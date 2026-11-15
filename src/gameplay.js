@@ -4541,12 +4541,20 @@
       joyZone.addEventListener("pointerdown", (e) => {
         input.joyActive = true;
         input.joyId = e.pointerId;
-        input.originX = e.clientX;
-        input.originY = e.clientY;
-        if (joyBase) {
-          joyBase.style.left = `${e.clientX}px`;
-          joyBase.style.top = `${e.clientY}px`;
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile && joyBase) {
+          const rect = joyBase.getBoundingClientRect();
+          input.originX = rect.left + rect.width * 0.5;
+          input.originY = rect.top + rect.height * 0.5;
           joyBase.classList.add("active");
+        } else {
+          input.originX = e.clientX;
+          input.originY = e.clientY;
+          if (joyBase) {
+            joyBase.style.left = `${e.clientX}px`;
+            joyBase.style.top = `${e.clientY}px`;
+            joyBase.classList.add("active");
+          }
         }
       });
       window.addEventListener("pointermove", (e) => {
@@ -4784,3 +4792,4 @@
     resetGame,
   };
 })();
+
