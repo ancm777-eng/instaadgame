@@ -1428,3 +1428,86 @@ html, body {
   from { transform: translateX(-50%) scale(0.96); }
   to   { transform: translateX(-50%) scale(1.05); }
 }
+
+/* =========================================================================
+ * 모바일 전용 가독성 확대 & 우측 하단 고정 조이스틱
+ * ========================================================================= */
+@media (max-width: 768px) {
+  /* 1. 상단 HUD 및 재화·버튼 글자 크기 대폭 확대 */
+  .title-pill {
+    font-size: 13px !important;
+    padding: 5px 12px !important;
+  }
+
+  .stat-card, .bag-card {
+    min-width: 155px !important;
+    padding: 7px 12px !important;
+  }
+
+  .lv-badge {
+    font-size: 12.5px !important;
+    padding: 2px 9px !important;
+  }
+
+  .hero-role, .bag-label, .bag-value {
+    font-size: 13px !important;
+  }
+
+  .currency-pill {
+    padding: 6px 12px !important;
+    gap: 6px !important;
+  }
+
+  .cur-val {
+    font-size: 15.5px !important;
+  }
+
+  .fairy-btn {
+    padding: 7px 12px !important;
+    font-size: 13px !important;
+  }
+
+  .icon-btn {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 16px !important;
+  }
+
+  /* 2. 캐릭터 머리 위 가방 게이지 & 플로팅 데미지/수금 글자 확대 */
+  #hero-bag-float, .float-popup {
+    font-size: 16px !important;
+  }
+
+  #toast-banner {
+    font-size: 14.5px !important;
+    padding: 9px 18px !important;
+  }
+
+  /* 3. 조이스틱을 화면 우측 하단(오른손 엄지 영역)으로 이동 */
+  #joystick-base {
+    left: auto !important;
+    top: auto !important;
+    right: calc(26px + var(--safe-right)) !important;
+    bottom: calc(34px + var(--safe-bottom)) !important;
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    width: 120px !important;
+    height: 120px !important;
+    opacity: 0.88 !important;
+  }
+
+  #joystick-stick {
+    width: 50px !important;
+    height: 50px !important;
+    margin-left: -25px !important;
+    margin-top: -25px !important;
+  }
+
+  #joystick-hint {
+    left: auto !important;
+    right: calc(20px + var(--safe-right)) !important;
+    bottom: calc(164px + var(--safe-bottom)) !important;
+    transform: none !important;
+    font-size: 13px !important;
+  }
+}
