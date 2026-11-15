@@ -366,10 +366,11 @@
       padPos: LAB_CONFIGS[3].padPos,
     },
     // Defense R&D Tech Systems (Expanded +1.3m cross pads around 13.5, 0.0)
+    // Defense R&D Tech Systems (건물 위쪽 배치 금지 -> 모두 건물 아래쪽/좌우 배치)
     turret_flame: {
       id: "turret_flame",
       tab: "defense",
-      dirLabel: "▲ 북쪽",
+      dirLabel: "▼ 남서쪽",
       icon: "🔥",
       title: "화염 연금 포탑",
       desc: "차원 에너지 R&D (최대 Lv.20)! 사거리 9m 내 적에게 고폭 화염 포격.",
@@ -378,12 +379,12 @@
       mult: 1.45,
       maxLv: 20,
       turretPos: { x: 23.2, z: -5.0 },
-      padPos: { x: 13.5, z: -5.1 },
+      padPos: { x: 11.4, z: 5.1 },
     },
     turret_frost: {
       id: "turret_frost",
       tab: "defense",
-      dirLabel: "▼ 남쪽",
+      dirLabel: "▼ 남동쪽",
       icon: "❄️",
       title: "빙결 수정 탑",
       desc: "차원 에너지 R&D (최대 Lv.20)! 사거리 9m 내 적을 감속·타격.",
@@ -392,7 +393,7 @@
       mult: 1.45,
       maxLv: 20,
       turretPos: { x: 23.2, z: 5.0 },
-      padPos: { x: 13.5, z: 5.1 },
+      padPos: { x: 15.6, z: 5.1 },
     },
     turret_thunder: {
       id: "turret_thunder",
@@ -2203,11 +2204,11 @@
       { id: "tool", x: -18.3, z: 13.0 },
       { id: "bag", x: -12.5, z: 18.1 },
       { id: "speed", x: -6.7, z: 13.0 },
-      // SE Guild District (+1.3m wider cross spacing around 11.5, 13.0)
+      // SE Guild District (건물 위쪽 z: 7.9 배치 금지 -> 모두 건물 아래쪽 z: 18.1 배치)
       { id: "fairy", x: 5.7, z: 13.0 },
       { id: "truck", x: 17.3, z: 13.0 },
-      { id: "farm2", x: 11.5, z: 7.9 },
-      { id: "farm3", x: 11.5, z: 18.1 },
+      { id: "farm2", x: 9.4, z: 18.1 },
+      { id: "farm3", x: 13.6, z: 18.1 },
       // East Defense Bastion (+1.3m wider cross spacing around 13.5, 0.0)
       { id: "turret_flame", x: UPGRADE_DEFS.turret_flame.padPos.x, z: UPGRADE_DEFS.turret_flame.padPos.z },
       { id: "turret_frost", x: UPGRADE_DEFS.turret_frost.padPos.x, z: UPGRADE_DEFS.turret_frost.padPos.z },
@@ -2772,12 +2773,52 @@
     }
 
     // 2. Passive Village Gate Repair & Defense Turrets / Aegis Shrine
-    const maxHp = getGateMaxHp();
-    const regenRate = (runtime.waveActive ? 0 : 4.0) + state.shrineAegisLv * 8.0;
-    if (state.gateHp < maxHp && regenRate > 0) {
-      state.gateHp = Math.min(maxHp, state.gateHp + regenRate * dt);
+    function updateGateAttackBanner(show, distMeters = 0) {
+    if (typeof document === "undefined") return;
+    let banner = document.getElementById("gate-attack-banner");
+    if (!banner) {
+      if (!document.getElementById("gate-attack-banner-style")) {
+        const st = document.createElement("style");
+        st.id = "gate-attack-banner-style";
+        st.textContent = `
+          @keyframes gateWarnPulse {
+            0%   { transform: translateX(-50%) scale(0.96); box-shadow: 0 0 18px rgba(239, 68, 68, 0.75); }
+            100% { transform: translateX(-50%) scale(1.05); box-shadow: 0 0 34px rgba(250, 204, 21, 0.95); }
+          }
+        `;
+        document.head.appendChild(st);
+      }
+      banner = document.createElement("div");
+      banner.id = "gate-attack-banner";
+      Object.assign(banner.style, {
+        display: "none",
+        position: "fixed",
+        top: "14%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: "9999",
+        padding: "16px 28px",
+        borderRadius: "18px",
+        background: "linear-gradient(135deg, rgba(185, 28, 28, 0.96), rgba(220, 38, 38, 0.96))",
+        border: "3px solid #fde047",
+        color: "#ffffff",
+        fontSize: "19px",
+        fontWeight: "900",
+        textAlign: "center",
+        lineHeight: "1.45",
+        pointerEvents: "none",
+        animation: "gateWarnPulse 0.65s infinite alternate",
+      });
+      document.body.appendChild(banner);
     }
-    state.heroHp = state.gateHp;
+
+    if (show && !runtime.gameOver) {
+      banner.innerHTML = `🚨 성문이 공격받고 있습니다!<br><span style="font-size:15px;color:#fef08a;">동쪽 성문 앞으로 이동해 방어하세요! (남은 거리: ${Math.round(distMeters)}m)</span>`;
+      banner.style.display = "block";
+    } else {
+      banner.style.display = "none";
+    }
+  }
     if (sceneObjs.villageGate && window.Entities) {
       if (sceneObjs.villageGate.hpFillPivot) {
         sceneObjs.villageGate.hpFillPivot.scale.x = Math.max(0.01, state.gateHp / maxHp);
@@ -3980,142 +4021,154 @@
 
     const nearestMon = getNearestMonster(player.x, player.z, 30);
     const bagCap = getHeroBagCap();
-    const hasOre = player.bagItems.includes("blue_ore");
+    const oreCount = player.bagItems.filter((item) => item === "blue_ore").length;
+    const hasOre = oreCount > 0;
     const hasHerb = player.bagItems.includes("rainbow_herb");
     const m1 = runtime.machines[0];
     const m2 = runtime.machines[1];
     const m3 = runtime.machines[2];
-
-    let nearestCashPed = null;
-    let nearestCashDist = Infinity;
-    for (let i = 0; i < runtime.pedestals.length; i++) {
-      const p = runtime.pedestals[i];
-      if (i > 0 && runtime.machines[i - 1] && runtime.machines[i - 1].lv <= 0) continue;
-      if (p.cashValues.length > 0) {
-        const d = Math.hypot(p.x - player.x, p.z - player.z);
-        if (d < nearestCashDist) {
-          nearestCashDist = d;
-          nearestCashPed = p;
-        }
-      }
-    }
+    const starterPed = runtime.pedestals[0];
+    const starterCashCount = starterPed ? starterPed.cashValues.length : 0;
 
     let tx = -10.0;
     let tz = 25.4;
-    let stepLabel = "광석 채집";
+    let stepLabel = "1단계 · 광석 채집";
     let guideText = "⛏️ 남쪽 출입구 광산에서 푸른 광석을 캐세요!";
     let colorHex = 0xffe629;
 
-    if (nearestMon) {
-      tx = nearestMon.x;
-      tz = nearestMon.z;
-      stepLabel = `🏰 WAVE ${state.wave} 성문 수호`;
-      guideText = "⚔️ 동쪽 성문 밖 전장으로 나가 원소 스킬(1~5)과 포탑으로 몬스터를 막아내세요!";
-      colorHex = 0xff5b77;
-    } else if (nearestCashPed) {
-      tx = nearestCashPed.x;
-      tz = nearestCashPed.z;
-      stepLabel = "💵 돈 받기";
-      guideText = "💵 '돈 받는 곳' 발판으로 가서 지폐 다발을 흡수하세요!";
-      colorHex = 0x2ecc71;
-    } else if (state.alchemyLabLv === 0 && state.gems >= getUpgradeCost("alchemy_lab") && !hasOre) {
-      tx = ALCHEMY_LAB_PAD_POS.x;
-      tz = ALCHEMY_LAB_PAD_POS.z;
-      stepLabel = "연구소 건설";
-      guideText = "⚗️ 중앙 왼쪽 [연금술 연구소]를 지어 광석을 차원 에너지로 변환하세요!";
-      colorHex = 0x8b5cf6;
-    } else if (state.m1Lv === 0 && state.gems >= getUpgradeCost("m1") && !hasOre) {
-      tx = MACHINE_CONFIGS[0].padPos.x;
-      tz = MACHINE_CONFIGS[0].padPos.z;
-      stepLabel = "1호기 해금";
-      guideText = "⚙️ 북쪽 공방 [1호기 세공기]를 지어 광석을 💵 35 세공 보석으로 자동 판매하세요!";
-      colorHex = 0xd67aff;
-    } else if (state.m2Lv === 0 && state.gems >= getUpgradeCost("m2") && !hasHerb) {
-      tx = MACHINE_CONFIGS[1].padPos.x;
-      tz = MACHINE_CONFIGS[1].padPos.z;
-      stepLabel = "2호기 해금";
-      guideText = "🌿 북쪽 공방 [2호기 가마솥]을 지어 남부 자원 계곡 '무지개 약초 숲' & 💵 80 포션을 여세요!";
-      colorHex = 0x52ff9b;
-    } else if (state.turretFlameLv === 0 && canAffordUpgrade("turret_flame")) {
-      tx = UPGRADE_DEFS.turret_flame.padPos.x;
-      tz = UPGRADE_DEFS.turret_flame.padPos.z;
-      stepLabel = "🛡️ 디펜스 기술 개발";
-      guideText = "🔥 동쪽 디펜스 연구소 북쪽 발판에서 차원 에너지로 [화염 연금 포탑] 기술을 개발하세요!";
-      colorHex = 0xff6b4a;
-    } else if (state.m3Lv === 0 && state.gems >= getUpgradeCost("m3")) {
-      tx = MACHINE_CONFIGS[2].padPos.x;
-      tz = MACHINE_CONFIGS[2].padPos.z;
-      stepLabel = "3호기 해금";
-      guideText = "👑 북쪽 공방 [3호기 합체소]를 지어 VIP 무역 마차 💵 300 잭팟을 여세요!";
-      colorHex = 0xff9f43;
-    } else if (
-      player.bagItems.length >= bagCap ||
-      ((hasOre || hasHerb) && player.bagItems.length >= (state.totalEarnedGems < 60 ? 3 : 5))
-    ) {
-      if (hasHerb && m3 && m3.lv > 0 && m3.inQueueB.length < 18 && (!m2 || m3.inQueueB.length <= m2.inQueue.length)) {
-        tx = m3.cfg.inPosB.x;
-        tz = m3.cfg.inPosB.z;
-        stepLabel = "3호기 약초 투입";
-        guideText = "🌿 3호기 합체소 [약초 넣는 곳]에 무지개 약초를 넣으세요!";
-        colorHex = 0xff9f43;
-      } else if (hasHerb && m2 && m2.lv > 0) {
-        tx = m2.cfg.inPos.x;
-        tz = m2.cfg.inPos.z;
-        stepLabel = "2호기 약초 투입";
-        guideText = "⚗️ 2호기 가마솥 [약초 넣는 곳]에 넣으면 💵 80 포션이 자동 판매됩니다!";
-        colorHex = 0x52ff9b;
-      } else if (hasOre && state.alchemyLabLv >= 1 && (state.dim1 || 0) < 40 && (runtime.alchemyLabQueue || []).length < 8) {
-        tx = ALCHEMY_LAB_IN_POS.x;
-        tz = ALCHEMY_LAB_IN_POS.z;
-        stepLabel = "차원 에너지 연성";
-        guideText = "⚗️ [연금술 연구소] 서쪽 투입구에 광석을 넣어 기술 개발용 차원 에너지를 만드세요!";
-        colorHex = 0x8b5cf6;
-      } else if (hasOre && m3 && m3.lv > 0 && m3.inQueue.length < 18 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
-        tx = m3.cfg.inPos.x;
-        tz = m3.cfg.inPos.z;
-        stepLabel = "3호기 광석 투입";
-        guideText = "⛏️ 3호기 합체소 [광석 넣는 곳]에 푸른 광석을 넣으세요!";
-        colorHex = 0xff9f43;
-      } else if (hasOre && m1 && m1.lv > 0) {
-        tx = m1.cfg.inPos.x;
-        tz = m1.cfg.inPos.z;
-        stepLabel = "1호기 광석 투입";
-        guideText = "⚙️ 1호기 세공기 [광석 넣는 곳]에 넣으면 💵 35 보석이 자동 진열됩니다!";
+    // [초반 단일 순차 튜토리얼: 1호기(m1) 완공 전까지는 오직 '광석 -> 원석 교역소 -> 1호기' 순서만 안내]
+    if (state.m1Lv === 0) {
+      const m1Cost = getUpgradeCost("m1"); // 50 캐시
+
+      if (state.gems >= m1Cost) {
+        // 3단계: 1호기 건설 비용(50)이 모이면 1호기 발판 안내
+        tx = MACHINE_CONFIGS[0].padPos.x;
+        tz = MACHINE_CONFIGS[0].padPos.z;
+        stepLabel = "3단계 · 1호기 건설";
+        guideText = "⚙️ 북쪽 공방 [1호기 크리스탈 세공기] 발판을 밟아 건설하세요!";
         colorHex = 0xd67aff;
-      } else {
+      } else if (starterCashCount > 0) {
+        // 2-2단계: 교역소에 돈이 쌓였으면 수금 발판 안내
+        tx = GEM_PEDESTAL_POS.x;
+        tz = GEM_PEDESTAL_POS.z;
+        stepLabel = "2단계 · 교역소 수금";
+        guideText = "💵 원석 교역소 북쪽 [돈 받는 곳]에서 캐시를 수금하세요!";
+        colorHex = 0x2ecc71;
+      } else if (hasOre) {
+        // 2-1단계: 광석을 1개라도 챘으면 원석 교역소 판매 발판 안내
         tx = SELL_PALLET_POS.x;
         tz = SELL_PALLET_POS.z;
-        stepLabel = "원석 판매";
-        guideText = "📦 서쪽 [원석 교역소] 남쪽 발판에 푸른 광석을 올려 💵 10에 판매하세요!";
+        stepLabel = "2단계 · 원석 교역소";
+        guideText = "📦 서쪽 [원석 교역소] 남쪽 발판에 푸른 광석을 판매하세요!";
         colorHex = 0x38bdf8;
+      } else {
+        // 1단계: 맨 처음에는 가장 가까운 푸른 광석 안내
+        let bestDist = Infinity;
+        for (const n of runtime.farmNodes) {
+          if (!isZoneUnlocked(n.zone) || n.respawnTimer > 0 || n.itemType !== "blue_ore") continue;
+          const d = Math.hypot(n.x - player.x, n.z - player.z);
+          if (d < bestDist) {
+            bestDist = d;
+            tx = n.x;
+            tz = n.z;
+          }
+        }
+        stepLabel = "1단계 · 광석 채집";
+        guideText = "⛏️ 남쪽 출입구 광산에서 푸른 광석을 캐세요!";
+        colorHex = 0xffe629;
       }
     } else {
-      const needHerbNode =
-        state.herbGroveUnlocked &&
-        m2 &&
-        m2.lv > 0 &&
-        (!m1 || m2.inQueue.length < m1.inQueue.length || (m3 && m3.lv > 0 && m3.inQueueB.length < m3.inQueue.length));
-      let bestDist = Infinity;
-      for (const n of runtime.farmNodes) {
-        if (!isZoneUnlocked(n.zone) || n.respawnTimer > 0) continue;
-        if (needHerbNode && n.itemType !== "rainbow_herb") continue;
-        const d = Math.hypot(n.x - player.x, n.z - player.z);
-        if (d < bestDist) {
-          bestDist = d;
-          tx = n.x;
-          tz = n.z;
-          if (n.itemType === "rainbow_herb") {
-            stepLabel = "약초 채집";
-            guideText = "🌿 남쪽 출입구 무지개 약초 숲에서 약초를 채집하세요!";
-            colorHex = 0x52ff9b;
-          } else {
-            stepLabel = "광석 채집";
-            guideText = "⛏️ 남쪽 출입구 광산에서 푸른 광석을 캐세요!";
-            colorHex = 0xffe629;
+      // [1호기 건설 완료 이후: 단일 핵심 루프 가이드]
+      let nearestCashPed = null;
+      let nearestCashDist = Infinity;
+      for (let i = 0; i < runtime.pedestals.length; i++) {
+        const p = runtime.pedestals[i];
+        if (i > 0 && runtime.machines[i - 1] && runtime.machines[i - 1].lv <= 0) continue;
+        if (p.cashValues.length > 0) {
+          const d = Math.hypot(p.x - player.x, p.z - player.z);
+          if (d < nearestCashDist) {
+            nearestCashDist = d;
+            nearestCashPed = p;
+          }
+        }
+      }
+
+      if (nearestMon) {
+        tx = nearestMon.x;
+        tz = nearestMon.z;
+        stepLabel = `🏰 WAVE ${state.wave} 성문 수호`;
+        guideText = "⚔️ 동쪽 성문 앞으로 이동해 몬스터 공세를 막아내세요!";
+        colorHex = 0xff5b77;
+      } else if (nearestCashPed) {
+        tx = nearestCashPed.x;
+        tz = nearestCashPed.z;
+        stepLabel = "💵 돈 받기";
+        guideText = "💵 '돈 받는 곳' 발판으로 가서 지폐 다발을 수금하세요!";
+        colorHex = 0x2ecc71;
+      } else if (player.bagItems.length >= bagCap || ((hasOre || hasHerb) && player.bagItems.length >= 4)) {
+        if (hasHerb && m2 && m2.lv > 0) {
+          tx = m2.cfg.inPos.x;
+          tz = m2.cfg.inPos.z;
+          stepLabel = "2호기 약초 투입";
+          guideText = "⚗️ 2호기 양조기 투입구에 무지개 약초를 넣으세요!";
+          colorHex = 0x52ff9b;
+        } else if (hasOre && m1 && m1.lv > 0) {
+          tx = m1.cfg.inPos.x;
+          tz = m1.cfg.inPos.z;
+          stepLabel = "1호기 광석 투입";
+          guideText = "⚙️ 1호기 세공기 투입구에 푸른 광석을 넣으세요!";
+          colorHex = 0xd67aff;
+        } else {
+          tx = SELL_PALLET_POS.x;
+          tz = SELL_PALLET_POS.z;
+          stepLabel = "원석 교역소 판매";
+          guideText = "📦 서쪽 [원석 교역소]에 광석을 판매하세요!";
+          colorHex = 0x38bdf8;
+        }
+      } else {
+        let bestDist = Infinity;
+        for (const n of runtime.farmNodes) {
+          if (!isZoneUnlocked(n.zone) || n.respawnTimer > 0) continue;
+          const d = Math.hypot(n.x - player.x, n.z - player.z);
+          if (d < bestDist) {
+            bestDist = d;
+            tx = n.x;
+            tz = n.z;
+            stepLabel = n.itemType === "rainbow_herb" ? "약초 채집" : "광석 채집";
+            guideText = n.itemType === "rainbow_herb" ? "🌿 무지개 약초를 채집하세요!" : "⛏️ 푸른 광석을 채집하세요!";
+            colorHex = n.itemType === "rainbow_herb" ? 0x52ff9b : 0xffe629;
           }
         }
       }
     }
+
+    const dx = tx - player.x;
+    const dz = tz - player.z;
+    const distToTarget = Math.hypot(dx, dz);
+    const ang = Math.atan2(dx, dz);
+
+    hero.guideArrowGroup.visible = distToTarget > 1.6;
+    hero.guideArrowGroup.rotation.y = ang - player.rotY;
+    hero.guideArrowGroup.scale.set(1, 1, 1);
+
+    if (hero.guideArrowGroup.userData && hero.guideArrowGroup.userData.arrowMesh) {
+      hero.guideArrowGroup.userData.arrowMesh.position.z = 1.80 + Math.sin(runtime.time * 6.0) * 0.22;
+    }
+    if (hero.guideArrowMat && hero.guideArrowMat.color) {
+      hero.guideArrowMat.color.setHex(colorHex);
+      if (hero.guideArrowMat.emissive) hero.guideArrowMat.emissive.setHex(colorHex);
+    }
+
+    if (typeof document !== "undefined") {
+      const stepEl = document.getElementById("ui-guide-step");
+      const textEl = document.getElementById("ui-guide-text");
+      const distEl = document.getElementById("ui-guide-dist");
+      if (stepEl && stepEl.textContent !== stepLabel) stepEl.textContent = stepLabel;
+      if (textEl && textEl.textContent !== guideText) textEl.textContent = guideText;
+      const distStr = `${Math.max(0, Math.round(distToTarget))}m`;
+      if (distEl && distEl.textContent !== distStr) distEl.textContent = distStr;
+    }
+  }
 
     const dx = tx - player.x;
     const dz = tz - player.z;
@@ -4385,6 +4438,10 @@
     const maxHp = getGateMaxHp();
     state.gateHp = Math.min(maxHp, Math.max(1, state.gateHp !== undefined ? state.gateHp : maxHp));
     state.heroHp = state.gateHp;
+
+    const isUnderSiege = runtime.waveActive || runtime.monsters.length > 0;
+    const distToGate = Math.hypot(player.x - GATE_POS.x, player.z - GATE_POS.z);
+    updateGateAttackBanner(isUnderSiege && distToGate > 7.5, distToGate);
   }
 
   function resetGame() {
