@@ -6,10 +6,13 @@
 (function () {
   "use strict";
 
-  const SAVE_KEY = "fairy_alchemy_tycoon_v7";
+  const SAVE_KEY = "fairy_alchemy_tycoon_v8";
   const FIRST_WAVE_DELAY = 300; // 5 minutes before Wave 1!
   const WAVE_INTERVAL = 180; // 3 minutes between subsequent waves
   const GATE_POS = { x: 24.0, z: 0.0 };
+  const SOUTH_GATE_POS = { x: 0.0, z: 20.0 };
+  const HERO_ATTACK_RANGE = 8.0;
+  const TURRET_ATTACK_RANGE = 9.0;
 
   const ITEM_META = {
     blue_ore: { label: "푸른 광석", short: "광석", icon: "⛏️", val: 10 },
@@ -74,7 +77,7 @@
       dirLabel: "▼ 남쪽",
       icon: "⚗️",
       title: "2호기 가마솥",
-      desc: "동쪽 외곽 '무지개 약초 숲' 해금! 약초 전용 포션(💵 80)을 자동 판매합니다.",
+      desc: "남부 자원 계곡 '무지개 약초 숲' 해금! 약초 전용 포션(💵 80)을 자동 판매합니다.",
       accent: "#52ff9b",
       baseCost: 140,
       mult: 1.9,
@@ -110,7 +113,7 @@
       dirLabel: "▶ 동쪽",
       icon: "🚜",
       title: "수확 트럭",
-      desc: "동쪽 외곽 숲과 공방 설비를 순회하는 자동 분배 메가 트럭.",
+      desc: "남쪽 출입구를 통해 남부 자원 계곡과 공방을 순회하는 자동 분배 메가 트럭.",
       accent: "#4ce6d8",
       baseCost: 220,
       mult: 1.95,
@@ -121,8 +124,8 @@
       tab: "automation",
       dirLabel: "▲ 북쪽",
       icon: "⛏️",
-      title: "북동 광산 확장",
-      desc: "18개 추가 푸른 광석 광맥을 동쪽 외곽 북부에 해금합니다.",
+      title: "심층 광산 확장",
+      desc: "18개 추가 푸른 광석 광맥을 남부 광산 심층에 해금합니다.",
       accent: "#59b2ff",
       baseCost: 160,
       mult: 1,
@@ -133,26 +136,26 @@
       tab: "automation",
       dirLabel: "▼ 남쪽",
       icon: "🌿",
-      title: "남동 약초 확장",
-      desc: "18개 추가 무지개 약초 정원을 동쪽 외곽 남부에 해금합니다.",
+      title: "심층 약초 확장",
+      desc: "18개 추가 무지개 약초 정원을 남부 약초 숲 심층에 해금합니다.",
       accent: "#6bff9e",
       baseCost: 340,
       mult: 1,
       maxLv: 1,
     },
-    // Defense R&D Tech Systems (East Defense Bastion: center (13.5, 0.0), maxLv: 10)
+    // Defense R&D Tech Systems (East Defense Bastion: center (13.5, 0.0))
     turret_flame: {
       id: "turret_flame",
       tab: "defense",
       dirLabel: "▲ 북쪽",
       icon: "🔥",
       title: "화염 연금 포탑",
-      desc: "동쪽 성문 북측에 배치되어 고폭 화염탄으로 광역 포격을 가합니다.",
+      desc: "동쪽 성문 북측 흉벽에 배치되어 사거리 9m 내 적에게 고폭 화염 포격을 가합니다.",
       accent: "#ff6b4a",
       baseCost: 65,
       mult: 1.65,
       maxLv: 10,
-      turretPos: { x: 21.2, z: -5.2 },
+      turretPos: { x: 23.2, z: -5.0 },
       padPos: { x: 13.5, z: -3.8 },
     },
     turret_frost: {
@@ -161,12 +164,12 @@
       dirLabel: "▼ 남쪽",
       icon: "❄️",
       title: "빙결 수정 탑",
-      desc: "동쪽 성문 남측에 배치되어 냉기 파편으로 적을 40% 감속·타격합니다.",
+      desc: "동쪽 성문 남측 흉벽에 배치되어 사거리 9m 내 적을 40% 감속·타격합니다.",
       accent: "#38bdf8",
       baseCost: 110,
       mult: 1.7,
       maxLv: 10,
-      turretPos: { x: 21.2, z: 5.2 },
+      turretPos: { x: 23.2, z: 5.0 },
       padPos: { x: 13.5, z: 3.8 },
     },
     turret_thunder: {
@@ -175,26 +178,26 @@
       dirLabel: "▶ 동쪽",
       icon: "⚡",
       title: "뇌전 오벨리스크",
-      desc: "성문 전방 상단에 배치되어 다수의 적을 연쇄 번개로 타격합니다.",
+      desc: "동쪽 성문 북중단 흉벽에 배치되어 사거리 9m 내 적을 연쇄 번개로 타격합니다.",
       accent: "#c084fc",
       baseCost: 210,
       mult: 1.75,
       maxLv: 10,
-      turretPos: { x: 21.2, z: -2.2 },
+      turretPos: { x: 23.2, z: -2.4 },
       padPos: { x: 17.8, z: 0.0 },
     },
     shrine_aegis: {
       id: "shrine_aegis",
       tab: "defense",
       dirLabel: "◀ 서쪽",
-      icon: "🛡️",
-      title: "수호 결계 성소",
-      desc: "성문 내구도(+150/Lv) · 초당 수복(+8/s·Lv) · 성문 앞 적 밀쳐내기 파동 발동.",
+      icon: "🏰",
+      title: "성문 증축·강화",
+      desc: "3단계 요새 증축! 성문 최대 내구도(500→900→1,450→2,200)와 고급 요새 외형·결계를 강화합니다.",
       accent: "#4ade80",
-      baseCost: 95,
-      mult: 1.65,
-      maxLv: 10,
-      turretPos: { x: 21.2, z: 2.2 },
+      baseCost: 120,
+      mult: 2.2,
+      maxLv: 3,
+      turretPos: { x: 23.2, z: 2.4 },
       padPos: { x: 9.2, z: 0.0 },
     },
     // ★1 ~ ★5 Elemental Hero Skills (tab: "skills", maxLv: 10)
@@ -563,8 +566,11 @@
     return !def || getUpgradeLevel(id) >= def.maxLv;
   }
 
+  const GATE_BASE_HP_BY_TIER = [500, 900, 1450, 2200];
+
   function getGateMaxHp() {
-    return 500 + (state.level - 1) * 40 + state.shrineAegisLv * 150;
+    const tier = Math.max(0, Math.min(3, state.shrineAegisLv || 0));
+    return GATE_BASE_HP_BY_TIER[tier] + (state.level - 1) * 40;
   }
 
   function getHeroMaxHp() {
@@ -606,7 +612,7 @@
         refreshFacilityVisibility();
         showToast(
           state.m2Lv === 1
-            ? "⚗️ 2호기 가마솥 가동 & 동쪽 외곽 '무지개 약초 숲' 해금!"
+            ? "⚗️ 2호기 가마솥 가동 & 남부 자원 계곡 '무지개 약초 숲' 해금!"
             : `⚗️ 2호기 가마솥 Lv.${state.m2Lv} 가속!`
         );
         break;
@@ -634,13 +640,13 @@
       case "farm2":
         state.farm2Unlocked = true;
         refreshFarmZoneVisibility();
-        showToast("⛏️ 동쪽 외곽 북부에 추가 광석 광맥 18노드 해금!");
+        showToast("⛏️ 남부 심층 광산에 추가 푸른 광석 18노드 해금!");
         break;
       case "farm3":
         state.farm3Unlocked = true;
         state.herbGroveUnlocked = true;
         refreshFarmZoneVisibility();
-        showToast("🌿 동쪽 외곽 남부에 추가 약초 정원 18노드 해금!");
+        showToast("🌿 남부 심층 정원에 추가 무지개 약초 18노드 해금!");
         break;
       case "turret_flame":
         state.turretFlameLv++;
@@ -657,12 +663,18 @@
         refreshDefenseTurretsVisibility();
         showToast(`⚡ 뇌전 오벨리스크 Lv.${state.turretThunderLv} 가동!`);
         break;
-      case "shrine_aegis":
-        state.shrineAegisLv++;
-        state.gateHp = Math.min(getGateMaxHp(), (state.gateHp || 500) + 150);
+      case "shrine_aegis": {
+        const prevMax = getGateMaxHp();
+        state.shrineAegisLv = Math.min(3, (state.shrineAegisLv || 0) + 1);
+        const nextMax = getGateMaxHp();
+        const gain = Math.max(0, nextMax - prevMax);
+        state.gateHp = Math.min(nextMax, (state.gateHp || prevMax) + gain);
         state.heroHp = state.gateHp;
         refreshDefenseTurretsVisibility();
-        showToast(`🛡️ 수호 결계 성소 Lv.${state.shrineAegisLv}! 성문 최대 내구도 +150`);
+        const tierNames = ["왕립 석조 성문", "1단: 철갑 룬 성문", "2단: 에메랄드 성채문", "3단 MAX: 황실 신성 요새문"];
+        showToast(`🏰 ${tierNames[state.shrineAegisLv]} 증축 완료! (최대 HP ${nextMax})`);
+        break;
+      }
         break;
       case "s1":
       case "s2":
@@ -1040,31 +1052,31 @@
     const Entities = window.Entities;
     if (!Engine || !Entities) return;
 
-    // All 84 resource nodes live in East Outer Resource Valley (x in [27.6..37.0]),
-    // keeping the central East invasion avenue (|z| < 4.5) clear for heroes & monsters.
+    // All 84 resource nodes live in the dedicated Southern Resource Valley (z in [23.4..35.6]),
+    // completely separated from the East Monster Siege Gate (x = 24.0, z = 0.0)!
     const specs = [];
-    // Zone 1: East Valley North-Inner (24 Blue Ore, unlocked from start)
+    // Zone 1: South Valley West-Inner (24 Blue Ore, unlocked from start)
     for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 6; c++) {
-        specs.push({ zone: 1, kind: "blue_ore", itemType: "blue_ore", x: 27.6 + c * 1.85, z: -11.5 + r * 2.0 });
+        specs.push({ zone: 1, kind: "blue_ore", itemType: "blue_ore", x: -14.6 + c * 1.85, z: 23.4 + r * 2.0 });
       }
     }
-    // Zone 2: East Valley South-Inner (24 Rainbow Herb, unlocked with 2호기/남동 확장)
+    // Zone 2: South Valley East-Inner (24 Rainbow Herb, unlocked with 2호기/남동 확장)
     for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 6; c++) {
-        specs.push({ zone: 2, kind: "rainbow_herb", itemType: "rainbow_herb", x: 27.6 + c * 1.85, z: 5.5 + r * 2.0 });
+        specs.push({ zone: 2, kind: "rainbow_herb", itemType: "rainbow_herb", x: 5.35 + c * 1.85, z: 23.4 + r * 2.0 });
       }
     }
-    // Zone 3: East Valley Far North (18 Blue Ore, unlocked via Guild North pad)
+    // Zone 3: South Valley Deep West (18 Blue Ore, unlocked via Guild North pad)
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 6; c++) {
-        specs.push({ zone: 3, kind: "blue_ore", itemType: "blue_ore", x: 27.6 + c * 1.85, z: -18.6 + r * 2.0 });
+        specs.push({ zone: 3, kind: "blue_ore", itemType: "blue_ore", x: -14.6 + c * 1.85, z: 31.6 + r * 2.0 });
       }
     }
-    // Zone 4: East Valley Far South (18 Rainbow Herb, unlocked via Guild South pad)
+    // Zone 4: South Valley Deep East (18 Rainbow Herb, unlocked via Guild South pad)
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 6; c++) {
-        specs.push({ zone: 4, kind: "rainbow_herb", itemType: "rainbow_herb", x: 27.6 + c * 1.85, z: 14.6 + r * 2.0 });
+        specs.push({ zone: 4, kind: "rainbow_herb", itemType: "rainbow_herb", x: 5.35 + c * 1.85, z: 31.6 + r * 2.0 });
       }
     }
 
@@ -1142,6 +1154,9 @@
         t.entity.root.visible = lv > 0;
       }
     }
+    if (sceneObjs.villageGate && window.Entities && typeof window.Entities.updateVillageGateTier === "function") {
+      window.Entities.updateVillageGateTier(sceneObjs.villageGate, state.shrineAegisLv);
+    }
   }
 
   function buildDistrictBuildings() {
@@ -1151,7 +1166,7 @@
 
     const specs = [
       { kind: "forge", x: -12.5, z: 13.0, badge: "⚒️ 장비 강화 대장간", accent: "#ffd24c" },
-      { kind: "guild", x: 1.5, z: 13.0, badge: "🧚 자동화·채집 길드", accent: "#4ce6d8" },
+      { kind: "guild", x: 11.5, z: 13.0, badge: "🧚 자동화·채집 길드", accent: "#4ce6d8" },
       { kind: "defense_lab", x: 13.5, z: 0.0, badge: "🛡️ 디펜스 기술 연구소", accent: "#38bdf8" },
     ];
 
@@ -1168,8 +1183,12 @@
     if (!Engine || !Entities) return;
 
     if (typeof Entities.createVillageGate === "function") {
-      sceneObjs.villageGate = Entities.createVillageGate(GATE_POS.x, GATE_POS.z, "🏰 마을 수호 성문");
+      sceneObjs.villageGate = Entities.createVillageGate(GATE_POS.x, GATE_POS.z, "🏰 동쪽 수호 성문");
       Engine.stationGroup.add(sceneObjs.villageGate.root);
+    }
+    if (typeof Entities.createSouthResourceGate === "function") {
+      sceneObjs.southGate = Entities.createSouthResourceGate(SOUTH_GATE_POS.x, SOUTH_GATE_POS.z, "⛏️ 남쪽 자원 채집 출입구");
+      Engine.stationGroup.add(sceneObjs.southGate);
     }
 
     buildDistrictBuildings();
@@ -1366,11 +1385,11 @@
       { id: "tool", x: -17.0, z: 13.0 },
       { id: "bag", x: -12.5, z: 16.8 },
       { id: "speed", x: -8.0, z: 13.0 },
-      // SE Guild District around (1.5, 13.0)
-      { id: "fairy", x: -3.0, z: 13.0 },
-      { id: "truck", x: 6.0, z: 13.0 },
-      { id: "farm2", x: 1.5, z: 9.2 },
-      { id: "farm3", x: 1.5, z: 16.8 },
+      // SE Guild District around (11.5, 13.0), clear of central South road
+      { id: "fairy", x: 7.0, z: 13.0 },
+      { id: "truck", x: 16.0, z: 13.0 },
+      { id: "farm2", x: 11.5, z: 9.2 },
+      { id: "farm3", x: 11.5, z: 16.8 },
       // North Production District along z = -14.2 (south pads at z = -9.6)
       { id: "m1", x: MACHINE_CONFIGS[0].padPos.x, z: MACHINE_CONFIGS[0].padPos.z },
       { id: "m2", x: MACHINE_CONFIGS[1].padPos.x, z: MACHINE_CONFIGS[1].padPos.z },
@@ -1449,13 +1468,13 @@
     }
     if (!runtime.truck) {
       const ent = Entities.createHarvesterCart();
-      ent.root.position.set(20.2, 0, 0);
+      ent.root.position.set(0.0, 0, 16.5);
       Engine.unitGroup.add(ent.root);
       runtime.truck = {
-        x: 20.2,
-        z: 0,
-        rotY: Math.PI * 0.5,
-        state: "harvest",
+        x: 0.0,
+        z: 16.5,
+        rotY: 0,
+        state: "exit",
         waypointIdx: 0,
         bag: [],
         bagVisuals: [],
@@ -1502,7 +1521,7 @@
       {
         species: "slime",
         name: "말랑 젤리 슬라임",
-        sx: 38.8,
+        sx: 34.5,
         sz: -1.8,
         targetOffsetZ: -1.8,
         hp: Math.round(110 * hpMult),
@@ -1515,20 +1534,20 @@
       {
         species: "shroom",
         name: "통통 버섯 정령",
-        sx: 40.2,
+        sx: 35.8,
         sz: 1.8,
         targetOffsetZ: 1.8,
         hp: Math.round(135 * hpMult),
         atk: 16 + (w - 1) * 5,
         speed: 3.15 + w * 0.08,
-        range: 7.5,
+        range: 5.2,
         atkCd: 1.65,
         reward: 32 + w * 22,
       },
       {
         species: "golem",
         name: "태엽 별골렘",
-        sx: 41.2,
+        sx: 36.8,
         sz: 0.0,
         targetOffsetZ: 0.0,
         hp: Math.round(230 * hpMult),
@@ -1649,11 +1668,11 @@
       slowSec: opts.slowSec || 0,
       color,
       life: 0,
-      maxLife: 2.2,
+      maxLife: opts.maxLife || 2.2,
     });
   }
 
-  function getNearestMonster(x = player.x, z = player.z, maxRange = 20) {
+  function getNearestMonster(x = player.x, z = player.z, maxRange = HERO_ATTACK_RANGE) {
     let best = null;
     let bestD = maxRange;
     for (const m of runtime.monsters) {
@@ -1669,6 +1688,11 @@
 
   function castSkill(skillId, silent = false) {
     if (runtime.gameOver) return false;
+    // Hero skills are ONLY allowed outside the East Monster Siege Gate (x >= 24.3)
+    if (player.x < GATE_POS.x + 0.3) {
+      if (!silent) showToast("🏰 동쪽 수호 성문 밖으로 나가야 원소 스킬로 공격할 수 있습니다!");
+      return false;
+    }
     const def = UPGRADE_DEFS[skillId];
     const lv = getUpgradeLevel(skillId);
     if (!def || lv <= 0) {
@@ -1677,10 +1701,10 @@
     }
     if ((runtime.skillCooldowns[skillId] || 0) > 0) return false;
 
-    const target = getNearestMonster(player.x, player.z, 22);
+    const target = getNearestMonster(player.x, player.z, HERO_ATTACK_RANGE);
     if (!target && skillId !== "s5") {
       if (silent || skillId !== "s1") {
-        if (!silent) showToast("👾 사거리 안에 공격할 몬스터가 없습니다!");
+        if (!silent) showToast("👾 화면 사거리(8m) 안에 공격할 몬스터가 없습니다!");
         return false;
       }
     }
@@ -1689,38 +1713,43 @@
     player.swingTimer = player.swingDuration;
     playSkillSfx(skillId);
 
+    const inRangeMonsters = runtime.monsters.filter(
+      (m) => m.hp > 0 && Math.hypot(m.x - player.x, m.z - player.z) <= HERO_ATTACK_RANGE
+    );
+
     if (skillId === "s1") {
-      // ★1 Fireball Volley (manual press can also cast forward during peacetime!)
+      // ★1 Fireball Volley (manual press casts up to 7.5m forward outside gate even during peacetime)
       const bolts = 1 + Math.floor(lv / 4);
       const dmg = 38 * (1 + 0.35 * (lv - 1));
       const dirX = Math.sin(player.rotY);
       const dirZ = Math.cos(player.rotY);
       for (let i = 0; i < bolts; i++) {
-        const tgt = runtime.monsters.length > 0 ? runtime.monsters[i % runtime.monsters.length] || target : null;
-        spawnProjectile(player.x + (i - 0.5) * 0.3, 1.15, player.z, tgt, 0xff622e, dmg, 15.5, {
-          tx: tgt ? tgt.x : player.x + dirX * 14 + (i - 0.5) * 0.4,
-          tz: tgt ? tgt.z : player.z + dirZ * 14,
+        const tgt = inRangeMonsters.length > 0 ? inRangeMonsters[i % inRangeMonsters.length] : null;
+        spawnProjectile(player.x + (i - 0.5) * 0.3, 1.15, player.z, tgt, 0xff622e, dmg, 13.5, {
+          tx: tgt ? tgt.x : player.x + dirX * 7.5 + (i - 0.5) * 0.4,
+          tz: tgt ? tgt.z : player.z + dirZ * 7.5,
           radius: 0.28,
-          aoeRadius: 2.2,
+          aoeRadius: 1.8,
+          maxLife: 0.62,
         });
       }
-      spawnShockwaveRing(player.x, 0.12, player.z, 0xff7849, 2.0, 0.32);
+      spawnShockwaveRing(player.x, 0.12, player.z, 0xff7849, 1.8, 0.32);
     } else if (skillId === "s2") {
       // ★2 Frost Blizzard
       const dmg = 62 * (1 + 0.38 * (lv - 1));
       const tx = target.x;
       const tz = target.z;
-      applyAoEDamage(tx, tz, 4.8, dmg, 1.5, 3.5, 0);
-      spawnShockwaveRing(tx, 0.14, tz, 0x38bdf8, 4.8, 0.65);
+      applyAoEDamage(tx, tz, 3.6, dmg, 1.5, 3.5, 0);
+      spawnShockwaveRing(tx, 0.14, tz, 0x38bdf8, 3.6, 0.65);
       spawnBurstVfx(tx, 1.4, tz, 0x93e2ff, 14);
     } else if (skillId === "s3") {
-      // ★3 Chain Thunderstorm
-      const maxTargets = Math.min(runtime.monsters.length, 3 + Math.floor(lv / 2));
+      // ★3 Chain Thunderstorm (only hits targets inside 8m hero range)
+      const maxTargets = Math.min(inRangeMonsters.length, 3 + Math.floor(lv / 2));
       const dmg = 88 * (1 + 0.40 * (lv - 1));
       for (let i = 0; i < maxTargets; i++) {
-        const m = runtime.monsters[i];
+        const m = inRangeMonsters[i];
         spawnLightningPillar(m.x, m.z, 0xfef08a, 0.38);
-        spawnShockwaveRing(m.x, 0.10, m.z, 0x60a5fa, 2.4, 0.35);
+        spawnShockwaveRing(m.x, 0.10, m.z, 0x60a5fa, 2.2, 0.35);
         damageMonster(m, dmg, 0, 0, 0);
         m.stunTimer = Math.max(m.stunTimer, 0.7);
       }
@@ -1729,18 +1758,18 @@
       const count = 3 + Math.floor(lv / 3);
       const dmg = 145 * (1 + 0.42 * (lv - 1));
       for (let i = 0; i < count; i++) {
-        const m = runtime.monsters[i % runtime.monsters.length] || target;
-        const ox = (Math.random() - 0.5) * 2.0;
-        const oz = (Math.random() - 0.5) * 2.0;
+        const m = inRangeMonsters.length > 0 ? inRangeMonsters[i % inRangeMonsters.length] : target;
+        const ox = (Math.random() - 0.5) * 1.8;
+        const oz = (Math.random() - 0.5) * 1.8;
         spawnMeteorStrike(m.x + ox, m.z + oz, dmg);
       }
     } else if (skillId === "s5") {
       // ★5 Aether Supernova + 30% Village Gate Repair
       const dmg = 240 * (1 + 0.45 * (lv - 1));
-      applyAoEDamage(player.x, player.z, 11.5, dmg, 6.0, 2.0, 0.8);
-      applyAoEDamage(GATE_POS.x + 1.5, GATE_POS.z, 9.5, dmg, 6.0, 2.0, 0.8);
-      spawnShockwaveRing(player.x, 0.16, player.z, 0xe879f9, 10.2, 0.65);
-      spawnShockwaveRing(GATE_POS.x, 0.24, GATE_POS.z, 0x38bdf8, 8.0, 0.55);
+      applyAoEDamage(player.x, player.z, 7.5, dmg, 5.0, 2.0, 0.8);
+      applyAoEDamage(GATE_POS.x + 1.5, GATE_POS.z, 6.5, dmg, 5.0, 2.0, 0.8);
+      spawnShockwaveRing(player.x, 0.16, player.z, 0xe879f9, 7.2, 0.65);
+      spawnShockwaveRing(GATE_POS.x, 0.24, GATE_POS.z, 0x38bdf8, 6.5, 0.55);
       spawnBurstVfx(player.x, 1.2, player.z, 0xfef08a, 16);
       const maxHp = getGateMaxHp();
       const healAmt = Math.round(maxHp * 0.3);
@@ -1835,8 +1864,8 @@
       }
     }
 
-    if (state.autoSkill && runtime.monsters.length > 0) {
-      const near = getNearestMonster(player.x, player.z, 20.0);
+    if (state.autoSkill && runtime.monsters.length > 0 && player.x >= GATE_POS.x + 0.3) {
+      const near = getNearestMonster(player.x, player.z, HERO_ATTACK_RANGE);
       if (near) {
         for (let i = SKILL_IDS.length - 1; i >= 0; i--) {
           const sid = SKILL_IDS[i];
@@ -1869,30 +1898,31 @@
       const t = runtime.turrets[id];
       if (!t || t.lv <= 0) continue;
       if (t.cooldown > 0) t.cooldown -= dt;
-      const target = getNearestMonster(t.x, t.z, 22.0);
+      const target = getNearestMonster(t.x, t.z, TURRET_ATTACK_RANGE);
       window.Entities.animateDefenseTurret(t.entity, !!target, dt);
 
       if (target && t.cooldown <= 0) {
         if (id === "turret_flame") {
           t.cooldown = Math.max(0.7, 1.85 - t.lv * 0.08);
-          spawnProjectile(t.x, 1.35, t.z, target, 0xff5a28, 32 + t.lv * 18, 13.5, { radius: 0.30, aoeRadius: 2.6 });
+          spawnProjectile(t.x, 1.35, t.z, target, 0xff5a28, 32 + t.lv * 18, 12.5, { radius: 0.30, aoeRadius: 2.2, maxLife: 0.72 });
         } else if (id === "turret_frost") {
           t.cooldown = Math.max(0.65, 1.55 - t.lv * 0.07);
-          spawnProjectile(t.x, 1.45, t.z, target, 0x38bdf8, 24 + t.lv * 14, 15.0, { radius: 0.26, slowSec: 2.5 });
+          spawnProjectile(t.x, 1.45, t.z, target, 0x38bdf8, 24 + t.lv * 14, 13.0, { radius: 0.26, slowSec: 2.5, maxLife: 0.72 });
         } else if (id === "turret_thunder") {
           t.cooldown = Math.max(0.9, 2.2 - t.lv * 0.09);
-          const count = Math.min(runtime.monsters.length, 2 + Math.floor(t.lv / 3));
+          const inRange = runtime.monsters.filter((m) => m.hp > 0 && Math.hypot(m.x - t.x, m.z - t.z) <= TURRET_ATTACK_RANGE);
+          const count = Math.min(inRange.length, 2 + Math.floor(t.lv / 3));
           for (let ci = 0; ci < count; ci++) {
-            const m = runtime.monsters[ci];
+            const m = inRange[ci];
             spawnLightningPillar(m.x, m.z, 0xc084fc, 0.30);
             damageMonster(m, 42 + t.lv * 22);
           }
         } else if (id === "shrine_aegis") {
           const closeDist = Math.hypot(target.x - GATE_POS.x, target.z - GATE_POS.z);
-          if (closeDist < 8.5) {
+          if (closeDist < 6.5) {
             t.cooldown = 4.2;
-            applyAoEDamage(GATE_POS.x + 1.0, GATE_POS.z, 8.5, 24 + t.lv * 14, 6.5, 1.5, 0);
-            spawnShockwaveRing(GATE_POS.x + 1.0, 0.14, GATE_POS.z, 0x4ade80, 6.5, 0.45);
+            applyAoEDamage(GATE_POS.x + 1.0, GATE_POS.z, 6.5, 24 + t.lv * 16, 6.0, 1.5, 0);
+            spawnShockwaveRing(GATE_POS.x + 1.0, 0.14, GATE_POS.z, 0x4ade80, 6.0, 0.45);
           }
         }
       }
@@ -2036,17 +2066,30 @@
   // Tycoon Movement, Harvesting, Facilities, Pedestals & Workers
   // ---------------------------------------------------------------------------
   function resolveWorldBoundsAndCollisions(obj, radius = 0.65) {
-    const inEastGate = obj.x > 22.4 && Math.abs(obj.z) < 4.0;
-    if (obj.x < 23.6) {
-      obj.x = Math.max(-23.2, Math.min(inEastGate ? 41.0 : 23.2, obj.x));
-      obj.z = Math.max(-19.2, Math.min(19.2, obj.z));
-    } else {
-      obj.x = Math.max(23.6, Math.min(41.0, obj.x));
-      if (obj.x < 25.4) {
-        obj.z = Math.max(-3.8, Math.min(3.8, obj.z));
+    if (obj.z > 20.0) {
+      // Region A: Dedicated Southern Resource Valley (z in [20.0, 37.5])
+      if (obj.z < 21.8) {
+        obj.x = Math.max(-3.8, Math.min(3.8, obj.x));
       } else {
-        obj.z = Math.max(-19.4, Math.min(19.4, obj.z));
+        obj.x = Math.max(-16.6, Math.min(16.6, obj.x));
       }
+      obj.z = Math.min(37.5, obj.z);
+    } else if (obj.x > 24.0) {
+      // Region B: Dedicated East Monster Siege Battlefield (x in [24.0, 40.5], z in [-5.2, 5.2])
+      if (obj.x < 25.4) {
+        obj.z = Math.max(-3.6, Math.min(3.6, obj.z));
+      } else {
+        obj.z = Math.max(-5.2, Math.min(5.2, obj.z));
+      }
+      obj.x = Math.min(40.5, obj.x);
+    } else {
+      // Region C: Inside Walled Village (48m x 40m) with dual separated gates:
+      // 1) East Monster Gate at (x = 24.0, |z| <= 3.6)
+      // 2) South Resource Gate at (|x| <= 3.8, z = 20.0)
+      const maxX = Math.abs(obj.z) <= 3.6 ? 40.5 : 23.2;
+      const maxZ = Math.abs(obj.x) <= 3.8 ? 37.5 : 19.2;
+      obj.x = Math.max(-23.2, Math.min(maxX, obj.x));
+      obj.z = Math.max(-19.2, Math.min(maxZ, obj.z));
     }
 
     const boxes = [{ cx: STALL_POS.x, cz: STALL_POS.z, hw: 1.65 + radius, hd: 1.05 + radius }];
@@ -2307,7 +2350,7 @@
     const dockStopX = 16.8;
     const dockZ = -13.8;
     const turnX = 19.8;
-    const eastParkX = 35.5;
+    const eastParkX = 39.5;
     let spd = 0;
 
     const moveToward = (tx, tz, moveSpd) => {
@@ -2579,12 +2622,12 @@
     const maxCargo = 14 + state.truckLv * 6;
     const speed = 5.4 + state.truckLv * 0.8;
 
-    let tx = 31.0;
-    let tz = 0;
+    let tx = 0.0;
+    let tz = 26.5;
     if (tr.state === "harvest") {
       const waypoints = state.herbGroveUnlocked
-        ? [{ x: 29.0, z: -7.5 }, { x: 36.0, z: -7.5 }, { x: 36.0, z: 7.5 }, { x: 29.0, z: 7.5 }]
-        : [{ x: 29.0, z: -9.5 }, { x: 36.0, z: -9.5 }, { x: 36.0, z: -6.5 }, { x: 29.0, z: -6.5 }];
+        ? [{ x: -12.0, z: 24.5 }, { x: -12.0, z: 29.0 }, { x: 12.0, z: 29.0 }, { x: 12.0, z: 24.5 }]
+        : [{ x: -13.0, z: 24.2 }, { x: -6.5, z: 24.2 }, { x: -6.5, z: 29.0 }, { x: -13.0, z: 29.0 }];
       const wp = waypoints[tr.waypointIdx % waypoints.length];
       tx = wp.x;
       tz = wp.z;
@@ -2597,12 +2640,12 @@
       }
       if (tr.bag.length >= maxCargo) tr.state = "return";
     } else if (tr.state === "return") {
-      if (tr.x > 25.0) {
-        tx = 24.5;
-        tz = 0.0;
-      } else if (tr.x > 21.5) {
-        tx = 21.0;
-        tz = 0.0;
+      if (tr.z > 21.8) {
+        tx = 0.0;
+        tz = 21.2;
+      } else if (tr.z > 18.0) {
+        tx = 0.0;
+        tz = 17.0;
       } else {
         tx = 0.0;
         tz = -7.0;
@@ -2632,8 +2675,8 @@
         }
       }
     } else {
-      tx = 26.5;
-      tz = 0.0;
+      tx = 0.0;
+      tz = 22.8;
       if (Math.hypot(tx - tr.x, tz - tr.z) < 1.5) tr.state = "harvest";
     }
 
@@ -2722,17 +2765,17 @@
       }
     }
 
-    let tx = 28.0;
-    let tz = -8.5;
+    let tx = -10.0;
+    let tz = 25.4;
     let stepLabel = "광석 채집";
-    let guideText = "⛏️ 동쪽 외곽 광산에서 푸른 광석을 캐세요!";
+    let guideText = "⛏️ 남쪽 출입구 광산에서 푸른 광석을 캐세요!";
     let colorHex = 0xffe629;
 
     if (nearestMon) {
       tx = nearestMon.x;
       tz = nearestMon.z;
       stepLabel = `🏰 WAVE ${state.wave} 성문 수호`;
-      guideText = "⚔️ 동쪽 성문 밖 몬스터 삼총사를 원소 스킬(1~5)과 포탑으로 막아내세요!";
+      guideText = "⚔️ 동쪽 성문 밖 전장으로 나가 원소 스킬(1~5)과 포탑으로 몬스터를 막아내세요!";
       colorHex = 0xff5b77;
     } else if (nearestCashPed) {
       tx = nearestCashPed.x;
@@ -2750,7 +2793,7 @@
       tx = MACHINE_CONFIGS[1].padPos.x;
       tz = MACHINE_CONFIGS[1].padPos.z;
       stepLabel = "2호기 해금";
-      guideText = "🌿 북쪽 공방 [2호기 가마솥]을 지어 동쪽 외곽 '무지개 약초 숲' & 💵 80 포션을 여세요!";
+      guideText = "🌿 북쪽 공방 [2호기 가마솥]을 지어 남부 자원 계곡 '무지개 약초 숲' & 💵 80 포션을 여세요!";
       colorHex = 0x52ff9b;
     } else if (state.turretFlameLv === 0 && state.gems >= getUpgradeCost("turret_flame")) {
       tx = UPGRADE_DEFS.turret_flame.padPos.x;
@@ -2816,11 +2859,11 @@
           tz = n.z;
           if (n.itemType === "rainbow_herb") {
             stepLabel = "약초 채집";
-            guideText = "🌿 동쪽 외곽 무지개 약초 숲에서 약초를 채집하세요!";
+            guideText = "🌿 남쪽 출입구 무지개 약초 숲에서 약초를 채집하세요!";
             colorHex = 0x52ff9b;
           } else {
             stepLabel = "광석 채집";
-            guideText = "⛏️ 동쪽 외곽 광산에서 푸른 광석을 캐세요!";
+            guideText = "⛏️ 남쪽 출입구 광산에서 푸른 광석을 캐세요!";
             colorHex = 0xffe629;
           }
         }
@@ -3379,7 +3422,7 @@
     updateStepPads(0.016);
     updateGuideArrow();
     syncHUD(true);
-    showToast("🎯 동쪽 외곽에서 자원을 캐고 건물별 기술을 개발해 5분 뒤 성문을 막아내세요!");
+    showToast("🎯 남쪽 출입구에서 자원을 캐 기술을 개발하고, 5분 뒤 동쪽 성문으로 오는 몬스터를 막아내세요!");
 
     if (typeof window !== "undefined" && !window.__NO_AUTO_RAF__ && typeof window.requestAnimationFrame === "function") {
       _rafId = window.requestAnimationFrame(rafLoop);
@@ -3402,6 +3445,9 @@
     SKILL_IDS,
     DEFENSE_IDS,
     GATE_POS,
+    SOUTH_GATE_POS,
+    HERO_ATTACK_RANGE,
+    TURRET_ATTACK_RANGE,
     FIRST_WAVE_DELAY,
     WAVE_INTERVAL,
     init,

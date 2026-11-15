@@ -194,9 +194,9 @@
       ctx.restore();
     }
 
-    // Main Cross Boulevards connecting the 5 functional zones & East Gate
+    // Main Cross Boulevards connecting the 5 functional zones, South Resource Gate & East Siege Gate
     fillWorldZone(-22.5, -2.5, 24.0, 2.5, "#dfc99d", "#a68552", 12);
-    fillWorldZone(-3.0, -18.5, 3.0, 18.5, "#dfc99d", "#a68552", 12);
+    fillWorldZone(-3.0, -18.5, 3.0, 20.0, "#dfc99d", "#a68552", 12);
 
     // 1. North Production Line District (cool stone factory floor along z in [-19.0, -7.8])
     fillWorldZone(-22.5, -19.0, 19.5, -7.8, "#bfc6d9", "#7b84a3", 22);
@@ -230,8 +230,8 @@
     // 3. South-West Equipment Forge District (x in [-20.0, -5.2], z in [8.8, 18.8])
     fillWorldZone(-20.0, 8.8, -5.2, 18.8, "#e3bfa1", "#9e663c", 20);
 
-    // 4. South-East Automation & Harvest Guild District (x in [-4.6, 8.4], z in [7.2, 18.8])
-    fillWorldZone(-4.6, 7.2, 8.4, 18.8, "#cbe6c8", "#589962", 20);
+    // 4. South-East Automation & Harvest Guild District (x in [4.8, 18.2], z in [7.2, 18.8])
+    fillWorldZone(4.8, 7.2, 18.2, 18.8, "#cbe6c8", "#589962", 20);
 
     // 5. East Defense R&D Lab & Gate Bastion District (x in [7.2, 23.6], z in [-6.8, 6.8])
     fillWorldZone(7.2, -6.8, 23.6, 6.8, "#c7cde8", "#656ea8", 22);
@@ -318,19 +318,28 @@
       envGroup.add(soil);
     }
 
-    // Zone 1: East Ore Mine Quarry (north of East invasion avenue)
-    addFarmPlot(32.8, -7.8, 13.6, 7.6, 0x627394, 0x434d68);
-    // Zone 2: South-East Rainbow Herb Grove (south of East invasion avenue)
-    addFarmPlot(32.8, 7.8, 13.6, 7.6, 0x63ad60, 0x3e7844);
-    // Zone 3: Deep Ore Annex (outer NE)
-    addFarmPlot(32.8, -16.8, 13.6, 7.2, 0x5c6d8e, 0x3f4962);
+    // Dedicated Southern Resource Valley (z in [22.6, 37.4], strictly separated from East Monster Gate)
+    // Zone 1: South-West Ore Mine Quarry
+    addFarmPlot(-10.0, 26.4, 13.6, 7.6, 0x627394, 0x434d68);
+    // Zone 2: South-East Rainbow Herb Grove
+    addFarmPlot(10.0, 26.4, 13.6, 7.6, 0x63ad60, 0x3e7844);
+    // Zone 3: Deep Ore Annex (outer SW)
+    addFarmPlot(-10.0, 33.8, 13.6, 7.2, 0x5c6d8e, 0x3f4962);
     // Zone 4: Deep Rainbow Herb Annex (outer SE)
-    addFarmPlot(32.8, 16.8, 13.6, 7.2, 0x4e9c50, 0x356b38);
+    addFarmPlot(10.0, 33.8, 13.6, 7.2, 0x4e9c50, 0x356b38);
 
-    // Single East Gate Avenue & Monster Invasion Road leading to x = 24.0, z = 0.0
+    // Dual Entrances:
+    // 1) South Resource Gathering Road leading out of South Gate (x = 0, z = 20.0) into Southern Resource Valley
     const pathMat = new THREE.MeshLambertMaterial({ color: 0xd9be8c });
     const stoneRoadMat = new THREE.MeshLambertMaterial({ color: 0xb0b8ce });
-    const eastPath = new THREE.Mesh(new THREE.BoxGeometry(20.0, 0.04, 6.8), pathMat);
+    const southPath = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.04, 17.5), pathMat);
+    southPath.position.set(0, 0.005, 28.75);
+    southPath.receiveShadow = true;
+    envGroup.add(southPath);
+
+    // 2) Single East Monster Invasion Road & Defense Battlefield leading strictly to East Gate (x = 24.0, z = 0.0)
+    const battlefieldMat = new THREE.MeshLambertMaterial({ color: 0x737b96 });
+    const eastPath = new THREE.Mesh(new THREE.BoxGeometry(20.0, 0.04, 11.4), battlefieldMat);
     eastPath.position.set(33.5, 0.005, 0);
     eastPath.receiveShadow = true;
     envGroup.add(eastPath);
@@ -448,8 +457,9 @@
     }
 
     // Perimeter fence segments around x in [-24, 24], z in [-20, 20]
-    // South border (z = +20, completely closed)
+    // South border (z = +20, leave ONLY South Resource Gathering Gate at x in [-4.2, +4.2])
     for (let x = -21.5; x <= 21.5; x += 3.0) {
+      if (Math.abs(x) < 4.5) continue;
       placeFence(x, 20.0, 0);
     }
     // West border (x = -24, completely closed)
@@ -460,22 +470,26 @@
     for (let x = -21.5; x <= 21.5; x += 3.0) {
       placeFence(x, -20.0, 0);
     }
-    // East border (x = +24, leave ONLY Single Central East Gate at z in [-4.2, +4.2])
+    // East border (x = +24, leave ONLY Single Central East Monster Gate at z in [-4.2, +4.2])
     for (let z = -17.5; z <= 17.5; z += 3.0) {
       if (Math.abs(z) < 4.5) continue;
       placeFence(24.0, z, Math.PI * 0.5);
     }
 
-    // Illuminated Gate Pillars flanking the SINGLE East Entrance (x = 24.0, z = +-4.4)
-    envGroup.add(makeGatePillar(24.0, -4.4, 0x52efff));
-    envGroup.add(makeGatePillar(24.0, 4.4, 0x52ff9b));
+    // Illuminated Gate Pillars flanking BOTH separated entrances:
+    // South Resource Gate (x = +-4.4, z = 20.0) & East Monster Defense Gate (x = 24.0, z = +-4.4)
+    envGroup.add(makeGatePillar(-4.4, 20.0, 0x52ff9b));
+    envGroup.add(makeGatePillar(4.4, 20.0, 0x52efff));
+    envGroup.add(makeGatePillar(24.0, -4.4, 0xff9b52));
+    envGroup.add(makeGatePillar(24.0, 4.4, 0xff6b8b));
 
-    // Outer Forest Trees: strictly OUTSIDE 48x40 village AND clear of East Resource Valley
+    // Outer Forest Trees: strictly OUTSIDE 48x40 village AND clear of Southern Resource Valley (x in [-18,18], z in [20,39]) & East Battlefield (x in [24,42], z in [-7,7])
     const treeSpots = [
       [-28.5, -24], [-30.0, -16], [-29.0, -8], [-29.5, 0], [-28.8, 8], [-29.5, 16], [-27.5, 22],
       [-21.0, -25.5], [-12.0, -26.0], [-3.0, -25.5], [6.0, -26.0], [15.0, -25.5], [23.5, -25.0],
-      [43.5, -20.0], [44.5, -12.0], [44.0, -5.5], [44.0, 5.5], [44.5, 12.0], [43.5, 20.0],
-      [27.0, 25.0], [35.0, 25.5], [35.0, -25.5], [28.0, -25.0],
+      [29.5, -18.0], [36.0, -14.0], [43.5, -16.0], [44.5, -9.0], [44.5, 9.0], [43.5, 16.0], [36.0, 14.0], [29.5, 18.0],
+      [-23.5, 26.5], [-23.5, 34.0], [23.5, 26.5], [23.5, 34.0],
+      [-15.0, 41.5], [-5.0, 42.0], [5.0, 42.0], [15.0, 41.5],
     ];
     for (let i = 0; i < treeSpots.length; i++) {
       const [tx, tz] = treeSpots[i];

@@ -108,17 +108,49 @@
     return chibi().animateDefenseTurret(turret, active, dt);
   }
 
-  function createVillageGate(x = 24.0, z = 0.0, badgeText = "🏰 마을 수호 성문") {
+  function createVillageGate(x = 24.0, z = 0.0, badgeText = "🏰 동쪽 수호 성문") {
     const gate = chibi().createVillageGate();
     gate.root.position.set(x, 0, z);
     if (badgeText) {
+      // Positioned cleanly outside East threshold above stoneRoad so towers & arch bridge never obscure it
       const apron = createFloorApronBanner(3.3, badgeText, "#38bdf8", "rgba(16, 28, 56, 0.94)");
       if (apron) {
-        apron.position.set(0, 0.036, 3.15);
+        apron.position.set(2.35, 0.036, 0);
         gate.root.add(apron);
       }
     }
     return gate;
+  }
+
+  function createSouthResourceGate(x = 0.0, z = 20.0, badgeText = "⛏️ 남쪽 자원 채집 출입구") {
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+    const matWood = chibi().makeToonMat(0x8c562c);
+    const matStone = chibi().makeToonMat(0x7c86a8);
+    const matLeaf = chibi().makeToonMat(0x4ade80);
+    const matGold = chibi().makeToonMat(0xfacc15, { emissive: 0xd97706, emissiveIntensity: 0.25 });
+
+    [-4.2, 4.2].forEach((px) => {
+      const post = new THREE.Group();
+      post.position.set(px, 0, 0);
+      chibi().addOutlinedMesh(post, new THREE.BoxGeometry(0.92, 0.36, 0.92), matStone, { pos: [0, 0.18, 0] });
+      chibi().addOutlinedMesh(post, new THREE.CylinderGeometry(0.26, 0.34, 1.95, 8), matWood, { pos: [0, 1.25, 0] });
+      chibi().addOutlinedMesh(post, new THREE.ConeGeometry(0.64, 0.56, 6), matLeaf, { pos: [0, 2.45, 0] });
+      chibi().addOutlinedMesh(post, new THREE.OctahedronGeometry(0.20, 0), matGold, { pos: [0, 2.86, 0] });
+      group.add(post);
+    });
+    if (badgeText) {
+      const apron = createFloorApronBanner(3.8, badgeText, "#4ade80", "rgba(14, 38, 28, 0.94)");
+      if (apron) {
+        apron.position.set(0, 0.036, -1.65);
+        group.add(apron);
+      }
+    }
+    return group;
+  }
+
+  function updateVillageGateTier(gate, tier) {
+    return chibi().updateVillageGateTier(gate, tier);
   }
 
   function animateVillageGate(gate, underAttack, dt) {
@@ -826,6 +858,8 @@
     createDefenseTurret,
     animateDefenseTurret,
     createVillageGate,
+    createSouthResourceGate,
+    updateVillageGateTier,
     animateVillageGate,
     createCategoryBuilding,
     animateCategoryBuilding,

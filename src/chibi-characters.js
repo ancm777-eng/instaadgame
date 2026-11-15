@@ -1706,14 +1706,16 @@
   }
 
   // ===========================================================================
-  // 10. Single East Entrance Village Gate (🏰 마을 수호 성문 + 3D 내구도 게이지)
+  // 10. Single East Monster Siege Gate (🏰 동쪽 수호 성문 + 3단계 요새 증축 비주얼)
   // ===========================================================================
   function createVillageGate() {
     const root = new THREE.Group();
-    const matStone = makeToonMat(0x6b7494);
-    const matWood = makeToonMat(0x8c562c);
-    const matGold = makeToonMat(0xf5c542, { emissive: 0xd99b00, emissiveIntensity: 0.22 });
-    const matRoof = makeToonMat(0x3b82f6);
+    const matStone = makeToonMat(0x7680a1);
+    const matTrim = makeToonMat(0xb8863b);
+    const matGold = makeToonMat(0xf5c542, { emissive: 0xd99b00, emissiveIntensity: 0.25 });
+    const matMarble = makeToonMat(0xdce3f2);
+    const matRoof = makeToonMat(0x2563eb);
+    const matEmblem = makeToonMat(0x60efff, { emissive: 0x0ea5e9, emissiveIntensity: 0.55 });
     const matShield = new THREE.MeshToonMaterial({
       color: 0x38bdf8,
       emissive: 0x0284c7,
@@ -1722,76 +1724,282 @@
       opacity: 0.34,
     });
 
-    // Twin Flanking Gate Bastion Towers at z = -4.2 and z = +4.2
-    [-4.2, 4.2].forEach((tz) => {
+    // Twin Stepped Octagonal Citadel Bastion Towers at z = -4.2 and z = +4.2
+    const sideSign = [-1, 1];
+    sideSign.forEach((sz) => {
       const tower = new THREE.Group();
-      tower.position.set(0, 0, tz);
+      tower.position.set(0, 0, sz * 4.2);
+
+      // Stepped octagonal foundation plinths
       addOutlinedMesh(
         tower,
-        cachedGeo("gate_bastion", () => new THREE.BoxGeometry(1.75, 2.25, 1.75)),
+        cachedGeo("gate_plinth_outer", () => new THREE.CylinderGeometry(1.42, 1.56, 0.36, 8)),
         matStone,
-        { pos: [0, 1.12, 0], outlineScale: 1.04 }
+        { pos: [0, 0.18, 0], outlineScale: 1.03 }
       );
       addOutlinedMesh(
         tower,
-        cachedGeo("gate_cap", () => new THREE.ConeGeometry(1.38, 1.1, 4)),
+        cachedGeo("gate_plinth_mid", () => new THREE.CylinderGeometry(1.22, 1.32, 0.32, 8)),
+        matMarble,
+        { pos: [0, 0.52, 0], outlineScale: 1.03 }
+      );
+      // Tall octagonal tower shaft
+      addOutlinedMesh(
+        tower,
+        cachedGeo("gate_tower_shaft", () => new THREE.CylinderGeometry(1.04, 1.18, 2.05, 8)),
+        matStone,
+        { pos: [0, 1.65, 0], outlineScale: 1.04 }
+      );
+      // Corbelled stone ring + golden belt trim
+      addOutlinedMesh(
+        tower,
+        cachedGeo("gate_corbel_ring", () => new THREE.CylinderGeometry(1.22, 1.06, 0.34, 8)),
+        matStone,
+        { pos: [0, 2.75, 0], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        tower,
+        cachedGeo("gate_gold_belt", () => new THREE.CylinderGeometry(1.13, 1.13, 0.14, 8)),
+        matGold,
+        { pos: [0, 1.65, 0], outline: false }
+      );
+      // Crenellated battlements around the corbel top
+      for (let i = 0; i < 6; i++) {
+        const ang = (i / 6) * Math.PI * 2;
+        addOutlinedMesh(
+          tower,
+          cachedGeo("gate_merlon", () => new THREE.BoxGeometry(0.30, 0.28, 0.30)),
+          matStone,
+          { pos: [Math.cos(ang) * 0.96, 3.04, Math.sin(ang) * 0.96], rot: [0, -ang, 0], outlineScale: 1.04 }
+        );
+      }
+      // Faceted royal spire roof + crown finial
+      addOutlinedMesh(
+        tower,
+        cachedGeo("gate_spire_roof", () => new THREE.ConeGeometry(1.28, 1.35, 8)),
         matRoof,
-        { pos: [0, 2.75, 0], rot: [0, Math.PI * 0.25, 0], outlineScale: 1.05 }
+        { pos: [0, 3.60, 0], outlineScale: 1.04 }
       );
       addOutlinedMesh(
         tower,
-        cachedGeo("gate_lantern", () => new THREE.OctahedronGeometry(0.26, 0)),
-        makeToonMat(0x60efff, { emissive: 0x22d3ee, emissiveIntensity: 0.5 }),
-        { pos: [0.95, 1.95, 0], outlineScale: 1.06 }
+        cachedGeo("gate_finial_orb", () => new THREE.SphereGeometry(0.18, 8, 8)),
+        matGold,
+        { pos: [0, 4.30, 0], outlineScale: 1.06 }
       );
+      addOutlinedMesh(
+        tower,
+        cachedGeo("gate_finial_tip", () => new THREE.ConeGeometry(0.10, 0.42, 6)),
+        matGold,
+        { pos: [0, 4.58, 0], outline: false }
+      );
+      // Twin front & rear crystal sconces
+      [-0.98, 0.98].forEach((sx) => {
+        addOutlinedMesh(
+          tower,
+          cachedGeo("gate_lantern", () => new THREE.OctahedronGeometry(0.22, 0)),
+          matEmblem,
+          { pos: [sx, 2.05, 0], outlineScale: 1.06 }
+        );
+      });
       root.add(tower);
     });
 
-    // Reinforced Golden Rune Threshold across z in [-3.6, +3.6]
+    // Fluted Marble Inner Gate Columns (z = -3.15, +3.15)
+    [-3.15, 3.15].forEach((cz) => {
+      addOutlinedMesh(
+        root,
+        cachedGeo("gate_inner_col", () => new THREE.CylinderGeometry(0.30, 0.36, 2.55, 8)),
+        matMarble,
+        { pos: [0, 1.28, cz], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        root,
+        cachedGeo("gate_inner_cap", () => new THREE.BoxGeometry(0.76, 0.24, 0.76)),
+        matGold,
+        { pos: [0, 2.60, cz], outlineScale: 1.04 }
+      );
+    });
+
+    // Reinforced Stone & Golden Rune Threshold across z in [-3.8, +3.8]
     addOutlinedMesh(
       root,
-      cachedGeo("gate_sill", () => new THREE.BoxGeometry(1.15, 0.14, 7.6)),
-      matWood,
+      cachedGeo("gate_sill", () => new THREE.BoxGeometry(1.45, 0.14, 7.6)),
+      matTrim,
       { pos: [0, 0.07, 0], outlineScale: 1.03 }
     );
     addOutlinedMesh(
       root,
-      cachedGeo("gate_rune_bar", () => new THREE.BoxGeometry(0.32, 0.18, 7.2)),
+      cachedGeo("gate_rune_bar", () => new THREE.BoxGeometry(0.36, 0.18, 6.8)),
       matGold,
       { pos: [0.35, 0.10, 0], outline: false }
     );
 
-    // Translucent Arcane Barrier Bars (Blocks monsters outside while letting hero pass freely)
-    const barrierMesh = new THREE.Mesh(
-      cachedGeo("gate_barrier", () => new THREE.BoxGeometry(0.18, 1.65, 7.1)),
-      matShield
-    );
-    barrierMesh.position.set(0.2, 0.92, 0);
-    root.add(barrierMesh);
-
-    // Thin Overhead Arch Beam + Large 3D Gate Durability Bar
+    // Arched Crenelated Royal Bridge & Heraldic Crest across Top
     addOutlinedMesh(
       root,
-      cachedGeo("gate_arch", () => new THREE.BoxGeometry(0.65, 0.36, 8.6)),
-      matWood,
-      { pos: [0, 2.65, 0], outlineScale: 1.03 }
+      cachedGeo("gate_arch_beam", () => new THREE.BoxGeometry(1.02, 0.48, 8.2)),
+      matStone,
+      { pos: [0, 2.86, 0], outlineScale: 1.03 }
     );
+    addOutlinedMesh(
+      root,
+      cachedGeo("gate_arch_cornice", () => new THREE.BoxGeometry(1.16, 0.16, 8.4)),
+      matMarble,
+      { pos: [0, 3.15, 0], outlineScale: 1.03 }
+    );
+    [-2.8, -1.7, -0.7, 0.7, 1.7, 2.8].forEach((mz) => {
+      addOutlinedMesh(
+        root,
+        cachedGeo("gate_bridge_merlon", () => new THREE.BoxGeometry(0.36, 0.26, 0.44)),
+        matStone,
+        { pos: [0, 3.34, mz], outlineScale: 1.04 }
+      );
+    });
+    // Central Heraldic Shield Medallion (visible from both village and battlefield sides)
+    addOutlinedMesh(
+      root,
+      cachedGeo("gate_crest_frame", () => new THREE.BoxGeometry(1.32, 0.76, 1.15)),
+      matGold,
+      { pos: [0, 2.96, 0], outlineScale: 1.04 }
+    );
+    [-0.68, 0.68].forEach((cx) => {
+      addOutlinedMesh(
+        root,
+        cachedGeo("gate_crest_gem", () => new THREE.OctahedronGeometry(0.28, 0)),
+        matEmblem,
+        { pos: [cx, 2.96, 0], outlineScale: 1.06 }
+      );
+    });
 
+    // Translucent Arcane Barrier Bars (Blocks monsters outside while letting hero pass freely)
+    const barrierMesh = new THREE.Mesh(
+      cachedGeo("gate_barrier", () => new THREE.BoxGeometry(0.18, 2.25, 6.4)),
+      matShield
+    );
+    barrierMesh.position.set(0.2, 1.24, 0);
+    root.add(barrierMesh);
+
+    // -----------------------------------------------------------------------
+    // 3-Stage Upgrade Subgroups (Lv.1 -> Lv.2 -> Lv.3 Visual Evolution)
+    // -----------------------------------------------------------------------
+    const tier1Group = new THREE.Group();
+    tier1Group.visible = false;
+    const matIronRune = makeToonMat(0x38bdf8, { emissive: 0x0ea5e9, emissiveIntensity: 0.6 });
+    const matBronzeArmor = makeToonMat(0xd99b26);
+    [-4.2, 4.2].forEach((tz) => {
+      addOutlinedMesh(
+        tier1Group,
+        cachedGeo("gate_t1_armor_collar", () => new THREE.CylinderGeometry(1.34, 1.46, 0.48, 8)),
+        matBronzeArmor,
+        { pos: [0, 0.96, tz], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        tier1Group,
+        cachedGeo("gate_t1_rune_ring", () => new THREE.CylinderGeometry(1.26, 1.26, 0.14, 8)),
+        matIronRune,
+        { pos: [0, 2.45, tz], outline: false }
+      );
+    });
+    [-3.15, 3.15].forEach((cz) => {
+      addOutlinedMesh(
+        tier1Group,
+        cachedGeo("gate_t1_col_rune", () => new THREE.BoxGeometry(0.70, 1.85, 0.14)),
+        matIronRune,
+        { pos: [0, 1.35, cz], outline: false }
+      );
+    });
+    root.add(tier1Group);
+
+    const tier2Group = new THREE.Group();
+    tier2Group.visible = false;
+    const matEmerald = makeToonMat(0x10b981, { emissive: 0x059669, emissiveIntensity: 0.65 });
+    const tier2Crystals = [];
+    [-4.2, 4.2].forEach((tz) => {
+      const crys = addOutlinedMesh(
+        tier2Group,
+        cachedGeo("gate_t2_crystal", () => new THREE.OctahedronGeometry(0.42, 0)),
+        matEmerald,
+        { pos: [0, 5.15, tz], outlineScale: 1.06 }
+      );
+      tier2Crystals.push(crys);
+      // Flanking emerald buttress fins
+      addOutlinedMesh(
+        tier2Group,
+        cachedGeo("gate_t2_buttress", () => new THREE.BoxGeometry(1.85, 1.55, 0.34)),
+        matBronzeArmor,
+        { pos: [0, 0.85, tz + (tz < 0 ? -1.18 : 1.18)], outlineScale: 1.04 }
+      );
+    });
+    // Upper golden crown truss over central arch
+    addOutlinedMesh(
+      tier2Group,
+      cachedGeo("gate_t2_arch_truss", () => new THREE.BoxGeometry(0.68, 0.32, 4.8)),
+      matGold,
+      { pos: [0, 3.60, 0], outlineScale: 1.04 }
+    );
+    root.add(tier2Group);
+
+    const tier3Group = new THREE.Group();
+    tier3Group.visible = false;
+    const matHolySun = makeToonMat(0xfde047, { emissive: 0xf59e0b, emissiveIntensity: 0.85 });
+    const haloPivot = new THREE.Group();
+    haloPivot.position.set(0, 4.55, 0);
+    // Radiant sacred royal sigil above central bridge
+    addOutlinedMesh(
+      haloPivot,
+      cachedGeo("gate_t3_halo_core", () => new THREE.OctahedronGeometry(0.48, 0)),
+      matHolySun,
+      { pos: [0, 0, 0], outlineScale: 1.07 }
+    );
+    [0, Math.PI * 0.25, Math.PI * 0.5, Math.PI * 0.75].forEach((ang) => {
+      addOutlinedMesh(
+        haloPivot,
+        cachedGeo("gate_t3_ray", () => new THREE.BoxGeometry(0.14, 1.35, 0.14)),
+        matGold,
+        { pos: [0, 0, 0], rot: [ang, 0, 0], outline: false }
+      );
+    });
+    tier3Group.add(haloPivot);
+    // Imperial side guardian spires at z = -5.6 and +5.6
+    [-5.6, 5.6].forEach((sz) => {
+      addOutlinedMesh(
+        tier3Group,
+        cachedGeo("gate_t3_pillar", () => new THREE.CylinderGeometry(0.42, 0.58, 2.35, 6)),
+        matMarble,
+        { pos: [0, 1.18, sz], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        tier3Group,
+        cachedGeo("gate_t3_spire", () => new THREE.ConeGeometry(0.56, 0.95, 6)),
+        matGold,
+        { pos: [0, 2.80, sz], outlineScale: 1.05 }
+      );
+      addOutlinedMesh(
+        tier3Group,
+        cachedGeo("gate_t3_orb", () => new THREE.OctahedronGeometry(0.28, 0)),
+        matHolySun,
+        { pos: [0, 3.55, sz], outlineScale: 1.06 }
+      );
+    });
+    root.add(tier3Group);
+
+    // Large High-Contrast 3D Gate Durability Bar perched high & clear of crowns
     const hpBarGroup = new THREE.Group();
-    hpBarGroup.position.set(0, 3.35, 0);
+    hpBarGroup.position.set(0, 5.45, 0);
+    hpBarGroup.rotation.y = Math.PI * 0.5;
     const barBg = new THREE.Mesh(
-      cachedGeo("gate_hp_bg", () => new THREE.BoxGeometry(0.28, 0.34, 5.2)),
+      cachedGeo("gate_hp_bg", () => new THREE.BoxGeometry(5.4, 0.24, 0.36)),
       new THREE.MeshBasicMaterial({ color: 0x1e132e })
     );
     hpBarGroup.add(barBg);
 
     const hpFillPivot = new THREE.Group();
-    hpFillPivot.position.set(0, 0, -2.5);
+    hpFillPivot.position.set(-2.6, 0.08, 0);
     const barFg = new THREE.Mesh(
-      cachedGeo("gate_hp_fg", () => new THREE.BoxGeometry(0.34, 0.22, 5.0)),
+      cachedGeo("gate_hp_fg", () => new THREE.BoxGeometry(5.2, 0.24, 0.44)),
       new THREE.MeshBasicMaterial({ color: 0x4ade80 })
     );
-    barFg.position.set(0, 0, 2.5);
+    barFg.position.set(2.6, 0, 0);
     hpFillPivot.add(barFg);
     hpBarGroup.add(hpFillPivot);
     root.add(hpBarGroup);
@@ -1802,15 +2010,70 @@
       barrierMat: matShield,
       hpFillPivot,
       hpFgMesh: barFg,
+      matStone,
+      matRoof,
+      matTrim,
+      matEmblem,
+      tier1Group,
+      tier2Group,
+      tier3Group,
+      tier2Crystals,
+      haloPivot,
+      tier: 0,
       _phase: 0,
     };
   }
 
+  function updateVillageGateTier(gate, tier = 0) {
+    if (!gate) return;
+    const t = Math.max(0, Math.min(3, Math.floor(Number(tier) || 0)));
+    gate.tier = t;
+    if (gate.tier1Group) gate.tier1Group.visible = t >= 1;
+    if (gate.tier2Group) gate.tier2Group.visible = t >= 2;
+    if (gate.tier3Group) gate.tier3Group.visible = t >= 3;
+
+    if (gate.matStone && gate.matRoof && gate.matEmblem && gate.barrierMat) {
+      if (t === 0) {
+        gate.matStone.color.setHex(0x7680a1);
+        gate.matRoof.color.setHex(0x2563eb);
+        gate.matEmblem.color.setHex(0x60efff);
+        gate.barrierMat.color.setHex(0x38bdf8);
+      } else if (t === 1) {
+        gate.matStone.color.setHex(0x647096);
+        gate.matRoof.color.setHex(0x1d4ed8);
+        gate.matEmblem.color.setHex(0x38bdf8);
+        gate.barrierMat.color.setHex(0x22d3ee);
+      } else if (t === 2) {
+        gate.matStone.color.setHex(0x95a4c8);
+        gate.matRoof.color.setHex(0x059669);
+        gate.matEmblem.color.setHex(0x34d399);
+        gate.barrierMat.color.setHex(0x34d399);
+      } else {
+        gate.matStone.color.setHex(0xe2e8f6);
+        gate.matRoof.color.setHex(0xd97706);
+        gate.matEmblem.color.setHex(0xfde047);
+        gate.barrierMat.color.setHex(0xfacc15);
+      }
+    }
+  }
+
   function animateVillageGate(gate, underAttack, dt) {
     if (!gate) return;
-    gate._phase = (gate._phase || 0) + (dt || 0.016) * (underAttack ? 7.0 : 2.5);
+    const d = dt || 0.016;
+    gate._phase = (gate._phase || 0) + d * (underAttack ? 7.0 : 2.5);
     if (gate.barrierMat) {
-      gate.barrierMat.opacity = (underAttack ? 0.42 : 0.26) + Math.sin(gate._phase) * 0.08;
+      gate.barrierMat.opacity = (underAttack ? 0.42 : 0.24) + Math.sin(gate._phase) * 0.08;
+    }
+    if (gate.tier >= 2 && gate.tier2Crystals) {
+      gate.tier2Crystals.forEach((crys, idx) => {
+        crys.rotation.y += d * 1.8;
+        crys.position.y = 5.15 + Math.sin(gate._phase + idx * 1.5) * 0.14;
+      });
+    }
+    if (gate.tier >= 3 && gate.haloPivot) {
+      gate.haloPivot.rotation.y += d * 1.4;
+      gate.haloPivot.rotation.x = Math.sin(gate._phase * 0.6) * 0.18;
+      gate.haloPivot.position.y = 4.55 + Math.sin(gate._phase) * 0.12;
     }
   }
 
@@ -1971,6 +2234,7 @@
     createDefenseTurret,
     animateDefenseTurret,
     createVillageGate,
+    updateVillageGateTier,
     animateVillageGate,
     createCategoryBuilding,
     animateCategoryBuilding,
