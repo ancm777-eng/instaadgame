@@ -95,15 +95,16 @@
 
   <!-- Top-Center Wave Countdown HUD -->
   <div id="wave-hud" class="wave-hud">
-    <span class="wave-badge" id="ui-wave-badge">🌊 WAVE 1 / 10</span>
-    <span class="wave-timer num" id="ui-wave-timer">첫 웨이브 05:00</span>
+    <span class="wave-badge" id="ui-wave-badge">🌊 WAVE 1 / 20</span>
+    <span class="wave-timer num" id="ui-wave-timer">첫 웨이브 10:00</span>
     <span class="wave-monsters num" id="ui-wave-monsters">평화 준비 중</span>
+    <span class="wave-exp-badge" id="ui-wave-expansion">🗺️ 다음 확장: Wave 6 (정령 공학 지구)</span>
     <button class="fairy-btn wave-now-btn" id="btn-wave-now" title="다음 웨이브 즉시 시작">⚔️ 즉시 시작</button>
   </div>
 
   <!-- Mission Objective Purpose Banner -->
   <div id="mission-banner" class="mission-banner">
-    🎯 목표: 남쪽 광석 채집 → 💵 캐시로 연구소·시설 건설 → 🔮 차원 에너지로 기술·광역 스킬 개발 후 동쪽 성문 60마리 웨이브를 막으세요!
+    🎯 목표: 남쪽 계곡 채집 → 4대 연구소 &amp; 1~9호기 자동화 성장 → 10분 뒤 20웨이브 대침공으로부터 성문을 지키며 5웨이브마다 영토를 확장하세요!
   </div>
 
   <!-- Giant Playable-Ad Objective Guide Banner -->
@@ -175,7 +176,8 @@
       <div class="sheet-header">
         <div>
           <h2 id="ui-shop-title">✨ 연금술 공방 & 원소 디펜스 연구소</h2>
-          <p class="sheet-sub" id="ui-shop-stats">이동 100% · 요정 0/15 · WAVE 1/10 · 60 FPS</p>
+          <p class="sheet-sub" id="ui-shop-stats">이동 100% · 요정 0/20 · WAVE 1/20 · 60 FPS</p>
+          <p class="sheet-sub" id="ui-shop-era" style="color:#fbbf24;font-weight:700;">🗺️ Era 1 · 기본 공방 타운 (상한 Lv.5)</p>
         </div>
         <div class="sheet-header-right">
           <span class="modal-dim-chip num" id="ui-shop-dim">🔮 25 · 💠 0 · 🌟 0</span>
@@ -196,31 +198,31 @@
   <!-- Opening Mission Briefing Overlay -->
   <div id="opening-modal" class="modal-backdrop open">
     <div class="glass-panel opening-card">
-      <div class="opening-badge">✨ 왕립 연금술사 &amp; 요새 디펜스 ✨</div>
-      <h1 class="opening-title">🏰 동쪽 성문을 지킬 전설의 연금술사여, 깨어나라!</h1>
+      <div class="opening-badge">✨ 왕립 연금술사 &amp; 대영토 공장 디펜스 (v10) ✨</div>
+      <h1 class="opening-title">🏰 20웨이브 대성채를 세울 전설의 연금술사여, 깨어나라!</h1>
       <p class="opening-lead">
-        남쪽 계곡의 <b>푸른 광석</b>을 캐 <b>💵 캐시</b>를 모아 공방과 <b>3단계 연금술 연구소</b>를 세우고,
-        연성한 <b>1~3차 차원 에너지(🔮/💠/🌟)</b>로 강력한 광역 원소 스킬과 요새를 개발해
-        <b>5단계(숲속 동물→좀비→뱀파이어→늑대인간→악마)</b> 60마리 웨이브로부터 성문을 지켜내세요!
+        남쪽 계곡(Zone 1~10)에서 자원을 채집해 <b>4대 연금술 연구소(1~12단계)</b>와 <b>1~9호기 자동화 공장</b>을 세우고,
+        <b>5웨이브 주기(Wave 6·11·16)</b> 영토 대확장(<b>정령 공학·번개 제련·황금 대성채</b>)을 통해 <b>Lv.20 대현자 오라</b>와
+        열기구·장갑열차·황금 비공정을 해금해 <b>총 20웨이브</b>로부터 동쪽 성문을 수호하세요! (첫 웨이브 10분 뒤 시작)
       </p>
       <div class="opening-steps">
         <div class="opening-step">
-          <div class="os-num">STEP 1 · 💵 캐시</div>
-          <div class="os-title">⛏️ 남쪽 광산 채굴 &amp; 시설 건설</div>
-          <div class="os-desc">남쪽 출입구에서 푸른 광석을 캐 교역소에 팔고, 캐시로 1~3호기·요정·1단계 연구소를 건설하세요.</div>
+          <div class="os-num">STEP 1 · 10분 평화 준비</div>
+          <div class="os-title">⛏️ 남쪽 채집 &amp; Lv.20 마일스톤</div>
+          <div class="os-desc">광석·약초로 1~3호기와 제1연구소를 짓고 Lv.5/10/15/20 마일스톤 패시브를 해금하세요.</div>
         </div>
         <div class="opening-step">
-          <div class="os-num">STEP 2 · 🔮💠🌟 에너지</div>
-          <div class="os-title">🔮 연금술 연구소(1~3단계) 연성</div>
-          <div class="os-desc">중앙 광장의 연구소에 광석을 넣으면 1차(🔮)·2차(💠)·3차(🌟) 차원 에너지가 생산됩니다.</div>
+          <div class="os-num">STEP 2 · 5웨이브 영토 확장</div>
+          <div class="os-title">🗺️ 4대 연구소 &amp; 4~9호기·탈것</div>
+          <div class="os-desc">Wave 6·11·16 클리어마다 북쪽 성벽이 개방되어 자동 컨베이어·열기구·장갑열차·비공정이 출항합니다!</div>
         </div>
         <div class="opening-step">
-          <div class="os-num">STEP 3 · 🌊 60마리 호드</div>
-          <div class="os-title">⚡ 광역 스킬 개발 &amp; 성문 방어</div>
-          <div class="os-desc">차원 에너지로 포탑·3단 성문·원소 스킬(★1~★5)을 강화해 10초마다 10마리씩 몰려오는 적을 섬멸하세요!</div>
+          <div class="os-num">STEP 3 · 🌊 WAVE 1~20</div>
+          <div class="os-title">⚡ 스킬 Lv.20 &amp; 60마리 호드</div>
+          <div class="os-desc">숲동물→좀비→뱀파이어→늑대인간→지옥 악마까지 총 20웨이브 공세로부터 동쪽 성문을 수호하세요!</div>
         </div>
       </div>
-      <button class="opening-start-btn" id="btn-start-mission" type="button">🚀 연금술 공방 &amp; 수호 작전 시작!</button>
+      <button class="opening-start-btn" id="btn-start-mission" type="button">🚀 20웨이브 대공방 &amp; 영토 수호 작전 시작!</button>
     </div>
   </div>
 

@@ -947,7 +947,9 @@
     );
 
     // Packed 3D cargo inside the crate by itemType
-    if (isOre) {
+    if (populateV10CrateContents(g, type)) {
+      g.userData.crateType = type;
+    } else if (isOre) {
       // Cobalt/Sapphire Blue Raw Ore Chunks (푸른 원석)
       const matOre1 = makeToonMat(0x2c8dff, { emissive: 0x1565d8, emissiveIntensity: 0.28 });
       const matOre2 = makeToonMat(0x74d2ff, { emissive: 0x35a7ff, emissiveIntensity: 0.34 });
@@ -1161,6 +1163,78 @@
         { rot: [Math.PI * 0.5, 0, 0] }
       );
       visualRoot.add(sawWheel);
+    } else if (kind === "rune_press" || kind === "music_box_assembler" || kind === "core_charger" || kind === "perfume_still" || kind === "stone_reactor" || kind === "airship_dock") {
+      activeGlow = makeToonMat(0xff9f43, { emissive: 0xff6b2b, emissiveIntensity: 0.45 });
+      const v10 = {};
+      if (kind === "rune_press") {
+        addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.3, 0.72, 1.5), makeToonMat(0x4b4453), { pos: [0, 0.56, -0.22], outlineScale: 1.04 });
+        addOutlinedMesh(visualRoot, new THREE.BoxGeometry(0.32, 1.65, 0.34), makeToonMat(0xb93829), { pos: [-0.82, 1.45, -0.22], outlineScale: 1.04 });
+        addOutlinedMesh(visualRoot, new THREE.BoxGeometry(0.32, 1.65, 0.34), makeToonMat(0xb93829), { pos: [0.82, 1.45, -0.22], outlineScale: 1.04 });
+        addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.05, 0.35, 0.52), matGold, { pos: [0, 2.25, -0.22], outlineScale: 1.04 });
+        const pressHammer = new THREE.Group();
+        pressHammer.position.set(0, 1.75, -0.22);
+        addOutlinedMesh(pressHammer, new THREE.CylinderGeometry(0.45, 0.52, 0.48, 8), matGold, { pos: [0, -0.15, 0] });
+        addOutlinedMesh(pressHammer, new THREE.CylinderGeometry(0.28, 0.28, 0.16, 8), activeGlow, { pos: [0, -0.44, 0] });
+        visualRoot.add(pressHammer);
+        v10.pressHammer = pressHammer;
+      } else if (kind === "music_box_assembler") {
+        addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(1.15, 1.25, 0.85, 8), makeToonMat(0x16a085), { pos: [0, 0.65, -0.22], outlineScale: 1.04 });
+        addOutlinedMesh(visualRoot, new THREE.TorusGeometry(1.08, 0.09, 8, 20), matGold, { pos: [0, 1.08, -0.22], rot: [Math.PI * 0.5, 0, 0] });
+        const drum = new THREE.Group();
+        drum.position.set(0, 1.55, -0.22);
+        addOutlinedMesh(drum, new THREE.CylinderGeometry(0.42, 0.42, 0.95, 12), matGold, { rot: [0, 0, Math.PI * 0.5] });
+        addOutlinedMesh(drum, new THREE.OctahedronGeometry(0.32, 0), makeToonMat(0x7ef9ff, { emissive: 0x22d3ee, emissiveIntensity: 0.45 }), { pos: [0, 0.55, 0] });
+        visualRoot.add(drum);
+        const auraRing = new THREE.Mesh(new THREE.RingGeometry(1.9, 2.22, 32), new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.45, side: THREE.DoubleSide }));
+        auraRing.rotation.x = -Math.PI * 0.5;
+        auraRing.position.set(0, 0.08, -0.15);
+        visualRoot.add(auraRing);
+        v10.drumCylinder = drum;
+        v10.auraRing = auraRing;
+      } else if (kind === "core_charger") {
+        activeGlow = makeToonMat(0x38bdf8, { emissive: 0x0ea5e9, emissiveIntensity: 0.55 });
+        addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.35, 0.72, 1.55), makeToonMat(0x2d3a6b), { pos: [0, 0.56, -0.22], outlineScale: 1.04 });
+        for (const sx of [-0.85, 0.85]) {
+          addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.22, 0.28, 1.55, 10), makeToonMat(0xd97706), { pos: [sx, 1.48, -0.22] });
+          addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.26, 10, 10), activeGlow, { pos: [sx, 2.32, -0.22] });
+        }
+        const rings = new THREE.Group();
+        rings.position.set(0, 1.68, -0.22);
+        addOutlinedMesh(rings, new THREE.SphereGeometry(0.32, 12, 12), makeToonMat(0xfacc15, { emissive: 0xf59e0b, emissiveIntensity: 0.55 }));
+        addOutlinedMesh(rings, new THREE.TorusGeometry(0.62, 0.06, 8, 18), activeGlow, { rot: [0.5, 0.3, 0] });
+        addOutlinedMesh(rings, new THREE.TorusGeometry(0.76, 0.06, 8, 18), matGold, { rot: [-0.4, 0.8, 0.4] });
+        visualRoot.add(rings);
+        v10.teslaRings = rings;
+      } else if (kind === "perfume_still") {
+        activeGlow = makeToonMat(0xe879f9, { emissive: 0xc026d3, emissiveIntensity: 0.45 });
+        addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(1.0, 1.25, 0.82, 12), makeToonMat(0x6d4c8c), { pos: [0, 0.62, -0.22], outlineScale: 1.04 });
+        addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.62, 14, 12), activeGlow, { pos: [0, 1.55, -0.22], outlineScale: 1.04 });
+        addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.24, 0.36, 0.72, 10), matGold, { pos: [0, 2.28, -0.22] });
+        turbineMesh = new THREE.Group();
+        turbineMesh.position.set(0, 2.76, -0.22);
+        addOutlinedMesh(turbineMesh, new THREE.TorusGeometry(0.38, 0.09, 8, 14, Math.PI * 1.35), matGold, { rot: [0, 0, 0.4] });
+        visualRoot.add(turbineMesh);
+      } else if (kind === "stone_reactor") {
+        activeGlow = makeToonMat(0xff3b5c, { emissive: 0xe11d48, emissiveIntensity: 0.55 });
+        addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(1.25, 1.45, 0.85, 8), makeToonMat(0x272038), { pos: [0, 0.65, -0.22], outlineScale: 1.04 });
+        addOutlinedMesh(visualRoot, new THREE.TorusGeometry(1.18, 0.12, 8, 18), matGold, { pos: [0, 1.12, -0.22], rot: [Math.PI * 0.5, 0, 0] });
+        const rings = new THREE.Group();
+        rings.position.set(0, 1.95, -0.22);
+        addOutlinedMesh(rings, new THREE.OctahedronGeometry(0.46, 0), activeGlow, { scale: [0.85, 1.25, 0.85] });
+        addOutlinedMesh(rings, new THREE.TorusGeometry(0.78, 0.07, 8, 18), matGold, { rot: [0.7, 0.2, 0] });
+        addOutlinedMesh(rings, new THREE.TorusGeometry(0.95, 0.06, 8, 18), makeToonMat(0xfde047), { rot: [-0.6, 0.7, 0.2] });
+        visualRoot.add(rings);
+        v10.reactorRings = rings;
+      } else {
+        // airship_dock (9호기 하늘 비공정 무역 부두)
+        activeGlow = makeToonMat(0xfbbf24, { emissive: 0xd97706, emissiveIntensity: 0.45 });
+        addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.6, 0.45, 2.0), makeToonMat(0x8d5b34), { pos: [0, 0.42, -0.15], outlineScale: 1.04 });
+        addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.24, 0.34, 2.25, 8), matGold, { pos: [-0.95, 1.45, -0.65] });
+        addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.24, 0.34, 2.25, 8), matGold, { pos: [0.95, 1.45, -0.65] });
+        addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.15, 0.22, 0.32), makeToonMat(0xb45309), { pos: [0, 2.45, -0.65] });
+        addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.28, 10, 10), activeGlow, { pos: [0, 2.78, -0.65] });
+      }
+      visualRoot.userData.v10Refs = v10;
     } else {
       // Stage 2C: Rainbow Elixir Distillery (무지개 엘릭서 증류기 5x)
       addOutlinedMesh(
@@ -1218,6 +1292,7 @@
       turbineMesh,
       bubbles,
       activeGlow,
+      v10Refs: visualRoot.userData.v10Refs || null,
       _beltPhase: 0,
     };
   }
@@ -1227,6 +1302,29 @@
     const step = dt || 0.016;
     const speed = processing ? 1.85 : 0.35;
     machine._beltPhase = (machine._beltPhase || 0) + step * speed;
+
+    if (machine.v10Refs) {
+      const refs = machine.v10Refs;
+      if (refs.pressHammer) {
+        const beat = Math.abs(Math.sin(machine._beltPhase * (processing ? 3.2 : 0.9)));
+        refs.pressHammer.position.y = 1.48 + beat * 0.42;
+      }
+      if (refs.drumCylinder) {
+        refs.drumCylinder.rotation.y += step * (processing ? 3.8 : 0.9);
+      }
+      if (refs.auraRing) {
+        const sc = 0.96 + Math.sin(machine._beltPhase * 2.4) * 0.06;
+        refs.auraRing.scale.set(sc, sc, 1);
+      }
+      if (refs.teslaRings) {
+        refs.teslaRings.rotation.y += step * (processing ? 4.4 : 1.1);
+        refs.teslaRings.rotation.x += step * (processing ? 1.8 : 0.4);
+      }
+      if (refs.reactorRings) {
+        refs.reactorRings.rotation.y -= step * (processing ? 3.9 : 1.0);
+        refs.reactorRings.rotation.z += step * (processing ? 1.4 : 0.35);
+      }
+    }
 
     if (machine.conveyorSlats && machine.conveyorSlats.length) {
       for (let i = 0; i < machine.conveyorSlats.length; i++) {
@@ -2259,8 +2357,8 @@
       matStone,
       { pos: [0, 0.12, 0], outlineScale: 1.03 }
     );
-    const spokeX = cachedGeo("hub_spoke_x", () => new THREE.BoxGeometry(5.6, 0.05, 0.85));
-    const spokeZ = cachedGeo("hub_spoke_z", () => new THREE.BoxGeometry(0.85, 0.05, 5.6));
+    const spokeX = cachedGeo("hub_spoke_x", () => new THREE.BoxGeometry(8.4, 0.05, 0.85));
+    const spokeZ = cachedGeo("hub_spoke_z", () => new THREE.BoxGeometry(0.85, 0.05, 8.4));
     const matPath = makeToonMat(0xe5d3b3);
     const meshSpokeX = new THREE.Mesh(spokeX, matPath);
     meshSpokeX.position.set(0, 0.03, 0);
@@ -2436,6 +2534,8 @@
         labTier: 0,
         _phase: 0,
       };
+    } else if (kind === "alchemy_lab_2" || kind === "alchemy_lab_3" || kind === "alchemy_lab_4") {
+      return buildExtendedAlchemyLab(root, kind, matGold);
     } else {
       // 🛡️ Defense Tech Research Lab (디펜스 기술 연구소)
       addOutlinedMesh(
@@ -2465,7 +2565,7 @@
   }
 
   function updateAlchemyLabTier(lab, tier = 0) {
-    if (!lab || lab.kind !== "alchemy_lab") return;
+    if (!lab || !String(lab.kind || "").startsWith("alchemy_lab")) return;
     const t = Math.max(0, Math.min(3, Math.floor(Number(tier) || 0)));
     lab.labTier = t;
     if (lab.blueprintOrb) lab.blueprintOrb.visible = t === 0;
@@ -2491,6 +2591,221 @@
     }
   }
 
+  function populateV10CrateContents(group, type) {
+    const matGold = makeToonMat(0xf5c842);
+    const crates = {
+      fire_mana_stone: () => {
+        const m = makeToonMat(0xff6b35, { emissive: 0xe63946, emissiveIntensity: 0.42 });
+        for (let i = 0; i < 4; i++) addOutlinedMesh(group, new THREE.DodecahedronGeometry(0.14, 0), m, { pos: [-0.26 + i * 0.17, 0.16, (i % 2 - 0.5) * 0.18], rot: [0.3 * i, 0.5 * i, 0] });
+      },
+      spirit_dew: () => {
+        const m = makeToonMat(0x5eead4, { emissive: 0x06b6d4, emissiveIntensity: 0.38 });
+        for (let i = 0; i < 3; i++) addOutlinedMesh(group, new THREE.SphereGeometry(0.13, 10, 10), m, { pos: [-0.22 + i * 0.22, 0.15, (i % 2 - 0.5) * 0.14], scale: [1, 1.25, 1] });
+      },
+      lightning_crystal: () => {
+        const m = makeToonMat(0xfef08a, { emissive: 0xfacc15, emissiveIntensity: 0.5 });
+        for (let i = 0; i < 4; i++) addOutlinedMesh(group, new THREE.OctahedronGeometry(0.13, 0), m, { pos: [-0.26 + i * 0.17, 0.17, (i % 2 - 0.5) * 0.16], scale: [0.65, 1.45, 0.65] });
+      },
+      moon_mushroom: () => {
+        const capM = makeToonMat(0x8b5cf6, { emissive: 0x6d28d9, emissiveIntensity: 0.35 });
+        const stemM = makeToonMat(0xfef3c7);
+        for (let i = 0; i < 3; i++) {
+          const x = -0.22 + i * 0.22;
+          addOutlinedMesh(group, new THREE.CylinderGeometry(0.05, 0.06, 0.12, 8), stemM, { pos: [x, 0.12, 0] });
+          addOutlinedMesh(group, new THREE.SphereGeometry(0.13, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), capM, { pos: [x, 0.17, 0] });
+        }
+      },
+      star_meteorite: () => {
+        const m = makeToonMat(0x312e81, { emissive: 0xfbbf24, emissiveIntensity: 0.35 });
+        for (let i = 0; i < 3; i++) addOutlinedMesh(group, new THREE.IcosahedronGeometry(0.15, 0), i === 1 ? matGold : m, { pos: [-0.22 + i * 0.22, 0.16, 0] });
+      },
+      dragon_scale_flower: () => {
+        const m = makeToonMat(0xf43f5e, { emissive: 0xe11d48, emissiveIntensity: 0.35 });
+        for (let i = 0; i < 3; i++) addOutlinedMesh(group, new THREE.ConeGeometry(0.14, 0.2, 6), m, { pos: [-0.22 + i * 0.22, 0.15, 0], rot: [Math.PI, i * 0.4, 0] });
+      },
+      fire_runestone: () => {
+        const m = makeToonMat(0x2c2538);
+        const seal = makeToonMat(0xff6b2b, { emissive: 0xff4500, emissiveIntensity: 0.55 });
+        addOutlinedMesh(group, new THREE.BoxGeometry(0.62, 0.12, 0.42), m, { pos: [0, 0.14, 0] });
+        addOutlinedMesh(group, new THREE.OctahedronGeometry(0.11, 0), seal, { pos: [0, 0.22, 0], scale: [1.3, 0.4, 1.3] });
+      },
+      spirit_music_box: () => {
+        addOutlinedMesh(group, new THREE.BoxGeometry(0.48, 0.16, 0.34), makeToonMat(0x0d9488), { pos: [0, 0.16, 0] });
+        addOutlinedMesh(group, new THREE.SphereGeometry(0.11, 10, 10), matGold, { pos: [0, 0.28, 0] });
+      },
+      arcane_core: () => {
+        const m = makeToonMat(0x38bdf8, { emissive: 0x0284c7, emissiveIntensity: 0.5 });
+        addOutlinedMesh(group, new THREE.SphereGeometry(0.16, 12, 12), m, { pos: [0, 0.2, 0] });
+        addOutlinedMesh(group, new THREE.TorusGeometry(0.24, 0.04, 6, 14), matGold, { pos: [0, 0.2, 0], rot: [Math.PI * 0.45, 0.3, 0] });
+      },
+      moon_perfume: () => {
+        const m = makeToonMat(0xe879f9, { emissive: 0xc026d3, emissiveIntensity: 0.4 });
+        for (const sx of [-0.18, 0.18]) {
+          addOutlinedMesh(group, new THREE.CylinderGeometry(0.11, 0.13, 0.18, 10), m, { pos: [sx, 0.17, 0] });
+          addOutlinedMesh(group, new THREE.SphereGeometry(0.06, 8, 8), matGold, { pos: [sx, 0.29, 0] });
+        }
+      },
+      philosopher_stone: () => {
+        const ruby = makeToonMat(0xff1e56, { emissive: 0xe11d48, emissiveIntensity: 0.6 });
+        addOutlinedMesh(group, new THREE.CylinderGeometry(0.28, 0.34, 0.08, 8), matGold, { pos: [0, 0.12, 0] });
+        addOutlinedMesh(group, new THREE.OctahedronGeometry(0.2, 0), ruby, { pos: [0, 0.28, 0], scale: [1, 1.3, 1] });
+      },
+    };
+    const fn = crates[type];
+    if (!fn) return false;
+    fn();
+    return true;
+  }
+
+  function buildExtendedAlchemyLab(root, kind, matGold) {
+    const colorMap = {
+      alchemy_lab_2: { body: 0x0f766e, trim: 0x38bdf8, orb: 0x22d3ee },
+      alchemy_lab_3: { body: 0x5b21b6, trim: 0xe879f9, orb: 0xd946ef },
+      alchemy_lab_4: { body: 0xf8fafc, trim: 0xff4d6d, orb: 0xfacc15 },
+    };
+    const pal = colorMap[kind] || colorMap.alchemy_lab_2;
+    const matTrim = makeToonMat(pal.trim, { emissive: pal.trim, emissiveIntensity: 0.3 });
+    const blueprintOrb = addOutlinedMesh(root, new THREE.SphereGeometry(0.45, 12, 10), makeToonMat(pal.orb, { transparent: true, opacity: 0.65 }), { pos: [0, 1.25, 0] });
+
+    const tier1Group = new THREE.Group();
+    addOutlinedMesh(tier1Group, new THREE.CylinderGeometry(1.18, 1.42, 1.15, 8), makeToonMat(pal.body), { pos: [0, 0.78, 0], outlineScale: 1.04 });
+    addOutlinedMesh(tier1Group, new THREE.TorusGeometry(1.06, 0.1, 8, 18), matGold, { pos: [0, 1.38, 0], rot: [Math.PI * 0.5, 0, 0] });
+    tier1Group.visible = false;
+    root.add(tier1Group);
+
+    const tier2Group = new THREE.Group();
+    const roofH = kind === "alchemy_lab_4" ? 1.65 : 1.05;
+    addOutlinedMesh(tier2Group, new THREE.ConeGeometry(1.12, roofH, 8), matTrim, { pos: [0, 1.45 + roofH * 0.45, 0], outlineScale: 1.04 });
+    for (const sx of [-1.25, 1.25]) addOutlinedMesh(tier2Group, new THREE.CylinderGeometry(0.18, 0.24, 1.45, 8), matGold, { pos: [sx, 0.92, 0] });
+    tier2Group.visible = false;
+    root.add(tier2Group);
+
+    const tier3Group = new THREE.Group();
+    tier3Group.position.set(0, kind === "alchemy_lab_4" ? 3.05 : 2.35, 0);
+    addOutlinedMesh(tier3Group, new THREE.TorusGeometry(0.86, 0.08, 8, 22), matGold, { rot: [Math.PI * 0.35, 0, 0] });
+    addOutlinedMesh(tier3Group, new THREE.TorusGeometry(0.68, 0.06, 8, 20), matTrim, { rot: [-Math.PI * 0.35, 0.5, 0] });
+    tier3Group.visible = false;
+    root.add(tier3Group);
+
+    const accentRotor = new THREE.Group();
+    accentRotor.position.set(0, kind === "alchemy_lab_4" ? 3.25 : 2.55, 0);
+    const rotorCrystal = addOutlinedMesh(accentRotor, new THREE.OctahedronGeometry(0.46, 0), makeToonMat(pal.orb, { emissive: pal.orb, emissiveIntensity: 0.5 }), { scale: [0.85, 1.4, 0.85] });
+    accentRotor.visible = false;
+    root.add(accentRotor);
+
+    return { root, blueprintOrb, tier1Group, tier2Group, tier3Group, accentRotor, rotorCrystal, kind, labTier: 0, _phase: 0 };
+  }
+
+  function createHotAirBalloon() {
+    const root = new THREE.Group();
+    const gondola = new THREE.Group();
+    addOutlinedMesh(gondola, new THREE.BoxGeometry(1.45, 0.72, 1.15), makeToonMat(0x9c6644), { pos: [0, 0.42, 0] });
+    const burner = addOutlinedMesh(gondola, new THREE.SphereGeometry(0.24, 10, 10), makeToonMat(0xff7b00, { emissive: 0xff5400, emissiveIntensity: 0.7 }), { pos: [0, 1.35, 0] });
+    const balloon = new THREE.Group();
+    balloon.position.set(0, 3.05, 0);
+    addOutlinedMesh(balloon, new THREE.SphereGeometry(1.55, 14, 12), makeToonMat(0xff6b6b), { scale: [1, 1.2, 1] });
+    addOutlinedMesh(balloon, new THREE.TorusGeometry(1.54, 0.14, 8, 20), makeToonMat(0xfacc15), { rot: [Math.PI * 0.5, 0, 0] });
+    for (const [rx, rz] of [[-0.55, -0.45], [0.55, -0.45], [-0.55, 0.45], [0.55, 0.45]]) {
+      addOutlinedMesh(gondola, new THREE.CylinderGeometry(0.03, 0.03, 1.65, 6), makeToonMat(0xd4a373), { pos: [rx, 1.5, rz] });
+    }
+    const cargoGroup = new THREE.Group();
+    cargoGroup.position.set(0, 0.85, 0);
+    gondola.add(cargoGroup);
+    root.add(gondola);
+    root.add(balloon);
+    return { root, gondola, balloon, burner, cargoGroup, _phase: 0 };
+  }
+
+  function animateHotAirBalloon(b, dt, moving) {
+    if (!b) return;
+    b._phase = (b._phase || 0) + (dt || 0.016) * (moving ? 3.2 : 1.6);
+    b.root.rotation.z = Math.sin(b._phase * 0.7) * 0.04;
+    if (b.burner) {
+      const s = 0.88 + Math.sin(b._phase * 3.5) * 0.18;
+      b.burner.scale.set(s, s, s);
+    }
+  }
+
+  function createArmoredTrain() {
+    const root = new THREE.Group();
+    const iron = makeToonMat(0x475569);
+    const brass = makeToonMat(0xf59e0b);
+    const engine = new THREE.Group();
+    addOutlinedMesh(engine, new THREE.BoxGeometry(2.4, 1.15, 1.35), iron, { pos: [0.85, 0.85, 0] });
+    addOutlinedMesh(engine, new THREE.CylinderGeometry(0.48, 0.48, 1.45, 12), makeToonMat(0x334155), { pos: [0.65, 1.45, 0], rot: [0, 0, Math.PI * 0.5] });
+    addOutlinedMesh(engine, new THREE.CylinderGeometry(0.22, 0.16, 0.75, 10), brass, { pos: [1.15, 2.05, 0] });
+    addOutlinedMesh(engine, new THREE.ConeGeometry(0.65, 0.85, 4), makeToonMat(0xb91c1c), { pos: [2.25, 0.65, 0], rot: [0, Math.PI * 0.25, -Math.PI * 0.5] });
+    root.add(engine);
+
+    const flatcar = new THREE.Group();
+    flatcar.position.set(-1.9, 0, 0);
+    addOutlinedMesh(flatcar, new THREE.BoxGeometry(2.35, 0.42, 1.38), makeToonMat(0x78350f), { pos: [0, 0.55, 0] });
+    const cargoGroup = new THREE.Group();
+    cargoGroup.position.set(0, 0.8, 0);
+    flatcar.add(cargoGroup);
+    root.add(flatcar);
+
+    const wheels = [];
+    const wGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.16, 12);
+    for (const wx of [-2.55, -1.25, 0.15, 1.45]) {
+      for (const wz of [-0.72, 0.72]) {
+        const w = addOutlinedMesh(root, wGeo, brass, { pos: [wx, 0.32, wz], rot: [Math.PI * 0.5, 0, 0] });
+        wheels.push(w);
+      }
+    }
+    return { root, wheels, cargoGroup, _phase: 0 };
+  }
+
+  function animateArmoredTrain(tr, speed, dt) {
+    if (!tr) return;
+    const s = speed || 0;
+    const d = dt || 0.016;
+    tr._phase = (tr._phase || 0) + d * 4;
+    if (tr.wheels) {
+      for (const w of tr.wheels) w.rotation.z -= d * s * 2.4;
+    }
+    tr.root.position.y = Math.abs(Math.sin(tr._phase)) * (s > 0.2 ? 0.03 : 0.005);
+  }
+
+  function createGoldenAirship() {
+    const root = new THREE.Group();
+    const gold = makeToonMat(0xfbbf24);
+    const royal = makeToonMat(0x312e81);
+    const ivory = makeToonMat(0xfef3c7);
+
+    addOutlinedMesh(root, new THREE.BoxGeometry(2.6, 0.75, 1.55), makeToonMat(0x92400e), { pos: [0, 0.65, 0] });
+    addOutlinedMesh(root, new THREE.ConeGeometry(0.95, 1.35, 6), gold, { pos: [0, 0.65, 1.8], rot: [Math.PI * 0.5, 0, 0] });
+    addOutlinedMesh(root, new THREE.BoxGeometry(2.8, 0.28, 1.75), gold, { pos: [0, 1.05, 0] });
+
+    const gasbag = addOutlinedMesh(root, new THREE.SphereGeometry(1.65, 16, 12), ivory, { pos: [0, 3.35, 0], scale: [0.95, 0.9, 1.9] });
+    addOutlinedMesh(root, new THREE.TorusGeometry(1.52, 0.14, 8, 22), royal, { pos: [0, 3.35, 0] });
+    addOutlinedMesh(root, new THREE.BoxGeometry(0.18, 1.45, 0.95), makeToonMat(0xdc2626), { pos: [0, 3.35, -2.5] });
+
+    const propellers = [];
+    for (const sx of [-1.65, 1.65]) {
+      const p = new THREE.Group();
+      p.position.set(sx, 0.95, -0.35);
+      addOutlinedMesh(p, new THREE.BoxGeometry(0.92, 0.14, 0.12), gold);
+      addOutlinedMesh(p, new THREE.BoxGeometry(0.14, 0.92, 0.12), gold);
+      root.add(p);
+      propellers.push(p);
+    }
+    const cargoGroup = new THREE.Group();
+    cargoGroup.position.set(0, 1.24, 0);
+    root.add(cargoGroup);
+    return { root, gasbag, propellers, cargoGroup, _phase: 0 };
+  }
+
+  function animateGoldenAirship(ship, dt) {
+    if (!ship) return;
+    const d = dt || 0.016;
+    ship._phase = (ship._phase || 0) + d * 2.1;
+    if (ship.propellers) {
+      for (const p of ship.propellers) p.rotation.z += d * 11.0;
+    }
+    ship.root.rotation.z = Math.sin(ship._phase * 0.8) * 0.035;
+  }
+
   window.ChibiCharacters = {
     CRATE_W,
     CRATE_H,
@@ -2511,6 +2826,12 @@
     animateHarvesterTruck,
     createRoyalTradeWagon,
     animateRoyalTradeWagon,
+    createHotAirBalloon,
+    animateHotAirBalloon,
+    createArmoredTrain,
+    animateArmoredTrain,
+    createGoldenAirship,
+    animateGoldenAirship,
     createCuteMonster,
     animateCuteMonster,
     createDefenseTurret,

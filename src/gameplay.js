@@ -1,13 +1,14 @@
 // =============================================================================
-// src/gameplay.js - 48x40m Village, 3-Stage Alchemy Lab & Dimensional Energy,
-// Opening Briefing, Peaceful/Wave BGM, 5-Tier 60-Monster Horde Waves & AoE Skills
+// src/gameplay.js - 20-Wave Territory Expansion, Lv.20 Mastery Milestones,
+// 4 Alchemy Labs, 9 Production Facilities + Vehicles & Overhead Billboard UI
 // =============================================================================
 
 (function () {
   "use strict";
 
-  const SAVE_KEY = "fairy_alchemy_tycoon_v9";
-  const FIRST_WAVE_DELAY = 300; // 5 minutes before Wave 1!
+  const SAVE_KEY = "fairy_alchemy_tycoon_v10";
+  const TOTAL_WAVES = 20;
+  const FIRST_WAVE_DELAY = 600; // 10 minutes before Wave 1!
   const WAVE_INTERVAL = 180; // 3 minutes between subsequent waves
   const WAVE_TOTAL_MONSTERS = 60;
   const WAVE_BATCH_SIZE = 10;
@@ -17,16 +18,89 @@
   const HERO_SPAWN = { x: 0.0, z: 3.5 };
   const ALCHEMY_LAB_POS = { x: -5.5, z: -2.5 };
   const ALCHEMY_LAB_IN_POS = { x: -9.2, z: -2.5 };
-  const ALCHEMY_LAB_PAD_POS = { x: -5.5, z: 1.5 };
+  const ALCHEMY_LAB_PAD_POS = { x: -5.5, z: 2.8 };
   const HERO_ATTACK_RANGE = 8.0;
   const TURRET_ATTACK_RANGE = 9.0;
+
+  const ERA_INFO = {
+    1: { era: 1, maxCap: 5, name: "Era 1 · 기본 공방 타운", nextText: "🗺️ 다음 확장: Wave 6 (정령 공학 지구)" },
+    2: { era: 2, maxCap: 10, name: "Era 2 · 정령 공학 지구", nextText: "🗺️ 다음 확장: Wave 11 (번개 제련 단지)" },
+    3: { era: 3, maxCap: 15, name: "Era 3 · 번개 제련 단지", nextText: "🗺️ 다음 확장: Wave 16 (황금 대성채)" },
+    4: { era: 4, maxCap: 20, name: "Era 4 · 황금 대성채 & 비공정 부두", nextText: "👑 최종 영토 대성채 완전 해금!" },
+  };
+
+  const LAB_CONFIGS = [
+    {
+      id: "alchemy_lab",
+      kind: "alchemy_lab",
+      stateKey: "alchemyLabLv",
+      era: 1,
+      title: "🔮 제1연금술 연구소",
+      inputType: "blue_ore",
+      accent: "#c084fc",
+      pos: ALCHEMY_LAB_POS,
+      inPos: ALCHEMY_LAB_IN_POS,
+      padPos: ALCHEMY_LAB_PAD_POS,
+      inLabel: "◀ 서쪽 · 🔮 광석→에너지",
+    },
+    {
+      id: "alchemy_lab_2",
+      kind: "alchemy_lab_2",
+      stateKey: "alchemyLab2Lv",
+      era: 2,
+      title: "🏭 제2연구소 [물류 공학동]",
+      inputType: "fire_mana_stone",
+      accent: "#38bdf8",
+      pos: { x: -11.8, z: -21.6 },
+      inPos: { x: -15.2, z: -21.6 },
+      padPos: { x: -8.4, z: -21.6 },
+      inLabel: "◀ 화염마나석→차원 에너지",
+    },
+    {
+      id: "alchemy_lab_3",
+      kind: "alchemy_lab_3",
+      stateKey: "alchemyLab3Lv",
+      era: 3,
+      title: "⚡ 제3연구소 [연성 증폭동]",
+      inputType: "lightning_crystal",
+      accent: "#e879f9",
+      pos: { x: 11.8, z: -21.4 },
+      inPos: { x: 14.8, z: -21.4 },
+      padPos: { x: 8.8, z: -21.4 },
+      inLabel: "▶ 번개수정→차원 에너지",
+    },
+    {
+      id: "alchemy_lab_4",
+      kind: "alchemy_lab_4",
+      stateKey: "alchemyLab4Lv",
+      era: 4,
+      title: "👑 제4연구소 [현자의 마탑]",
+      inputType: "star_meteorite",
+      accent: "#facc15",
+      pos: { x: 0.0, z: -38.0 },
+      inPos: { x: -3.8, z: -38.0 },
+      padPos: { x: 0.0, z: -34.2 },
+      inLabel: "◀ 운석→고차원 에너지",
+    },
+  ];
 
   const ITEM_META = {
     blue_ore: { label: "푸른 광석", short: "광석", icon: "⛏️", val: 10 },
     rainbow_herb: { label: "무지개 약초", short: "약초", icon: "🌿", val: 10 },
-    cut_gem: { label: "세공 보석", short: "세공보석", icon: "💠", val: 35 },
-    magic_potion: { label: "마법 포션", short: "포션", icon: "🧪", val: 80 },
-    royal_elixir: { label: "황실 엘릭서", short: "엘릭서", icon: "👑", val: 300 },
+    fire_mana_stone: { label: "화염 마나석", short: "화염석", icon: "🔥", val: 45 },
+    spirit_dew: { label: "정령의 이슬", short: "이슬", icon: "💧", val: 55 },
+    lightning_crystal: { label: "번개 수정", short: "번개석", icon: "⚡", val: 110 },
+    moon_mushroom: { label: "달빛 버섯", short: "버섯", icon: "🍄", val: 140 },
+    star_meteorite: { label: "별똥별 운석", short: "운석", icon: "🌟", val: 350 },
+    dragon_scale_flower: { label: "용의 비늘꽃", short: "비늘꽃", icon: "🌺", val: 420 },
+    cut_gem: { label: "세공 보석", short: "세공보석", icon: "💠", val: 45 },
+    magic_potion: { label: "마법 포션", short: "포션", icon: "🧪", val: 140 },
+    royal_elixir: { label: "황실 엘릭서", short: "엘릭서", icon: "👑", val: 360 },
+    fire_runestone: { label: "화염 룬스톤", short: "룬스톤", icon: "🪨🔥", val: 750 },
+    spirit_music_box: { label: "정령 오르골", short: "오르골", icon: "🎵", val: 1800 },
+    arcane_core: { label: "번개 마도핵", short: "마도핵", icon: "⚡🔮", val: 4500 },
+    moon_perfume: { label: "달빛 향수", short: "향수", icon: "🌺✨", val: 11000 },
+    philosopher_stone: { label: "현자의 돌", short: "현자돌", icon: "💎👑", val: 30000 },
   };
 
   const UPGRADE_DEFS = {
@@ -35,12 +109,12 @@
       tab: "wizard",
       dirLabel: "◀ 서쪽",
       icon: "⛏️",
-      title: "채집 곡괭이",
-      desc: "차원 에너지 기술 개발! 광석·약초 채집 속도와 수확량을 높입니다.",
+      title: "채집 곡괭이 (마일스톤)",
+      desc: "Lv.5 범위확장 · Lv.10 다중채집+자석2배 · Lv.15 30% 2배드롭 · Lv.20 대현자 오라(자동채집+1.5x판매)!",
       accent: "#52efff",
       baseCost: 15,
-      mult: 1.48,
-      maxLv: 8,
+      mult: 1.42,
+      maxLv: 20,
     },
     bag: {
       id: "bag",
@@ -48,11 +122,11 @@
       dirLabel: "▼ 남쪽",
       icon: "🎒",
       title: "배낭 적재",
-      desc: "차원 에너지 기술 개발! 등 뒤 나무 지게에 쌓이는 자원 최대 수를 늘립니다.",
+      desc: "차원 에너지 기술 개발! 등 뒤 지게 적재 칸을 늘립니다(Era별 Lv.5~20 해금).",
       accent: "#ffd24c",
       baseCost: 18,
-      mult: 1.48,
-      maxLv: 8,
+      mult: 1.42,
+      maxLv: 20,
     },
     speed: {
       id: "speed",
@@ -60,47 +134,125 @@
       dirLabel: "▶ 동쪽",
       icon: "👢",
       title: "신속 부츠",
-      desc: "차원 에너지 기술 개발! 연금술사의 이동 속도를 크게 높입니다.",
+      desc: "차원 에너지 기술 개발! 이동 속도를 높입니다(Era별 Lv.5~20 해금).",
       accent: "#7effa2",
       baseCost: 20,
-      mult: 1.5,
-      maxLv: 6,
+      mult: 1.42,
+      maxLv: 20,
     },
     m1: {
       id: "m1",
       tab: "automation",
       dirLabel: "▼ 남쪽",
       icon: "⚙️",
-      title: "1호기 세공기",
-      desc: "광석 전용! 세공 보석(💵 35)을 깎아 쇼케이스에 자동 진열합니다.",
+      title: "1호기 크리스탈 세공기",
+      desc: "광석→세공보석(💵 45) 자동 가공·판매! 제2연구소 시 4호기 자동 연결.",
       accent: "#d67aff",
       baseCost: 50,
-      mult: 1.9,
-      maxLv: 6,
+      mult: 1.85,
+      maxLv: 8,
     },
     m2: {
       id: "m2",
       tab: "automation",
       dirLabel: "▼ 남쪽",
       icon: "⚗️",
-      title: "2호기 가마솥",
-      desc: "남부 자원 계곡 '무지개 약초 숲' 해금! 약초 전용 포션(💵 80)을 자동 판매합니다.",
+      title: "2호기 무지개 포션 양조기",
+      desc: "무지개 약초 해금 & 포션(💵 140) 자동 판매! 제2연구소 시 6호기 자동 연결.",
       accent: "#52ff9b",
       baseCost: 140,
-      mult: 1.9,
-      maxLv: 6,
+      mult: 1.85,
+      maxLv: 8,
     },
     m3: {
       id: "m3",
       tab: "automation",
       dirLabel: "▼ 남쪽",
       icon: "👑",
-      title: "3호기 합체소",
-      desc: "광석+약초 조합! 황실 엘릭서를 VIP 무역 마차(💵 300)로 판매합니다.",
+      title: "3호기 엘릭서 증류솥",
+      desc: "광석+약초→황실 엘릭서(💵 360) · 왕실 무역 마차 납품!",
       accent: "#ff8c42",
       baseCost: 380,
+      mult: 1.85,
+      maxLv: 8,
+    },
+    m4: {
+      id: "m4",
+      tab: "automation",
+      dirLabel: "▲ 북쪽",
+      icon: "🎈",
+      title: "4호기 마나 룬 프레스",
+      desc: "[Era 2] 세공보석+화염마나석→화염 룬스톤(💵 750) · 마법 길드 열기구 항공 납품!",
+      accent: "#fb7185",
+      baseCost: 900,
       mult: 1.9,
-      maxLv: 6,
+      maxLv: 8,
+      unlockEra: 2,
+    },
+    m5: {
+      id: "m5",
+      tab: "automation",
+      dirLabel: "▲ 북쪽",
+      icon: "🎵",
+      title: "5호기 정령 오르골 조립기",
+      desc: "[Era 2] 약초+정령이슬→오르골(💵 1,800) · 전 일꾼·트럭 이속 +30% 오라 부여!",
+      accent: "#2dd4bf",
+      baseCost: 2200,
+      mult: 1.9,
+      maxLv: 8,
+      unlockEra: 2,
+    },
+    m6: {
+      id: "m6",
+      tab: "automation",
+      dirLabel: "▲ 북쪽",
+      icon: "🚂",
+      title: "6호기 번개 마도핵 충전소",
+      desc: "[Era 3] 포션+번개수정→번개 마도핵(💵 4,500) · 드워프 장갑열차 대량 수송!",
+      accent: "#facc15",
+      baseCost: 6500,
+      mult: 1.95,
+      maxLv: 8,
+      unlockEra: 3,
+    },
+    m7: {
+      id: "m7",
+      tab: "automation",
+      dirLabel: "▲ 북쪽",
+      icon: "🌺",
+      title: "7호기 달빛 향수 증류탑",
+      desc: "[Era 3] 달빛버섯+이슬→달빛 향수(💵 11,000) · 왕실 특사 가판대 초고속 판매!",
+      accent: "#e879f9",
+      baseCost: 14000,
+      mult: 1.95,
+      maxLv: 8,
+      unlockEra: 3,
+    },
+    m8: {
+      id: "m8",
+      tab: "automation",
+      dirLabel: "▲ 북쪽",
+      icon: "💎",
+      title: "8호기 현자의 돌 융합로",
+      desc: "[Era 4] 운석+비늘꽃+마도핵→현자의 돌(💵 30,000) 연성!",
+      accent: "#f43f5e",
+      baseCost: 35000,
+      mult: 2.0,
+      maxLv: 8,
+      unlockEra: 4,
+    },
+    m9: {
+      id: "m9",
+      tab: "automation",
+      dirLabel: "▲ 북쪽",
+      icon: "🛸",
+      title: "9호기 하늘 비공정 무역 부두",
+      desc: "[Era 4] 현자의 돌 항공 무역! 거대 황금 비공정(💵 30,000 · 4연구소 2배 💵 60,000)!",
+      accent: "#fbbf24",
+      baseCost: 68000,
+      mult: 2.0,
+      maxLv: 8,
+      unlockEra: 4,
     },
     fairy: {
       id: "fairy",
@@ -108,11 +260,11 @@
       dirLabel: "◀ 서쪽",
       icon: "🧚",
       title: "요정 일꾼",
-      desc: "광석팀·약초팀으로 분업하는 자동 일꾼(최대 15).",
+      desc: "해금된 전 자원(광석~운석)을 자동 채집·배달합니다(최대 20).",
       accent: "#ff88c2",
       baseCost: 60,
-      mult: 1.55,
-      maxLv: 15,
+      mult: 1.48,
+      maxLv: 20,
     },
     truck: {
       id: "truck",
@@ -120,11 +272,11 @@
       dirLabel: "▶ 동쪽",
       icon: "🚜",
       title: "수확 트럭",
-      desc: "남쪽 출입구를 통해 남부 자원 계곡과 공방을 순회하는 자동 분배 메가 트럭.",
+      desc: "남부 자원 계곡 순회 수확 트럭(제2연구소 완공 시 2호기 증설!).",
       accent: "#4ce6d8",
       baseCost: 220,
-      mult: 1.95,
-      maxLv: 5,
+      mult: 1.85,
+      maxLv: 8,
     },
     farm2: {
       id: "farm2",
@@ -132,7 +284,7 @@
       dirLabel: "▲ 북쪽",
       icon: "⛏️",
       title: "심층 광산 확장",
-      desc: "18개 추가 푸른 광석 광맥을 남부 광산 심층에 해금합니다.",
+      desc: "남부 광산 심층에 추가 푸른 광석 18노드 해금.",
       accent: "#59b2ff",
       baseCost: 160,
       mult: 1,
@@ -144,7 +296,7 @@
       dirLabel: "▼ 남쪽",
       icon: "🌿",
       title: "심층 약초 확장",
-      desc: "18개 추가 무지개 약초 정원을 남부 약초 숲 심층에 해금합니다.",
+      desc: "남부 약초 숲 심층에 추가 무지개 약초 18노드 해금.",
       accent: "#6bff9e",
       baseCost: 340,
       mult: 1,
@@ -155,8 +307,8 @@
       tab: "automation",
       dirLabel: "▼ 남쪽",
       icon: "🔮",
-      title: "연금술 연구소",
-      desc: "1단계(💵40) 건설 · 광석을 1~3차 차원 에너지로 변환! 2·3단계는 캐시+차원 에너지로 증축합니다.",
+      title: "제1연금술 연구소",
+      desc: "Lv.1~3: 광석을 1~3차 차원 에너지로 변환 & 연구 기틀 마련.",
       accent: "#c084fc",
       baseCost: 40,
       mult: 4.0,
@@ -165,20 +317,68 @@
       inPos: ALCHEMY_LAB_IN_POS,
       padPos: ALCHEMY_LAB_PAD_POS,
     },
-    // Defense R&D Tech Systems (East Defense Bastion: center (13.5, 0.0)) — Dimensional Energy
+    alchemy_lab_2: {
+      id: "alchemy_lab_2",
+      tab: "automation",
+      dirLabel: "▶ 동쪽",
+      icon: "🏭",
+      title: "제2연구소 [물류 공학동]",
+      desc: "[Era 2 · Lv.4~6] 1→4·2→6·6→8호기 자동 컨베이어 연결 + 트럭 2호기 증설!",
+      accent: "#38bdf8",
+      baseCost: 1200,
+      mult: 2.2,
+      maxLv: 3,
+      unlockEra: 2,
+      pos: LAB_CONFIGS[1].pos,
+      inPos: LAB_CONFIGS[1].inPos,
+      padPos: LAB_CONFIGS[1].padPos,
+    },
+    alchemy_lab_3: {
+      id: "alchemy_lab_3",
+      tab: "automation",
+      dirLabel: "◀ 서쪽",
+      icon: "⚡",
+      title: "제3연구소 [연성 증폭동]",
+      desc: "[Era 3 · Lv.7~9] 모든 생산시설 제작 시 30%(+) 확률로 1+1 대성공(2배 생산)!",
+      accent: "#e879f9",
+      baseCost: 8500,
+      mult: 2.2,
+      maxLv: 3,
+      unlockEra: 3,
+      pos: LAB_CONFIGS[2].pos,
+      inPos: LAB_CONFIGS[2].inPos,
+      padPos: LAB_CONFIGS[2].padPos,
+    },
+    alchemy_lab_4: {
+      id: "alchemy_lab_4",
+      tab: "automation",
+      dirLabel: "▼ 남쪽",
+      icon: "👑",
+      title: "제4연구소 [현자의 마탑]",
+      desc: "[Era 4 · Lv.10~12] 요정 일꾼 순간이동(초고속 워프) + 비공정 황금 보너스 2배!",
+      accent: "#facc15",
+      baseCost: 42000,
+      mult: 2.2,
+      maxLv: 3,
+      unlockEra: 4,
+      pos: LAB_CONFIGS[3].pos,
+      inPos: LAB_CONFIGS[3].inPos,
+      padPos: LAB_CONFIGS[3].padPos,
+    },
+    // Defense R&D Tech Systems (Expanded +1.3m cross pads around 13.5, 0.0)
     turret_flame: {
       id: "turret_flame",
       tab: "defense",
       dirLabel: "▲ 북쪽",
       icon: "🔥",
       title: "화염 연금 포탑",
-      desc: "차원 에너지 R&D! 사거리 9m 내 적에게 2배속 고폭 화염 포격을 가합니다.",
+      desc: "차원 에너지 R&D (최대 Lv.20)! 사거리 9m 내 적에게 고폭 화염 포격.",
       accent: "#ff6b4a",
       baseCost: 20,
-      mult: 1.55,
-      maxLv: 10,
+      mult: 1.45,
+      maxLv: 20,
       turretPos: { x: 23.2, z: -5.0 },
-      padPos: { x: 13.5, z: -3.8 },
+      padPos: { x: 13.5, z: -5.1 },
     },
     turret_frost: {
       id: "turret_frost",
@@ -186,13 +386,13 @@
       dirLabel: "▼ 남쪽",
       icon: "❄️",
       title: "빙결 수정 탑",
-      desc: "차원 에너지 R&D! 사거리 9m 내 적을 감속·타격하는 2배속 냉기 탄환을 발사합니다.",
+      desc: "차원 에너지 R&D (최대 Lv.20)! 사거리 9m 내 적을 감속·타격.",
       accent: "#38bdf8",
       baseCost: 24,
-      mult: 1.55,
-      maxLv: 10,
+      mult: 1.45,
+      maxLv: 20,
       turretPos: { x: 23.2, z: 5.0 },
-      padPos: { x: 13.5, z: 3.8 },
+      padPos: { x: 13.5, z: 5.1 },
     },
     turret_thunder: {
       id: "turret_thunder",
@@ -200,13 +400,13 @@
       dirLabel: "▶ 동쪽",
       icon: "⚡",
       title: "뇌전 오벨리스크",
-      desc: "차원 에너지 R&D! 사거리 9m 내 다수 적을 연쇄 번개로 타격합니다.",
+      desc: "차원 에너지 R&D (최대 Lv.20)! 다수 적을 연쇄 번개로 타격.",
       accent: "#c084fc",
       baseCost: 30,
-      mult: 1.6,
-      maxLv: 10,
+      mult: 1.48,
+      maxLv: 20,
       turretPos: { x: 23.2, z: -2.4 },
-      padPos: { x: 17.8, z: 0.0 },
+      padPos: { x: 19.1, z: 0.0 },
     },
     shrine_aegis: {
       id: "shrine_aegis",
@@ -214,26 +414,26 @@
       dirLabel: "◀ 서쪽",
       icon: "🏰",
       title: "성문 증축·강화",
-      desc: "차원 에너지 3단 요새 증축(1차→2차→3차)! 성문 내구도(500→900→1,450→2,200)가 진화합니다.",
+      desc: "차원 에너지 3단 성채 진화! 성문 최대 HP(500→1,000→1,800→3,000)를 강화합니다.",
       accent: "#4ade80",
       baseCost: 25,
       mult: 1.4,
       maxLv: 3,
       turretPos: { x: 23.2, z: 2.4 },
-      padPos: { x: 9.2, z: 0.0 },
+      padPos: { x: 7.9, z: 0.0 },
     },
-    // ★1 ~ ★5 Elemental Hero Skills (tab: "skills", maxLv: 10) — Dimensional Energy (2x speed + AoE scaling)
+    // ★1 ~ ★5 Elemental Hero Skills (Era-capped up to Lv.20!)
     s1: {
       id: "s1",
       tab: "skills",
       stars: 1,
       icon: "🔥",
       title: "화염구 연사",
-      desc: "2배속 초고속 화염구! Lv.4부터 다발 연사 및 광역 폭발(1.8~3.8m)이 적용됩니다.",
+      desc: "초고속 화염구(최대 Lv.20)! Lv.5/10/15/20 돌파 시 초대형 폭염 연사로 진화.",
       accent: "#ff7849",
       baseCost: 16,
-      mult: 1.45,
-      maxLv: 10,
+      mult: 1.38,
+      maxLv: 20,
       cooldown: 0.85,
     },
     s2: {
@@ -242,11 +442,11 @@
       stars: 2,
       icon: "❄️",
       title: "혹한의 눈보라",
-      desc: "넓은 빙결 회오리(3.8~6.6m)를 소환해 다수의 적을 동시에 50% 감속·타격합니다.",
+      desc: "넓은 빙결 회오리(최대 Lv.20)! 50% 감속과 함께 강력한 범위 빙결 타격.",
       accent: "#38bdf8",
       baseCost: 24,
-      mult: 1.48,
-      maxLv: 10,
+      mult: 1.4,
+      maxLv: 20,
       cooldown: 4.2,
     },
     s3: {
@@ -255,11 +455,11 @@
       stars: 3,
       icon: "⚡",
       title: "천둥 연쇄 낙뢰",
-      desc: "다수 목표(4+Lv)에 번개 기둥과 2.4~4.2m 광역 감전 파동을 일으켜 0.7초 기절시킵니다.",
+      desc: "다수 목표(최대 Lv.20) 번개 기둥 & 광역 기절.",
       accent: "#facc15",
       baseCost: 30,
-      mult: 1.5,
-      maxLv: 10,
+      mult: 1.42,
+      maxLv: 20,
       cooldown: 6.8,
     },
     s4: {
@@ -268,11 +468,11 @@
       stars: 4,
       icon: "☄️",
       title: "대지의 운석 폭풍",
-      desc: "초고속 거대 마그마 운석 3~8발을 투하해 각 3.8~6.2m 초대형 광역 폭발을 일으킵니다.",
+      desc: "거대 마그마 운석 다연발 투하(최대 Lv.20) & 초대형 폭발.",
       accent: "#fb7185",
       baseCost: 36,
-      mult: 1.52,
-      maxLv: 10,
+      mult: 1.44,
+      maxLv: 20,
       cooldown: 10.5,
     },
     s5: {
@@ -281,11 +481,11 @@
       stars: 5,
       icon: "🌈",
       title: "에테르 초신성",
-      desc: "3차 에너지 궁극기! 반경 9.5m 전장 초신성 폭발과 함께 성문 내구도를 30% 즉시 수복합니다.",
+      desc: "전장 초신성 폭발 + 성문 30% 즉시 수복(최대 Lv.20).",
       accent: "#e879f9",
       baseCost: 40,
-      mult: 1.45,
-      maxLv: 10,
+      mult: 1.4,
+      maxLv: 20,
       cooldown: 15.0,
     },
   };
@@ -297,8 +497,9 @@
     {
       id: "m1",
       padId: "m1",
+      era: 1,
       kind: "cutter",
-      title: "1호기 세공기",
+      title: "1호기 크리스탈 세공기",
       x: -14.0,
       z: -14.2,
       inPos: { x: -17.4, z: -14.2 },
@@ -306,21 +507,22 @@
       cashPos: { x: -10.4, z: -10.2 },
       padPos: { x: -14.0, z: -9.6 },
       inputType: "blue_ore",
-      inBadge: "⛏️ 광석 넣는 곳",
+      inBadge: "⛏️ 광석 투입",
       showcaseKind: "jewel",
       customerRole: "vip",
       custQueueX: -8.3,
       custQueueZ0: -14.2,
       outputType: "cut_gem",
-      salePrice: 35,
-      baseCraftTime: 1.5,
+      salePrice: 45,
+      baseCraftTime: 1.4,
       accent: "#d67aff",
     },
     {
       id: "m2",
       padId: "m2",
+      era: 1,
       kind: "cauldron",
-      title: "2호기 가마솥",
+      title: "2호기 무지개 포션 양조기",
       x: -1.2,
       z: -14.2,
       inPos: { x: -4.6, z: -14.2 },
@@ -328,21 +530,22 @@
       cashPos: { x: 2.4, z: -10.2 },
       padPos: { x: -1.2, z: -9.6 },
       inputType: "rainbow_herb",
-      inBadge: "🌿 약초 넣는 곳",
+      inBadge: "🌿 약초 투입",
       showcaseKind: "potion",
       customerRole: "wizard",
       custQueueX: 4.5,
       custQueueZ0: -14.2,
       outputType: "magic_potion",
-      salePrice: 80,
-      baseCraftTime: 1.75,
+      salePrice: 140,
+      baseCraftTime: 1.65,
       accent: "#52ff9b",
     },
     {
       id: "m3",
       padId: "m3",
+      era: 1,
       kind: "distillery",
-      title: "3호기 합체소",
+      title: "3호기 엘릭서 증류솥",
       x: 11.6,
       z: -14.2,
       inPos: { x: 8.2, z: -15.3 },
@@ -352,12 +555,160 @@
       padPos: { x: 11.6, z: -9.6 },
       inputType: "blue_ore",
       inputTypeB: "rainbow_herb",
-      inBadge: "⛏️ 광석 넣는 곳",
-      inBadgeB: "🌿 약초 넣는 곳",
+      inBadge: "⛏️ 광석 투입",
+      inBadgeB: "🌿 약초 투입",
       outputType: "royal_elixir",
-      salePrice: 300,
-      baseCraftTime: 2.0,
+      vehicleKind: "wagon",
+      salePrice: 360,
+      baseCraftTime: 1.9,
       accent: "#ff8c42",
+    },
+    {
+      id: "m4",
+      padId: "m4",
+      era: 2,
+      kind: "rune_press",
+      title: "4호기 마나 룬 프레스",
+      x: -18.2,
+      z: -27.4,
+      inPos: { x: -21.2, z: -28.4 },
+      inPosB: { x: -21.2, z: -26.2 },
+      outPos: { x: -15.0, z: -27.4 },
+      cashPos: { x: -15.0, z: -24.2 },
+      padPos: { x: -18.2, z: -23.6 },
+      inputType: "cut_gem",
+      inputTypeB: "fire_mana_stone",
+      inBadge: "💠 세공보석",
+      inBadgeB: "🔥 화염마나석",
+      outputType: "fire_runestone",
+      vehicleKind: "balloon",
+      dockBadge: "🎈 열기구 선착장",
+      salePrice: 750,
+      baseCraftTime: 2.0,
+      accent: "#fb7185",
+    },
+    {
+      id: "m5",
+      padId: "m5",
+      era: 2,
+      kind: "music_box_assembler",
+      title: "5호기 정령 오르골 조립기",
+      x: -5.2,
+      z: -27.4,
+      inPos: { x: -8.2, z: -28.4 },
+      inPosB: { x: -8.2, z: -26.2 },
+      outPos: { x: -2.0, z: -27.4 },
+      cashPos: { x: -2.0, z: -24.2 },
+      padPos: { x: -5.2, z: -23.6 },
+      inputType: "rainbow_herb",
+      inputTypeB: "spirit_dew",
+      inBadge: "🌿 약초",
+      inBadgeB: "💧 정령이슬",
+      showcaseKind: "jewel",
+      customerRole: "vip",
+      custQueueX: -0.3,
+      custQueueZ0: -28.0,
+      outputType: "spirit_music_box",
+      salePrice: 1800,
+      baseCraftTime: 2.1,
+      accent: "#2dd4bf",
+    },
+    {
+      id: "m6",
+      padId: "m6",
+      era: 3,
+      kind: "core_charger",
+      title: "6호기 번개 마도핵 충전소",
+      x: 5.0,
+      z: -26.2,
+      inPos: { x: 2.0, z: -27.2 },
+      inPosB: { x: 2.0, z: -25.0 },
+      outPos: { x: 8.2, z: -26.2 },
+      cashPos: { x: 11.4, z: -25.8 },
+      padPos: { x: 5.0, z: -22.5 },
+      inputType: "magic_potion",
+      inputTypeB: "lightning_crystal",
+      inBadge: "🧪 포션",
+      inBadgeB: "⚡ 번개수정",
+      outputType: "arcane_core",
+      vehicleKind: "train",
+      dockBadge: "🚂 열차 화물역",
+      salePrice: 4500,
+      baseCraftTime: 2.2,
+      accent: "#facc15",
+    },
+    {
+      id: "m7",
+      padId: "m7",
+      era: 3,
+      kind: "perfume_still",
+      title: "7호기 달빛 향수 증류탑",
+      x: 18.2,
+      z: -26.2,
+      inPos: { x: 15.2, z: -27.2 },
+      inPosB: { x: 15.2, z: -25.0 },
+      outPos: { x: 21.0, z: -26.2 },
+      cashPos: { x: 21.0, z: -23.2 },
+      padPos: { x: 18.2, z: -22.5 },
+      inputType: "moon_mushroom",
+      inputTypeB: "spirit_dew",
+      inBadge: "🍄 달빛버섯",
+      inBadgeB: "💧 정령이슬",
+      showcaseKind: "potion",
+      customerRole: "wizard",
+      custQueueX: 22.8,
+      custQueueZ0: -26.8,
+      outputType: "moon_perfume",
+      salePrice: 11000,
+      baseCraftTime: 2.3,
+      accent: "#e879f9",
+    },
+    {
+      id: "m8",
+      padId: "m8",
+      era: 4,
+      kind: "stone_reactor",
+      title: "8호기 현자의 돌 융합로",
+      x: -11.6,
+      z: -38.0,
+      inPos: { x: -15.4, z: -39.2 },
+      inPosB: { x: -15.4, z: -36.8 },
+      inPosC: { x: -11.6, z: -41.4 },
+      outPos: { x: -7.8, z: -38.0 },
+      cashPos: { x: -7.8, z: -34.2 },
+      padPos: { x: -11.6, z: -34.2 },
+      inputType: "star_meteorite",
+      inputTypeB: "dragon_scale_flower",
+      inputTypeC: "arcane_core",
+      inBadge: "🌟 운석",
+      inBadgeB: "🌺 비늘꽃",
+      inBadgeC: "⚡🔮 마도핵(6호기)",
+      outputType: "philosopher_stone",
+      dockBadge: "💎 현자의 돌 창고",
+      salePrice: 30000,
+      baseCraftTime: 2.5,
+      accent: "#f43f5e",
+    },
+    {
+      id: "m9",
+      padId: "m9",
+      era: 4,
+      kind: "airship_dock",
+      title: "9호기 하늘 비공정 무역 부두",
+      x: 11.6,
+      z: -38.0,
+      inPos: { x: 7.8, z: -38.0 },
+      outPos: { x: 15.4, z: -38.0 },
+      cashPos: { x: 15.4, z: -34.2 },
+      padPos: { x: 11.6, z: -34.2 },
+      inputType: "philosopher_stone",
+      inBadge: "💎 현자의 돌 상차",
+      outputType: "philosopher_stone",
+      vehicleKind: "airship",
+      dockBadge: "🛸 비공정 선착장",
+      salePrice: 30000,
+      baseCraftTime: 1.6,
+      accent: "#fbbf24",
     },
   ];
 
@@ -373,13 +724,16 @@
 
   function createDefaultState() {
     return {
-      gems: 45, // Green Cash (💵) — Builds facilities & Lv.1 Alchemy Lab
+      gems: 45,
       totalEarnedGems: 0,
-      // 3-Tier Dimensional Energy (🔮 1차 / 💠 2차 / 🌟 3차) — Tech & Elemental Skills
       dim1: 25,
       dim2: 0,
       dim3: 0,
-      alchemyLabLv: 0, // 0..3
+      alchemyLabLv: 0,
+      alchemyLab2Lv: 0,
+      alchemyLab3Lv: 0,
+      alchemyLab4Lv: 0,
+      unlockedEra: 1,
       xp: 0,
       xpMax: 100,
       level: 1,
@@ -391,17 +745,21 @@
       m1Lv: 0,
       m2Lv: 0,
       m3Lv: 0,
+      m4Lv: 0,
+      m5Lv: 0,
+      m6Lv: 0,
+      m7Lv: 0,
+      m8Lv: 0,
+      m9Lv: 0,
       fairyCount: 0,
       truckLv: 0,
       herbGroveUnlocked: false,
       farm2Unlocked: false,
       farm3Unlocked: false,
-      // 4 Defense R&D Levels (0~10 / Gate 0~3)
       turretFlameLv: 0,
       turretFrostLv: 0,
       turretThunderLv: 0,
       shrineAegisLv: 0,
-      // ★1 ~ ★5 Elemental Skill Levels (s1 starts at Lv.1!)
       s1Lv: 1,
       s2Lv: 0,
       s3Lv: 0,
@@ -423,7 +781,7 @@
     rotY: 0,
     walkPhase: 0,
     swingTimer: 0,
-    swingDuration: 0.14, // 2x faster skill cast & harvest animation!
+    swingDuration: 0.14,
     bagItems: [],
     harvestCooldown: 0,
     transferCooldown: 0,
@@ -445,8 +803,11 @@
     farmNodes: [],
     machines: [],
     stepPads: [],
-    turrets: {}, // keyed by defense id
-    buildings: [], // 3D category buildings (forge, guild, defense_lab, alchemy_lab)
+    turrets: {},
+    buildings: [],
+    labs: {},
+    districtVisuals: [],
+    zoneHeaders: [],
     alchemyLabBuilding: null,
     alchemyLabInPallet: null,
     alchemyLabQueue: [],
@@ -458,17 +819,23 @@
     pedestalGems: [],
     monsters: [],
     projectiles: [],
-    fxMeshes: [], // timed elemental rings/pillars/meteors
+    fxMeshes: [],
     flyingBricks: [],
     particles: [],
     popups: [],
     fairies: [],
     customers: [],
     truck: null,
+    truck2: null,
     wagon: null,
+    balloon: null,
+    train: null,
+    airship: null,
+    conveyorTimer: 0,
+    archmageAura: null,
     heroBackVisuals: [],
     skillCooldowns: { s1: 0, s2: 0, s3: 0, s4: 0, s5: 0 },
-    waveTimer: FIRST_WAVE_DELAY, // 5-minute peaceful build & upgrade phase before Wave 1!
+    waveTimer: FIRST_WAVE_DELAY,
     waveActive: false,
     waveCurrentNum: 1,
     waveTotalToSpawn: WAVE_TOTAL_MONSTERS,
@@ -638,11 +1005,20 @@
       case "m1": return state.m1Lv;
       case "m2": return state.m2Lv;
       case "m3": return state.m3Lv;
+      case "m4": return state.m4Lv || 0;
+      case "m5": return state.m5Lv || 0;
+      case "m6": return state.m6Lv || 0;
+      case "m7": return state.m7Lv || 0;
+      case "m8": return state.m8Lv || 0;
+      case "m9": return state.m9Lv || 0;
       case "fairy": return state.fairyCount;
       case "truck": return state.truckLv;
       case "farm2": return state.farm2Unlocked ? 1 : 0;
       case "farm3": return state.farm3Unlocked ? 1 : 0;
       case "alchemy_lab": return state.alchemyLabLv || 0;
+      case "alchemy_lab_2": return state.alchemyLab2Lv || 0;
+      case "alchemy_lab_3": return state.alchemyLab3Lv || 0;
+      case "alchemy_lab_4": return state.alchemyLab4Lv || 0;
       case "turret_flame": return state.turretFlameLv;
       case "turret_frost": return state.turretFrostLv;
       case "turret_thunder": return state.turretThunderLv;
@@ -656,46 +1032,84 @@
     }
   }
 
+  function getUnlockedEra() {
+    const waveEra = state.wave >= 16 ? 4 : state.wave >= 11 ? 3 : state.wave >= 6 ? 2 : 1;
+    return Math.max(1, Math.min(4, Math.max(state.unlockedEra || 1, waveEra)));
+  }
+
+  function getEraSkillCap() {
+    const era = getUnlockedEra();
+    return (ERA_INFO[era] && ERA_INFO[era].maxCap) || 5;
+  }
+
+  function getEffectiveMaxLv(id) {
+    const def = UPGRADE_DEFS[id];
+    if (!def) return 0;
+    if (["tool", "bag", "speed", "s1", "s2", "s3", "s4", "s5", "turret_flame", "turret_frost", "turret_thunder"].includes(id)) {
+      return Math.min(def.maxLv, getEraSkillCap());
+    }
+    return def.maxLv;
+  }
+
+  function isEraUnlockedFor(id) {
+    const def = UPGRADE_DEFS[id];
+    if (!def || !def.unlockEra) return true;
+    return getUnlockedEra() >= def.unlockEra;
+  }
+
   function getUpgradeCostSpec(id) {
     const def = UPGRADE_DEFS[id];
     if (!def) return { mode: "cash", cash: 999999, energyTier: 0, energy: 0, text: "999999" };
+    if (!isEraUnlockedFor(id)) return { mode: "locked", cash: 0, energyTier: 0, energy: 0, text: `🔒 Era ${def.unlockEra}` };
     const lv = getUpgradeLevel(id);
+    const effMax = getEffectiveMaxLv(id);
     if (lv >= def.maxLv) return { mode: "max", cash: 0, energyTier: 0, energy: 0, text: "MAX" };
-
-    // 1. Buildings & Production Facilities use Cash (💵)
-    if (["m1", "m2", "m3", "fairy", "truck", "farm2", "farm3"].includes(id)) {
-      const cash = Math.round(def.baseCost * Math.pow(def.mult, lv));
-      return { mode: "cash", cash, energyTier: 0, energy: 0, text: `💵 ${cash}` };
+    if (lv >= effMax) {
+      const nextEra = getUnlockedEra() + 1;
+      const unlockWave = nextEra === 2 ? 6 : nextEra === 3 ? 11 : 16;
+      return { mode: "locked", cash: 0, energyTier: 0, energy: 0, text: `🔒 W${unlockWave} 해금` };
     }
 
-    // 2. 3-Stage Alchemy Research Lab: Lv.1 = Cash only; Lv.2 = Cash+🔮1차; Lv.3 = Cash+💠2차
+    // 1. Buildings & Production Facilities (1~9호기, 요정, 트럭, 농장) use Cash (💵)
+    if (["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "fairy", "truck", "farm2", "farm3"].includes(id)) {
+      const cash = Math.round(def.baseCost * Math.pow(def.mult, lv));
+      return { mode: "cash", cash, energyTier: 0, energy: 0, text: `💵 ${cash.toLocaleString()}` };
+    }
+
+    // 2. 4 Alchemy Research Labs (1~4호 연구소, 총 12단계)
     if (id === "alchemy_lab") {
       if (lv === 0) return { mode: "cash", cash: 40, energyTier: 0, energy: 0, text: "💵 40" };
       if (lv === 1) return { mode: "hybrid", cash: 160, energyTier: 1, energy: 30, text: "💵160 + 🔮30" };
       return { mode: "hybrid", cash: 420, energyTier: 2, energy: 45, text: "💵420 + 💠45" };
     }
+    if (id === "alchemy_lab_2" || id === "alchemy_lab_3" || id === "alchemy_lab_4") {
+      const cash = Math.round(def.baseCost * Math.pow(def.mult, lv));
+      const eTier = id === "alchemy_lab_4" ? 3 : id === "alchemy_lab_3" ? (lv === 0 ? 2 : 3) : (lv === 0 ? 1 : 2);
+      const eAmt = id === "alchemy_lab_4" ? 120 + lv * 80 : id === "alchemy_lab_3" ? 80 + lv * 50 : 45 + lv * 30;
+      return { mode: "hybrid", cash, energyTier: eTier, energy: eAmt, text: `💵${cash.toLocaleString()}+${ENERGY_META[eTier].icon}${eAmt}` };
+    }
 
-    // 3. Gate 3-Stage Reinforcement (🔮 1차 -> 💠 2차 -> 🌟 3차)
+    // 3. Gate 3-Stage Reinforcement
     if (id === "shrine_aegis") {
       const tier = lv + 1;
-      const energy = lv === 0 ? 25 : lv === 1 ? 35 : 45;
+      const energy = lv === 0 ? 25 : lv === 1 ? 45 : 80;
       return { mode: "energy", cash: 0, energyTier: tier, energy, text: `${ENERGY_META[tier].icon} ${energy}` };
     }
 
-    // 4. Tech R&D (Equipment, Turrets) & Elemental Skills (★1~★5) -> Higher Tier Energy as star/level rises!
+    // 4. Tech R&D & Elemental Skills (Lv.1~20) -> Higher Tier Energy as star/level rises
     let tier = 1;
     if (id === "s5") {
       tier = 3;
     } else if (id === "s4") {
       tier = lv < 5 ? 2 : 3;
     } else if (id === "s3" || id === "turret_thunder") {
-      tier = lv < 2 ? 1 : lv < 6 ? 2 : 3;
+      tier = lv < 3 ? 1 : lv < 9 ? 2 : 3;
     } else {
-      tier = lv < 3 ? 1 : lv < 6 ? 2 : 3;
+      tier = lv < 5 ? 1 : lv < 12 ? 2 : 3;
     }
     const effLv = id === "s1" ? Math.max(0, lv - 1) : lv;
-    const rawEnergy = Math.round(def.baseCost * Math.pow(1.22, effLv));
-    const tierScaled = tier === 1 ? rawEnergy : tier === 2 ? Math.round(rawEnergy * 0.72) : Math.round(rawEnergy * 0.52);
+    const rawEnergy = Math.round(def.baseCost * Math.pow(1.20, effLv));
+    const tierScaled = tier === 1 ? rawEnergy : tier === 2 ? Math.round(rawEnergy * 0.65) : Math.round(rawEnergy * 0.45);
     const energy = Math.max(12, tierScaled);
     return { mode: "energy", cash: 0, energyTier: tier, energy, text: `${ENERGY_META[tier].icon} ${energy}` };
   }
@@ -709,6 +1123,7 @@
   function canAffordUpgrade(id) {
     if (isUpgradeMax(id)) return false;
     const spec = getUpgradeCostSpec(id);
+    if (spec.mode === "locked" || spec.mode === "max") return false;
     if (spec.mode === "cash") return state.gems >= spec.cash;
     if (spec.mode === "energy") return getEnergyAmount(spec.energyTier) >= spec.energy;
     return state.gems >= spec.cash && getEnergyAmount(spec.energyTier) >= spec.energy;
@@ -722,29 +1137,65 @@
 
   function isUpgradeMax(id) {
     const def = UPGRADE_DEFS[id];
-    return !def || getUpgradeLevel(id) >= def.maxLv;
+    if (!def) return true;
+    return getUpgradeLevel(id) >= getEffectiveMaxLv(id);
   }
 
-  const GATE_BASE_HP_BY_TIER = [500, 900, 1450, 2200];
+  const GATE_BASE_HP_BY_TIER = [500, 1000, 1800, 3000];
+
+  function isWaveExpansionMilestone(w) {
+    return w === 6 || w === 11 || w === 16;
+  }
 
   function getGateMaxHp() {
     const tier = Math.max(0, Math.min(3, state.shrineAegisLv || 0));
-    return GATE_BASE_HP_BY_TIER[tier] + (state.level - 1) * 40;
+    return GATE_BASE_HP_BY_TIER[tier] + (state.level - 1) * 50;
   }
 
   function getHeroMaxHp() {
     return getGateMaxHp();
   }
 
+  function updateLabOverheadBanners() {
+    if (!window.Entities || typeof window.Entities.updateOverheadBannerSprite !== "function") return;
+    for (const cfg of LAB_CONFIGS) {
+      const labObj = runtime.labs[cfg.id];
+      if (!labObj || !labObj.bannerSprite) continue;
+      const lv = getUpgradeLevel(cfg.id);
+      const txt = lv > 0 ? `${cfg.title} Lv.${lv}` : `${cfg.title} (미건설)`;
+      window.Entities.updateOverheadBannerSprite(labObj.bannerSprite, txt, cfg.accent);
+    }
+    for (const m of runtime.machines) {
+      if (m.bannerSprite) {
+        const txt = m.lv > 0 ? `${m.cfg.title} Lv.${m.lv}` : m.cfg.title;
+        window.Entities.updateOverheadBannerSprite(m.bannerSprite, txt, m.cfg.accent);
+      }
+    }
+    if (sceneObjs.villageGate && sceneObjs.villageGate.bannerSprite) {
+      window.Entities.updateOverheadBannerSprite(
+        sceneObjs.villageGate.bannerSprite,
+        `🏰 동쪽 수호 성문 Lv.${(state.shrineAegisLv || 0) + 1}`,
+        "#ffe4e6"
+      );
+    }
+  }
+
   function applyUpgradeLevel(id) {
     switch (id) {
-      case "tool":
+      case "tool": {
         state.toolLv++;
         if (window.Entities && sceneObjs.hero) {
-          window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 2)));
+          window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 4)));
         }
-        showToast(`⛏️ 채집 곡괭이 Lv.${state.toolLv} 기술 개발 완료!`);
+        syncHeroArchmageAura();
+        const ms =
+          state.toolLv === 5 ? " [🌟 Lv.5 마일스톤: 채집 범위 4.0m 확장!]" :
+          state.toolLv === 10 ? " [🌟 Lv.10 마일스톤: 동시 2노드 채집 + 자석 2배!]" :
+          state.toolLv === 15 ? " [🌟 Lv.15 마일스톤: 30% 확률 수확량 2배!]" :
+          state.toolLv === 20 ? " [👑 Lv.20 MAX 대현자의 황금 오라: 자동 채집 + 전 판매 1.5배!]" : "";
+        showToast(`⛏️ 채집 곡괭이 Lv.${state.toolLv} 개발 완료!${ms}`);
         break;
+      }
       case "bag":
         state.bagLv++;
         showToast(`🎒 지게 용량 ${getHeroBagCap()}칸으로 확장!`);
@@ -754,48 +1205,49 @@
         showToast(`👢 이동 속도 Lv.${state.speedLv} 가속!`);
         break;
       case "m1":
-        state.m1Lv++;
-        if (runtime.machines[0]) runtime.machines[0].lv = state.m1Lv;
-        refreshFacilityVisibility();
-        showToast(
-          state.m1Lv === 1
-            ? "⚙️ 1호기 세공기 가동! 광석을 넣으면 세공 보석(💵 35)이 자동 판매됩니다!"
-            : `⚙️ 1호기 세공기 Lv.${state.m1Lv} 가속!`
-        );
-        break;
       case "m2":
-        state.m2Lv++;
-        state.herbGroveUnlocked = true;
-        if (runtime.machines[1]) runtime.machines[1].lv = state.m2Lv;
-        refreshFarmZoneVisibility();
-        refreshFacilityVisibility();
-        showToast(
-          state.m2Lv === 1
-            ? "⚗️ 2호기 가마솥 가동 & 남부 자원 계곡 '무지개 약초 숲' 해금!"
-            : `⚗️ 2호기 가마솥 Lv.${state.m2Lv} 가속!`
-        );
-        break;
       case "m3":
-        state.m3Lv++;
-        if (runtime.machines[2]) runtime.machines[2].lv = state.m3Lv;
+      case "m4":
+      case "m5":
+      case "m6":
+      case "m7":
+      case "m8":
+      case "m9": {
+        const idx = Number(id.slice(1)) - 1;
+        const key = `${id}Lv`;
+        state[key] = (state[key] || 0) + 1;
+        if (runtime.machines[idx]) runtime.machines[idx].lv = state[key];
+        if (id === "m2") {
+          state.herbGroveUnlocked = true;
+          refreshFarmZoneVisibility();
+        }
         refreshFacilityVisibility();
-        ensureWagonSpawned();
-        showToast(
-          state.m3Lv === 1
-            ? "👑 3호기 황실 합체소 & VIP 무역 마차 개통! (💵 300)"
-            : `👑 3호기 합체소 Lv.${state.m3Lv} 가속!`
-        );
+        if (id === "m3") ensureWagonSpawned();
+        if (id === "m4" || id === "m6" || id === "m9") ensureSpecialVehiclesSpawned();
+        const def = UPGRADE_DEFS[id];
+        showToast(state[key] === 1 ? `${def.icon} ${def.title} 완공 & 가동!` : `${def.icon} ${def.title} Lv.${state[key]} 가속!`);
         break;
+      }
       case "alchemy_lab":
         state.alchemyLabLv = Math.min(3, (state.alchemyLabLv || 0) + 1);
         refreshFacilityVisibility();
-        showToast(
-          state.alchemyLabLv === 1
-            ? "🔮 1단계 연금술 연구소 완공! 광석을 넣으면 🔮 1차 차원 에너지가 생산됩니다!"
-            : state.alchemyLabLv === 2
-            ? "💠 2단계 차원 연구소 증축! 이제 💠 2차 차원 에너지도 동시 연성됩니다!"
-            : "🌟 3단계 초월 연구소 완성! 최고 등급 🌟 3차 차원 에너지가 생산됩니다!"
-        );
+        showToast(`🔮 제1연금술 연구소 Lv.${state.alchemyLabLv} 증축!`);
+        break;
+      case "alchemy_lab_2":
+        state.alchemyLab2Lv = Math.min(3, (state.alchemyLab2Lv || 0) + 1);
+        refreshFacilityVisibility();
+        ensureTruckSpawned();
+        showToast(`🏭 제2연구소 [물류 공학동] Lv.${state.alchemyLab2Lv} 완공! (자동 컨베이어 & 트럭 2호기 가동!)`);
+        break;
+      case "alchemy_lab_3":
+        state.alchemyLab3Lv = Math.min(3, (state.alchemyLab3Lv || 0) + 1);
+        refreshFacilityVisibility();
+        showToast(`⚡ 제3연구소 [연성 증폭동] Lv.${state.alchemyLab3Lv} 완공! (전 시설 1+1 대성공 가동!)`);
+        break;
+      case "alchemy_lab_4":
+        state.alchemyLab4Lv = Math.min(3, (state.alchemyLab4Lv || 0) + 1);
+        refreshFacilityVisibility();
+        showToast(`👑 제4연구소 [현자의 마탑] Lv.${state.alchemyLab4Lv} 완공! (요정 순간이동 & 비공정 2배!)`);
         break;
       case "fairy":
         state.fairyCount++;
@@ -851,7 +1303,7 @@
       case "s4":
       case "s5": {
         const key = `${id}Lv`;
-        state[key] = Math.min(10, (state[key] || 0) + 1);
+        state[key] = Math.min(20, (state[key] || 0) + 1);
         const def = UPGRADE_DEFS[id];
         showToast(`★${def.stars} ${def.icon} ${def.title} Lv.${state[key]} 강화!`);
         break;
@@ -859,6 +1311,7 @@
       default:
         break;
     }
+    updateLabOverheadBanners();
     state.padPaid[id] = 0;
     addXp(25);
     playBuildPop();
@@ -876,19 +1329,56 @@
   }
 
   function getHeroBagCap() {
-    return 16 + state.bagLv * 8;
+    return 16 + state.bagLv * 6;
   }
 
   function getHeroMoveSpeed() {
-    return 7.6 + state.speedLv * 0.95;
+    return 7.6 + state.speedLv * 0.55;
   }
 
   function getHeroHarvestInterval() {
-    return Math.max(0.11, 0.34 - state.toolLv * 0.032);
+    if (state.toolLv >= 20) return 0; // Lv.20 Milestone: Zero-cooldown pass-by harvest!
+    return Math.max(0.08, 0.34 - state.toolLv * 0.015);
+  }
+
+  function getHeroPickRadius() {
+    return state.toolLv >= 5 ? 4.0 : 2.65; // Lv.5 Milestone!
+  }
+
+  function getHeroMultiHit() {
+    return state.toolLv >= 10 ? 2 : 1; // Lv.10 Milestone!
+  }
+
+  function getCashMagnetRadius() {
+    return state.toolLv >= 10 ? 5.6 : 2.8; // Lv.10 Milestone!
+  }
+
+  function getHeroDoubleDropChance() {
+    return state.toolLv >= 15 ? 0.30 : 0; // Lv.15 Milestone!
+  }
+
+  function getPriceMultiplier() {
+    return state.toolLv >= 20 ? 1.5 : 1.0; // Lv.20 Milestone!
   }
 
   function getHeroHarvestYield() {
-    return 1 + Math.floor(state.toolLv / 3);
+    return 1 + Math.floor(state.toolLv / 4);
+  }
+
+  function syncHeroArchmageAura() {
+    if (!sceneObjs.hero || !sceneObjs.hero.root) return;
+    if (!runtime.archmageAura && typeof THREE !== "undefined") {
+      const geo = new THREE.RingGeometry(1.15, 1.52, 32);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.x = -Math.PI * 0.5;
+      mesh.position.y = 0.06;
+      sceneObjs.hero.root.add(mesh);
+      runtime.archmageAura = mesh;
+    }
+    if (runtime.archmageAura) {
+      runtime.archmageAura.visible = state.toolLv >= 20;
+    }
   }
 
   function addXp(amount) {
@@ -1221,31 +1711,34 @@
     const Entities = window.Entities;
     if (!Engine || !Entities) return;
 
-    // All 84 resource nodes live in the dedicated Southern Resource Valley (z in [23.4..35.6]),
-    // completely separated from the East Monster Siege Gate (x = 24.0, z = 0.0)!
     const specs = [];
-    // Zone 1: South Valley West-Inner (24 Blue Ore, unlocked from start)
+    // Zone 1~4: Base Southern Resource Valley
     for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 6; c++) {
-        specs.push({ zone: 1, kind: "blue_ore", itemType: "blue_ore", x: -14.6 + c * 1.85, z: 23.4 + r * 2.0 });
-      }
+      for (let c = 0; c < 6; c++) specs.push({ zone: 1, kind: "blue_ore", itemType: "blue_ore", x: -14.6 + c * 1.85, z: 23.4 + r * 2.0 });
     }
-    // Zone 2: South Valley East-Inner (24 Rainbow Herb, unlocked with 2호기/남동 확장)
     for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 6; c++) {
-        specs.push({ zone: 2, kind: "rainbow_herb", itemType: "rainbow_herb", x: 5.35 + c * 1.85, z: 23.4 + r * 2.0 });
-      }
+      for (let c = 0; c < 6; c++) specs.push({ zone: 2, kind: "rainbow_herb", itemType: "rainbow_herb", x: 5.35 + c * 1.85, z: 23.4 + r * 2.0 });
     }
-    // Zone 3: South Valley Deep West (18 Blue Ore, unlocked via Guild North pad)
     for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 6; c++) {
-        specs.push({ zone: 3, kind: "blue_ore", itemType: "blue_ore", x: -14.6 + c * 1.85, z: 31.6 + r * 2.0 });
-      }
+      for (let c = 0; c < 6; c++) specs.push({ zone: 3, kind: "blue_ore", itemType: "blue_ore", x: -14.6 + c * 1.85, z: 31.6 + r * 2.0 });
     }
-    // Zone 4: South Valley Deep East (18 Rainbow Herb, unlocked via Guild South pad)
     for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 6; c++) {
-        specs.push({ zone: 4, kind: "rainbow_herb", itemType: "rainbow_herb", x: 5.35 + c * 1.85, z: 31.6 + r * 2.0 });
+      for (let c = 0; c < 6; c++) specs.push({ zone: 4, kind: "rainbow_herb", itemType: "rainbow_herb", x: 5.35 + c * 1.85, z: 31.6 + r * 2.0 });
+    }
+    // Zones 5~10: Era 2/3/4 Exotic Elemental Groves (18 nodes each)
+    const exoticZones = [
+      { zone: 5, kind: "fire_mana_stone", x0: -14.6, z0: 39.2 },
+      { zone: 6, kind: "spirit_dew", x0: 5.35, z0: 39.2 },
+      { zone: 7, kind: "lightning_crystal", x0: -14.6, z0: 46.8 },
+      { zone: 8, kind: "moon_mushroom", x0: 5.35, z0: 46.8 },
+      { zone: 9, kind: "star_meteorite", x0: -14.6, z0: 54.4 },
+      { zone: 10, kind: "dragon_scale_flower", x0: 5.35, z0: 54.4 },
+    ];
+    for (const ez of exoticZones) {
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 6; c++) {
+          specs.push({ zone: ez.zone, kind: ez.kind, itemType: ez.kind, x: ez.x0 + c * 1.85, z: ez.z0 + r * 2.0 });
+        }
       }
     }
 
@@ -1271,10 +1764,14 @@
   }
 
   function isZoneUnlocked(zone) {
+    const era = getUnlockedEra();
     if (zone === 1) return true;
     if (zone === 2) return !!state.herbGroveUnlocked || state.m2Lv > 0;
     if (zone === 3) return !!state.farm2Unlocked;
     if (zone === 4) return !!state.farm3Unlocked;
+    if (zone === 5 || zone === 6) return era >= 2;
+    if (zone === 7 || zone === 8) return era >= 3;
+    if (zone === 9 || zone === 10) return era >= 4;
     return false;
   }
 
@@ -1294,8 +1791,13 @@
   }
 
   function refreshFacilityVisibility() {
+    const era = getUnlockedEra();
+    if (window.Engine && typeof window.Engine.setUnlockedEraVisuals === "function") {
+      window.Engine.setUnlockedEraVisuals(era);
+    }
+
     for (const m of runtime.machines) {
-      const built = m.lv > 0;
+      const built = m.lv > 0 && era >= (m.cfg.era || 1);
       if (m.entity && m.entity.root) m.entity.root.visible = built;
       if (m.showcase && m.showcase.root) m.showcase.root.visible = built;
       if (m.cashPedestal && m.cashPedestal.entity && m.cashPedestal.entity.root) {
@@ -1303,20 +1805,48 @@
       }
       if (m.inPallet && m.inPallet.root) m.inPallet.root.visible = built;
       if (m.inPalletB && m.inPalletB.root) m.inPalletB.root.visible = built;
+      if (m.inPalletC && m.inPalletC.root) m.inPalletC.root.visible = built;
       if (m.dockPallet && m.dockPallet.root) m.dockPallet.root.visible = built;
       for (const c of m.customers || []) {
         if (c.entity && c.entity.root) c.entity.root.visible = built;
       }
     }
+
+    for (const cfg of LAB_CONFIGS) {
+      const labObj = runtime.labs[cfg.id];
+      if (!labObj) continue;
+      const eraOk = era >= cfg.era;
+      const lv = getUpgradeLevel(cfg.id);
+      if (labObj.ent && labObj.ent.root) labObj.ent.root.visible = eraOk;
+      if (labObj.ent && window.Entities && typeof window.Entities.updateAlchemyLabTier === "function") {
+        window.Entities.updateAlchemyLabTier(labObj.ent, lv);
+      }
+      if (labObj.inPallet && labObj.inPallet.root) labObj.inPallet.root.visible = eraOk && lv > 0;
+    }
+
+    for (const dv of runtime.districtVisuals) {
+      if (dv.root) dv.root.visible = era >= (dv.era || 1);
+    }
+    for (const zh of runtime.zoneHeaders) {
+      if (zh.sprite) zh.sprite.visible = era >= (zh.era || 1);
+    }
+    for (const sp of runtime.stepPads) {
+      if (sp.pad && sp.pad.root) sp.pad.root.visible = isEraUnlockedFor(sp.id);
+    }
+
     if (runtime.wagon && runtime.wagon.entity && runtime.wagon.entity.root) {
       runtime.wagon.entity.root.visible = state.m3Lv > 0;
     }
-    if (sceneObjs.alchemyLab && window.Entities && typeof window.Entities.updateAlchemyLabTier === "function") {
-      window.Entities.updateAlchemyLabTier(sceneObjs.alchemyLab, state.alchemyLabLv || 0);
+    if (runtime.balloon && runtime.balloon.entity && runtime.balloon.entity.root) {
+      runtime.balloon.entity.root.visible = (state.m4Lv || 0) > 0 && era >= 2;
     }
-    if (runtime.alchemyLabInPallet && runtime.alchemyLabInPallet.root) {
-      runtime.alchemyLabInPallet.root.visible = (state.alchemyLabLv || 0) > 0;
+    if (runtime.train && runtime.train.entity && runtime.train.entity.root) {
+      runtime.train.entity.root.visible = (state.m6Lv || 0) > 0 && era >= 3;
     }
+    if (runtime.airship && runtime.airship.entity && runtime.airship.entity.root) {
+      runtime.airship.entity.root.visible = (state.m9Lv || 0) > 0 && era >= 4;
+    }
+    updateLabOverheadBanners();
   }
 
   function refreshDefenseTurretsVisibility() {
@@ -1334,38 +1864,98 @@
     }
   }
 
+  function buildDistrictVisuals() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities) return;
+
+    if (typeof Entities.createDistrictPlatform === "function") {
+      const platforms = [
+        { era: 1, theme: "alchemy", x: -6.8, z: -2.0, w: 12.2, d: 11.8 },
+        { era: 1, theme: "defense", x: 13.5, z: 0.0, w: 15.8, d: 14.2 },
+        { era: 1, theme: "training", x: -12.5, z: 13.0, w: 15.6, d: 13.8 },
+        { era: 1, theme: "guild", x: 11.5, z: 13.0, w: 15.6, d: 13.8 },
+        { era: 1, theme: "factory", x: -1.2, z: -14.0, w: 36.5, d: 11.0 },
+        { era: 2, theme: "factory", x: -12.2, z: -26.0, w: 22.8, d: 11.5 },
+        { era: 3, theme: "factory", x: 12.2, z: -26.0, w: 22.8, d: 11.5 },
+        { era: 4, theme: "alchemy", x: 0.0, z: -38.0, w: 46.5, d: 11.5 },
+      ];
+      for (const p of platforms) {
+        const root = Entities.createDistrictPlatform(p);
+        Engine.stationGroup.add(root);
+        runtime.districtVisuals.push({ era: p.era, root });
+      }
+    }
+
+    if (typeof Entities.createZoneHeaderBanner === "function") {
+      const headers = [
+        { era: 1, title: "🔮 연금술 연구 단지", sub: "자원 → 차원 에너지 연성", x: -6.2, y: 5.5, z: -2.5, acc: "#e9d5ff", brd: "#9b59b6" },
+        { era: 1, title: "🛡️ 디펜스 기술 단지", sub: "성문 강화 & 자동 방어 포탑", x: 13.5, y: 5.5, z: 0.0, acc: "#cffafe", brd: "#00e5ff" },
+        { era: 1, title: "⚡ 마법사 수련장", sub: "Lv.20 마일스톤 장비 수련", x: -12.5, y: 5.5, z: 13.0, acc: "#dcfce7", brd: "#2ecc71" },
+        { era: 1, title: "🧚 자동화·채집 길드", sub: "요정·메가트럭·심층 광산", x: 11.5, y: 5.5, z: 13.0, acc: "#fef3c7", brd: "#1abc9c" },
+        { era: 1, title: "⚙️ 마법 자동화 공장 (1~3호기)", sub: "원석·약초 가공 & 왕실 마차", x: -1.2, y: 5.5, z: -14.2, acc: "#ffedd5", brd: "#e67e22" },
+        { era: 2, title: "🔥 정령 공학 지구 (4~5호기)", sub: "마나 룬 열기구 & 정령 오르골 오라", x: -12.2, y: 5.6, z: -25.8, acc: "#ffe4e6", brd: "#fb7185" },
+        { era: 3, title: "⚡ 번개 제련 단지 (6~7호기)", sub: "드워프 장갑열차 & 달빛 향수", x: 12.2, y: 5.6, z: -25.8, acc: "#fef9c3", brd: "#facc15" },
+        { era: 4, title: "👑 황금 대성채 & 비공정 부두 (8~9호기)", sub: "현자의 돌 & 거대 황금 비공정", x: 0.0, y: 5.8, z: -38.0, acc: "#fef08a", brd: "#f59e0b" },
+      ];
+      for (const h of headers) {
+        const sprite = Entities.createZoneHeaderBanner(h.title, h.sub, h.x, h.y, h.z, h.acc, h.brd);
+        Engine.stationGroup.add(sprite);
+        runtime.zoneHeaders.push({ era: h.era, sprite });
+      }
+    }
+  }
+
   function buildDistrictBuildings() {
     const Engine = window.Engine;
     const Entities = window.Entities;
     if (!Engine || !Entities || typeof Entities.createCategoryBuilding !== "function") return;
 
+    buildDistrictVisuals();
+
     const specs = [
       { kind: "forge", x: -12.5, z: 13.0, badge: "⚒️ 장비 강화 대장간", accent: "#ffd24c" },
       { kind: "guild", x: 11.5, z: 13.0, badge: "🧚 자동화·채집 길드", accent: "#4ce6d8" },
       { kind: "defense_lab", x: 13.5, z: 0.0, badge: "🛡️ 디펜스 기술 연구소", accent: "#38bdf8" },
-      { kind: "alchemy_lab", x: ALCHEMY_LAB_POS.x, z: ALCHEMY_LAB_POS.z, badge: "🔮 연금술 연구소", accent: "#c084fc" },
     ];
-
     for (const s of specs) {
       const ent = Entities.createCategoryBuilding(s.kind, s.x, s.z, s.badge, s.accent);
       Engine.stationGroup.add(ent.root);
       runtime.buildings.push({ kind: s.kind, x: s.x, z: s.z, ent });
-      if (s.kind === "alchemy_lab") {
-        sceneObjs.alchemyLab = ent;
-        runtime.alchemyLabBuilding = ent;
-      }
     }
 
-    if (typeof Entities.createWoodenPalletZone === "function") {
-      runtime.alchemyLabInPallet = Entities.createWoodenPalletZone({
-        x: ALCHEMY_LAB_IN_POS.x,
-        z: ALCHEMY_LAB_IN_POS.z,
-        w: 2.3,
-        d: 1.9,
-        accentColor: "#c084fc",
-        badgeText: "◀ 서쪽 · 🔮 광석→에너지 변환",
-      });
-      Engine.stationGroup.add(runtime.alchemyLabInPallet.root);
+    for (const cfg of LAB_CONFIGS) {
+      const ent = Entities.createCategoryBuilding(cfg.kind, cfg.pos.x, cfg.pos.z, cfg.title, cfg.accent);
+      Engine.stationGroup.add(ent.root);
+      runtime.buildings.push({ kind: cfg.kind, x: cfg.pos.x, z: cfg.pos.z, era: cfg.era, ent });
+
+      let inPallet = null;
+      if (typeof Entities.createWoodenPalletZone === "function") {
+        inPallet = Entities.createWoodenPalletZone({
+          x: cfg.inPos.x,
+          z: cfg.inPos.z,
+          w: 2.3,
+          d: 1.9,
+          accentColor: cfg.accent,
+          badgeText: cfg.inLabel,
+          overheadY: 3.75,
+        });
+        Engine.stationGroup.add(inPallet.root);
+      }
+      runtime.labs[cfg.id] = {
+        cfg,
+        ent,
+        inPallet,
+        queue: cfg.id === "alchemy_lab" ? runtime.alchemyLabQueue : [],
+        visuals: cfg.id === "alchemy_lab" ? runtime.alchemyLabVisuals : [],
+        progress: 0,
+        bannerSprite: ent.bannerSprite,
+      };
+      if (cfg.id === "alchemy_lab") {
+        sceneObjs.alchemyLab = ent;
+        runtime.alchemyLabBuilding = ent;
+        runtime.alchemyLabInPallet = inPallet;
+      }
     }
     refreshFacilityVisibility();
   }
@@ -1419,6 +2009,22 @@
       const cfg = MACHINE_CONFIGS[i];
       const ent = Entities.createProductionMachine(cfg.kind);
       ent.root.position.set(cfg.x, 0, cfg.z);
+      let bannerSprite = null;
+      if (typeof Entities.createOverheadBannerSprite === "function") {
+        bannerSprite = Entities.createOverheadBannerSprite({
+          text: cfg.title,
+          subtitle: `판매 💵 ${cfg.salePrice.toLocaleString()}`,
+          x: 0,
+          y: 3.9,
+          z: 0,
+          w: 4.8,
+          h: 1.12,
+          accentColor: cfg.accent,
+          borderColor: cfg.accent,
+          renderOrder: 999,
+        });
+        ent.root.add(bannerSprite);
+      }
       Engine.stationGroup.add(ent.root);
 
       const inPallet = Entities.createWoodenPalletZone({
@@ -1444,6 +2050,19 @@
         Engine.stationGroup.add(inPalletB.root);
       }
 
+      let inPalletC = null;
+      if (cfg.inPosC) {
+        inPalletC = Entities.createWoodenPalletZone({
+          x: cfg.inPosC.x,
+          z: cfg.inPosC.z,
+          w: 2.25,
+          d: 1.85,
+          accentColor: "#facc15",
+          badgeText: cfg.inBadgeC,
+        });
+        Engine.stationGroup.add(inPalletC.root);
+      }
+
       let showcase = null;
       let dockPallet = null;
       const facilityCustomers = [];
@@ -1453,13 +2072,13 @@
           x: cfg.outPos.x,
           z: cfg.outPos.z,
           kind: cfg.showcaseKind,
-          accentColor: cfg.id === "m1" ? 0xc56bff : 0x3be898,
+          accentColor: cfg.id === "m1" || cfg.id === "m7" ? 0xc56bff : 0x3be898,
         });
         Engine.stationGroup.add(showcase.root);
 
         for (let ci = 0; ci < 3; ci++) {
           const cz = cfg.custQueueZ0 + ci * 1.35;
-          const custEnt = Entities.createCustomer(ci + (cfg.id === "m2" ? 2 : 0), cfg.customerRole);
+          const custEnt = Entities.createCustomer(ci + (i % 4), cfg.customerRole);
           custEnt.root.position.set(cfg.custQueueX, 0, cz);
           custEnt.root.rotation.y = -Math.PI * 0.5;
           Engine.unitGroup.add(custEnt.root);
@@ -1480,7 +2099,8 @@
           w: 2.35,
           d: 1.95,
           accentColor: "#ffd85e",
-          badgeText: "👑 마차 상차장",
+          badgeText: cfg.dockBadge || "👑 마차 상차장",
+          overheadY: 3.6,
         });
         Engine.stationGroup.add(dockPallet.root);
       }
@@ -1501,8 +2121,10 @@
         cfg,
         lv: getUpgradeLevel(cfg.id),
         entity: ent,
+        bannerSprite,
         inPallet,
         inPalletB,
+        inPalletC,
         showcase,
         dockPallet,
         cashPedestal: pedObj,
@@ -1511,6 +2133,8 @@
         inVisuals: [],
         inQueueB: [],
         inVisualsB: [],
+        inQueueC: [],
+        inVisualsC: [],
         outQueue: [],
         outVisuals: [],
         craftProgress: 0,
@@ -1535,6 +2159,7 @@
       d: 2.15,
       accentColor: "#38bdf8",
       badgeText: "▼ 남쪽 · 📦 원석 파는 곳",
+      overheadY: 3.6,
     });
     Engine.stationGroup.add(sceneObjs.sellPallet.root);
 
@@ -1574,27 +2199,28 @@
     if (!Engine || !Entities) return;
 
     const padCoords = [
-      // SW Forge District around (-12.5, 13.0)
-      { id: "tool", x: -17.0, z: 13.0 },
-      { id: "bag", x: -12.5, z: 16.8 },
-      { id: "speed", x: -8.0, z: 13.0 },
-      // SE Guild District around (11.5, 13.0), clear of central South road
-      { id: "fairy", x: 7.0, z: 13.0 },
-      { id: "truck", x: 16.0, z: 13.0 },
-      { id: "farm2", x: 11.5, z: 9.2 },
-      { id: "farm3", x: 11.5, z: 16.8 },
-      // North Production District along z = -14.2 (south pads at z = -9.6)
-      { id: "m1", x: MACHINE_CONFIGS[0].padPos.x, z: MACHINE_CONFIGS[0].padPos.z },
-      { id: "m2", x: MACHINE_CONFIGS[1].padPos.x, z: MACHINE_CONFIGS[1].padPos.z },
-      { id: "m3", x: MACHINE_CONFIGS[2].padPos.x, z: MACHINE_CONFIGS[2].padPos.z },
-      // East Defense Bastion around (13.5, 0.0)
+      // SW Forge District (+1.3m wider cross spacing around -12.5, 13.0)
+      { id: "tool", x: -18.3, z: 13.0 },
+      { id: "bag", x: -12.5, z: 18.1 },
+      { id: "speed", x: -6.7, z: 13.0 },
+      // SE Guild District (+1.3m wider cross spacing around 11.5, 13.0)
+      { id: "fairy", x: 5.7, z: 13.0 },
+      { id: "truck", x: 17.3, z: 13.0 },
+      { id: "farm2", x: 11.5, z: 7.9 },
+      { id: "farm3", x: 11.5, z: 18.1 },
+      // East Defense Bastion (+1.3m wider cross spacing around 13.5, 0.0)
       { id: "turret_flame", x: UPGRADE_DEFS.turret_flame.padPos.x, z: UPGRADE_DEFS.turret_flame.padPos.z },
       { id: "turret_frost", x: UPGRADE_DEFS.turret_frost.padPos.x, z: UPGRADE_DEFS.turret_frost.padPos.z },
       { id: "turret_thunder", x: UPGRADE_DEFS.turret_thunder.padPos.x, z: UPGRADE_DEFS.turret_thunder.padPos.z },
       { id: "shrine_aegis", x: UPGRADE_DEFS.shrine_aegis.padPos.x, z: UPGRADE_DEFS.shrine_aegis.padPos.z },
-      // Central Alchemy Research Lab (-5.5, -2.5) South Upgrade Pad
-      { id: "alchemy_lab", x: ALCHEMY_LAB_PAD_POS.x, z: ALCHEMY_LAB_PAD_POS.z },
     ];
+
+    for (const cfg of LAB_CONFIGS) {
+      padCoords.push({ id: cfg.id, x: cfg.padPos.x, z: cfg.padPos.z });
+    }
+    for (const mc of MACHINE_CONFIGS) {
+      padCoords.push({ id: mc.id, x: mc.padPos.x, z: mc.padPos.z });
+    }
 
     for (const p of padCoords) {
       const def = UPGRADE_DEFS[p.id];
@@ -1613,6 +2239,7 @@
         accentHex: def.accent,
         paidRatio: 0,
       });
+      pad.root.visible = isEraUnlockedFor(p.id);
       Engine.stationGroup.add(pad.root);
       runtime.stepPads.push({ id: p.id, x: p.x, z: p.z, w: 3.1, d: 2.35, pad });
     }
@@ -1623,7 +2250,7 @@
     const Entities = window.Entities;
     if (!Engine || !Entities) return;
 
-    const desired = Math.min(15, state.fairyCount);
+    const desired = Math.min(20, state.fairyCount);
     while (runtime.fairies.length < desired) {
       const idx = runtime.fairies.length;
       const ent = Entities.createFairyWorker(idx);
@@ -1660,6 +2287,10 @@
         Engine.unitGroup.remove(runtime.truck.entity.root);
         runtime.truck = null;
       }
+      if (runtime.truck2) {
+        Engine.unitGroup.remove(runtime.truck2.entity.root);
+        runtime.truck2 = null;
+      }
       return;
     }
     if (!runtime.truck) {
@@ -1667,6 +2298,7 @@
       ent.root.position.set(0.0, 0, 16.5);
       Engine.unitGroup.add(ent.root);
       runtime.truck = {
+        id: 1,
         x: 0.0,
         z: 16.5,
         rotY: 0,
@@ -1675,6 +2307,22 @@
         bag: [],
         bagVisuals: [],
         entity: ent,
+      };
+    }
+    if ((state.alchemyLab2Lv || 0) >= 1 && !runtime.truck2) {
+      const ent2 = Entities.createHarvesterCart();
+      ent2.root.position.set(1.6, 0, 15.5);
+      Engine.unitGroup.add(ent2.root);
+      runtime.truck2 = {
+        id: 2,
+        x: 1.6,
+        z: 15.5,
+        rotY: 0,
+        state: "exit",
+        waypointIdx: 2,
+        bag: [],
+        bagVisuals: [],
+        entity: ent2,
       };
     }
   }
@@ -1703,31 +2351,70 @@
     runtime.wagon.entity.root.visible = state.m3Lv > 0;
   }
 
+  function ensureSpecialVehiclesSpawned() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities) return;
+    const era = getUnlockedEra();
+
+    if (!runtime.balloon && typeof Entities.createHotAirBalloon === "function") {
+      const bEnt = Entities.createHotAirBalloon();
+      bEnt.root.position.set(-15.0, 2.2, -29.5);
+      Engine.unitGroup.add(bEnt.root);
+      runtime.balloon = { x: -15.0, y: 2.2, z: -29.5, state: "dock", timer: 0, cargoCount: 0, cargoVisuals: [], entity: bEnt };
+    }
+    if (runtime.balloon && runtime.balloon.entity) {
+      runtime.balloon.entity.root.visible = (state.m4Lv || 0) > 0 && era >= 2;
+    }
+
+    if (!runtime.train && typeof Entities.createArmoredTrain === "function") {
+      const tEnt = Entities.createArmoredTrain();
+      tEnt.root.position.set(8.2, 0.12, -29.8);
+      Engine.unitGroup.add(tEnt.root);
+      runtime.train = { x: 8.2, z: -29.8, state: "dock", timer: 0, cargoCount: 0, cargoVisuals: [], entity: tEnt };
+    }
+    if (runtime.train && runtime.train.entity) {
+      runtime.train.entity.root.visible = (state.m6Lv || 0) > 0 && era >= 3;
+    }
+
+    if (!runtime.airship && typeof Entities.createGoldenAirship === "function") {
+      const aEnt = Entities.createGoldenAirship();
+      aEnt.root.position.set(15.4, 3.0, -40.5);
+      Engine.unitGroup.add(aEnt.root);
+      runtime.airship = { x: 15.4, y: 3.0, z: -40.5, state: "dock", timer: 0, cargoCount: 0, cargoVisuals: [], entity: aEnt };
+    }
+    if (runtime.airship && runtime.airship.entity) {
+      runtime.airship.entity.root.visible = (state.m9Lv || 0) > 0 && era >= 4;
+    }
+  }
+
   // ---------------------------------------------------------------------------
-  // Combat: 5-Tier Fantasy Horde (60 Monsters/Wave: 10 per 10s), 2x Speed & AoE Skills
+  // Combat: 20-Wave 5-Theme Horde (60 Monsters/Wave) + Territory Expansion Eras
   // ---------------------------------------------------------------------------
   const WAVE_THEME_INFO = [
-    { tier: 1, title: "숲속 야생 동물 무리", names: ["숲속 멧돼지", "숲속 회색 늑대", "숲속 불곰"] },
-    { tier: 1, title: "성난 숲속 맹수 군단", names: ["사나운 멧돼지", "야생 이리", "큰불곰 우두머리"] },
-    { tier: 2, title: "달빛 묘지 꼬마 좀비떼", names: ["꼬마 좀비", "늪지 포자 좀비", "철갑 무덤 좀비"] },
-    { tier: 2, title: "고대 유적 좀비 군단", names: ["역병 좀비", "원혼 좀비 술사", "왕실 근위 좀비"] },
-    { tier: 3, title: "붉은 달 뱀파이어 습격대", names: ["박쥐 뱀파이어", "혈액 마법 흡혈귀", "귀족 뱀파이어"] },
-    { tier: 3, title: "흡혈귀 백작의 밤군단", names: ["그림자 흡혈귀", "블러드 캐스터", "드라큘라 백작"] },
-    { tier: 4, title: "은빛 송곳니 늑대인간 무리", names: ["늑대인간 척후병", "포효 늑대주술사", "은빛 워울프"] },
-    { tier: 4, title: "보름달 광전사 늑대인간", names: ["광폭 늑대인간", "야성 워울프", "알파 늑대군주"] },
-    { tier: 5, title: "심연의 붉은 악마 선봉대", names: ["화염 임프 악마", "지옥불 악마 술사", "심연 데몬 가드"] },
-    { tier: 5, title: "마왕군 대악마 총공세", names: ["멸망의 악마병", "지옥 마도 악마", "심연 군주 대악마"] },
+    { tier: 1, title: "숲속 야생 동물 무리 (1~4)", names: ["숲속 멧돼지", "숲속 회색 늑대", "숲속 불곰"] },
+    { tier: 2, title: "달빛 묘지 꼬마 좀비떼 (5~8)", names: ["꼬마 좀비", "늪지 포자 좀비", "왕실 근위 좀비"] },
+    { tier: 3, title: "붉은 달 뱀파이어 군단 (9~12)", names: ["박쥐 뱀파이어", "혈액 마법 흡혈귀", "드라큘라 백작"] },
+    { tier: 4, title: "은빛 송곳니 늑대인간 부족 (13~16)", names: ["늑대인간 척후병", "포효 늑대주술사", "알파 늑대군주"] },
+    { tier: 5, title: "심연의 지옥 악마 대군세 (17~20)", names: ["화염 임프 악마", "지옥 마도 악마", "심연 군주 대마왕"] },
   ];
+
+  function getWaveThemeInfo(waveNum) {
+    const w = Math.max(1, Math.min(TOTAL_WAVES, waveNum));
+    const idx = Math.min(WAVE_THEME_INFO.length - 1, Math.floor((w - 1) / 4));
+    return WAVE_THEME_INFO[idx];
+  }
 
   function spawnMonsterBatch(waveNum, count = WAVE_BATCH_SIZE) {
     const Engine = window.Engine;
     const Entities = window.Entities;
     if (!Engine || !Entities || !Entities.createCuteMonster) return 0;
 
-    const w = Math.max(1, Math.min(10, waveNum));
-    const themeInfo = WAVE_THEME_INFO[w - 1] || WAVE_THEME_INFO[0];
-    const hpMult = Math.pow(1.38, w - 1);
-    const eTier = Math.min(3, Math.ceil(w / 4));
+    const w = Math.max(1, Math.min(TOTAL_WAVES, waveNum));
+    const themeInfo = getWaveThemeInfo(w);
+    const visualWave = Math.min(10, Math.ceil(w / 2));
+    const hpMult = Math.pow(1.24, w - 1);
+    const eTier = Math.min(3, Math.ceil(w / 6));
     const roleCycle = ["slime", "slime", "shroom", "golem", "slime", "shroom", "slime", "golem", "shroom", "golem"];
 
     for (let i = 0; i < count; i++) {
@@ -1737,12 +2424,12 @@
       const laneZ = ((i % 5) - 2) * 1.45 + (Math.random() - 0.5) * 0.45;
       const sx = 33.8 + Math.floor(i / 5) * 2.1 + Math.random() * 1.2;
 
-      const baseHp = isBruiser ? 52 : isRanged ? 32 : 26;
-      const baseAtk = (isBruiser ? 5 : isRanged ? 4 : 3) + Math.floor(w * 1.1);
-      const spd = (isBruiser ? 2.75 : isRanged ? 3.25 : 4.25) + w * 0.08;
+      const baseHp = isBruiser ? 50 : isRanged ? 30 : 25;
+      const baseAtk = (isBruiser ? 5 : isRanged ? 4 : 3) + Math.floor(w * 1.05);
+      const spd = (isBruiser ? 2.75 : isRanged ? 3.25 : 4.2) + Math.min(2.4, w * 0.09);
       const name = themeInfo.names[isBruiser ? 2 : isRanged ? 1 : 0];
 
-      const ent = Entities.createCuteMonster(species, w);
+      const ent = Entities.createCuteMonster(species, visualWave);
       ent.root.position.set(sx, 0, laneZ);
       Engine.unitGroup.add(ent.root);
       runtime.monsters.push({
@@ -1763,9 +2450,9 @@
         atkTimer: 0.4 + Math.random() * 0.4,
         slowTimer: 0,
         stunTimer: 0,
-        reward: 4 + w * 2,
+        reward: 6 + w * 4,
         energyTier: eTier,
-        energyReward: 2,
+        energyReward: 2 + Math.floor(w / 5),
         entity: ent,
       });
     }
@@ -1773,8 +2460,8 @@
   }
 
   function spawnWaveHorde(waveNum) {
-    const w = Math.max(1, Math.min(10, waveNum));
-    const themeInfo = WAVE_THEME_INFO[w - 1] || WAVE_THEME_INFO[0];
+    const w = Math.max(1, Math.min(TOTAL_WAVES, waveNum));
+    const themeInfo = getWaveThemeInfo(w);
     runtime.waveActive = true;
     runtime.waveCurrentNum = w;
     runtime.waveTotalToSpawn = WAVE_TOTAL_MONSTERS;
@@ -2258,24 +2945,39 @@
       }
     }
 
-    // 6. Wave Clear Progression (1 ~ 10)
+    // 6. Wave Clear Progression (1 ~ 20) + 5-Wave Territory Expansion (Wave 6, 11, 16)
     if (runtime.waveActive && runtime.waveSpawnCount >= runtime.waveTotalToSpawn && runtime.monsters.length === 0) {
       runtime.waveActive = false;
       const clearedW = state.wave;
-      const bonus = 80 * clearedW;
+      const bonus = 100 * clearedW;
       state.gems += bonus;
       state.totalEarnedGems += bonus;
       playBuildPop();
-      spawnFloatingText(GATE_POS.x - 1.5, 2.8, GATE_POS.z, `🎉 WAVE ${clearedW} 클리어 +💵 ${bonus}`, "#fde047");
+      spawnFloatingText(GATE_POS.x - 1.5, 2.8, GATE_POS.z, `🎉 WAVE ${clearedW} 클리어 +💵 ${bonus.toLocaleString()}`, "#fde047");
 
-      if (clearedW < 10) {
-        state.wave = clearedW + 1;
+      if (clearedW < TOTAL_WAVES) {
+        const nextWave = clearedW + 1;
+        state.wave = nextWave;
         runtime.waveTimer = WAVE_INTERVAL;
-        showToast(`🏆 WAVE ${clearedW} 성문 수호 성공! 보너스 💵 ${bonus} · 다음 웨이브 3분 뒤 시작`);
+        if (isWaveExpansionMilestone(nextWave)) {
+          const newEra = nextWave === 6 ? 2 : nextWave === 11 ? 3 : 4;
+          state.unlockedEra = Math.max(state.unlockedEra || 1, newEra);
+          refreshFarmZoneVisibility();
+          refreshFacilityVisibility();
+          ensureSpecialVehiclesSpawned();
+          const panCoords = newEra === 2 ? [-12.2, -25.8] : newEra === 3 ? [12.2, -25.8] : [0.0, -38.0];
+          if (window.Engine && typeof window.Engine.panCameraTo === "function") {
+            window.Engine.panCameraTo(panCoords[0], panCoords[1], 2.0);
+          }
+          const eInfo = ERA_INFO[newEra];
+          showToast(`🎊 영토 대확장 [Era ${newEra}]! '${eInfo.name}' & 스킬 상한 Lv.${eInfo.maxCap} 해금!`);
+        } else {
+          showToast(`🏆 WAVE ${clearedW} 성문 수호 성공! 보너스 💵 ${bonus.toLocaleString()} · 다음 웨이브 3분 뒤 시작`);
+        }
       } else {
         state.allWavesCleared = true;
         runtime.waveTimer = 0;
-        showToast("👑 축하합니다! 10단계 대침공으로부터 마을 성문을 끝까지 지켜냈습니다!");
+        showToast("👑 축하합니다! 총 20단계 대침공으로부터 황금 대성채를 끝까지 지켜냈습니다!");
       }
       saveGame();
       syncHUD(true);
@@ -2286,38 +2988,53 @@
   // Tycoon Movement, Harvesting, Facilities, Pedestals & Workers
   // ---------------------------------------------------------------------------
   function resolveWorldBoundsAndCollisions(obj, radius = 0.65) {
+    const era = getUnlockedEra();
     if (obj.z > 20.0) {
-      // Region A: Dedicated Southern Resource Valley (z in [20.0, 37.5])
+      // Region A: Dedicated Southern Resource Valley (Zones 1~10, z in [20.0, 60.5])
       if (obj.z < 21.8) {
         obj.x = Math.max(-3.8, Math.min(3.8, obj.x));
       } else {
         obj.x = Math.max(-16.6, Math.min(16.6, obj.x));
       }
-      obj.z = Math.min(37.5, obj.z);
+      obj.z = Math.min(era >= 4 ? 60.5 : era === 3 ? 52.8 : era === 2 ? 45.2 : 37.5, obj.z);
     } else if (obj.x > 24.0) {
-      // Region B: Dedicated East Monster Siege Battlefield (x in [24.0, 40.5], z in [-5.2, 5.2])
+      // Region B: Dedicated East Monster Siege Battlefield
       if (obj.x < 25.4) {
         obj.z = Math.max(-3.6, Math.min(3.6, obj.z));
       } else {
         obj.z = Math.max(-5.2, Math.min(5.2, obj.z));
       }
       obj.x = Math.min(40.5, obj.x);
+    } else if (obj.z < -20.0) {
+      // Region D: North Expansion Districts (Era 2 NW, Era 3 NE, Era 4 Citadel)
+      const minZ = era >= 4 ? -43.8 : era >= 2 ? -31.4 : -19.2;
+      let minX = -23.2;
+      let maxX = 23.2;
+      if (obj.z >= -32.2) {
+        if (era === 2) maxX = -0.8;
+        else if (era === 3 && era < 2) minX = 0.8;
+      }
+      obj.x = Math.max(minX, Math.min(maxX, obj.x));
+      obj.z = Math.max(minZ, obj.z);
     } else {
-      // Region C: Inside Walled Village (48m x 40m) with dual separated gates:
-      // 1) East Monster Gate at (x = 24.0, |z| <= 3.6)
-      // 2) South Resource Gate at (|x| <= 3.8, z = 20.0)
+      // Region C: Inside Walled Base Village (48m x 40m) + open North Era passageways
       const maxX = Math.abs(obj.z) <= 3.6 ? 40.5 : 23.2;
-      const maxZ = Math.abs(obj.x) <= 3.8 ? 37.5 : 19.2;
+      const maxZ = Math.abs(obj.x) <= 3.8 ? 60.5 : 19.2;
+      let minZ = -19.2;
+      if ((era >= 2 && obj.x <= -1.2) || (era >= 3 && obj.x >= 1.2) || era >= 4) {
+        minZ = era >= 4 ? -43.8 : -31.4;
+      }
       obj.x = Math.max(-23.2, Math.min(maxX, obj.x));
-      obj.z = Math.max(-19.2, Math.min(maxZ, obj.z));
+      obj.z = Math.max(minZ, Math.min(maxZ, obj.z));
     }
 
     const boxes = [{ cx: STALL_POS.x, cz: STALL_POS.z, hw: 1.65 + radius, hd: 1.05 + radius }];
     for (const bld of runtime.buildings) {
+      if (bld.era && era < bld.era) continue;
       boxes.push({ cx: bld.x, cz: bld.z, hw: 1.55 + radius, hd: 1.45 + radius });
     }
     for (const m of runtime.machines) {
-      if (m.lv <= 0) continue;
+      if (m.lv <= 0 || era < (m.cfg.era || 1)) continue;
       boxes.push({ cx: m.cfg.x, cz: m.cfg.z, hw: 1.35 + radius, hd: 1.15 + radius });
       if (m.cfg.showcaseKind) {
         boxes.push({ cx: m.cfg.outPos.x, cz: m.cfg.outPos.z, hw: 1.3 + radius, hd: 0.95 + radius });
@@ -2428,24 +3145,31 @@
 
     if (player.harvestCooldown > 0) player.harvestCooldown -= dt;
     const bagCap = getHeroBagCap();
+    const pickRad = getHeroPickRadius();
+    const multiHit = getHeroMultiHit();
     if (player.harvestCooldown <= 0 && player.bagItems.length < bagCap) {
-      let best = null;
-      let bestDist = 2.65;
+      const candidates = [];
       for (const node of runtime.farmNodes) {
         if (!isZoneUnlocked(node.zone) || node.respawnTimer > 0) continue;
         const d = Math.hypot(node.x - player.x, node.z - player.z);
-        if (d < bestDist) {
-          bestDist = d;
-          best = node;
-        }
+        if (d < pickRad) candidates.push({ node, d });
       }
-      if (best) {
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => a.d - b.d);
         player.swingTimer = player.swingDuration;
         player.harvestCooldown = getHeroHarvestInterval();
-        const yieldCount = Math.min(bagCap - player.bagItems.length, getHeroHarvestYield());
-        harvestNode(best, yieldCount, player.bagItems, player.x, player.z, true);
+        const hitCount = Math.min(multiHit, candidates.length);
+        for (let hi = 0; hi < hitCount && player.bagItems.length < bagCap; hi++) {
+          let rawYield = getHeroHarvestYield();
+          if (Math.random() < getHeroDoubleDropChance()) {
+            rawYield *= 2;
+            spawnFloatingText(candidates[hi].node.x, 1.8, candidates[hi].node.z, "🍀 2배 수확!", "#fde047");
+          }
+          const yieldCount = Math.min(bagCap - player.bagItems.length, rawYield);
+          harvestNode(candidates[hi].node, yieldCount, player.bagItems, player.x, player.z, true);
+        }
         playHarvestChime(player.bagItems.length);
-        addXp(3);
+        addXp(3 * hitCount);
       }
     }
   }
@@ -2463,13 +3187,46 @@
     return true;
   }
 
+  function stepAutoConveyors(dt) {
+    const lab2Lv = state.alchemyLab2Lv || 0;
+    if (lab2Lv <= 0 && (state.m9Lv || 0) <= 0) return;
+    runtime.conveyorTimer = (runtime.conveyorTimer || 0) + dt;
+    const interval = Math.max(0.32, 0.95 - (lab2Lv - 1) * 0.25);
+    if (runtime.conveyorTimer < interval) return;
+    runtime.conveyorTimer = 0;
+
+    const links = [
+      { reqLab2: true, fromIdx: 0, toIdx: 3, toQueueKey: "inQueue", color: 0xd67aff }, // m1 -> m4 (cut_gem)
+      { reqLab2: true, fromIdx: 1, toIdx: 5, toQueueKey: "inQueue", color: 0x52ff9b }, // m2 -> m6 (magic_potion)
+      { reqLab2: true, fromIdx: 5, toIdx: 7, toQueueKey: "inQueueC", color: 0xfacc15 }, // m6 -> m8 (arcane_core)
+      { reqLab2: false, fromIdx: 7, toIdx: 8, toQueueKey: "inQueue", color: 0xf43f5e }, // m8 -> m9 (philosopher_stone)
+    ];
+    for (const lk of links) {
+      if (lk.reqLab2 && lab2Lv <= 0) continue;
+      const src = runtime.machines[lk.fromIdx];
+      const dst = runtime.machines[lk.toIdx];
+      if (!src || !dst || src.lv <= 0 || dst.lv <= 0) continue;
+      const dstQ = dst[lk.toQueueKey];
+      if (src.outQueue.length > 0 && dstQ.length < 20) {
+        const item = src.outQueue.pop();
+        const dstPos = lk.toQueueKey === "inQueueC" ? dst.cfg.inPosC : dst.cfg.inPos;
+        spawnFlyingItem(item, src.cfg.outPos.x, 1.0, src.cfg.outPos.z, dstPos.x, 0.5, dstPos.z, () => {
+          dstQ.push(item);
+        });
+      }
+    }
+  }
+
   function updatePalletsAndHeroTransfers(dt) {
     if (player.transferCooldown > 0) player.transferCooldown -= dt;
+    const era = getUnlockedEra();
+    stepAutoConveyors(dt);
 
     for (const m of runtime.machines) {
-      if (m.lv <= 0) continue;
+      if (m.lv <= 0 || era < (m.cfg.era || 1)) continue;
       let inPulse = 0;
       let inBPulse = 0;
+      let inCPulse = 0;
 
       if (Math.hypot(player.x - m.cfg.inPos.x, player.z - m.cfg.inPos.z) < 2.25) {
         inPulse = 1;
@@ -2483,12 +3240,22 @@
           transferTypedFromBagToQueue(m.cfg.inputTypeB, m.cfg.inPosB.x, m.cfg.inPosB.z, m.inQueueB, 24);
         }
       }
+      if (m.inPalletC && m.cfg.inPosC && Math.hypot(player.x - m.cfg.inPosC.x, player.z - m.cfg.inPosC.z) < 2.25) {
+        inCPulse = 1;
+        if (player.transferCooldown <= 0) {
+          transferTypedFromBagToQueue(m.cfg.inputTypeC, m.cfg.inPosC.x, m.cfg.inPosC.z, m.inQueueC, 24);
+        }
+      }
 
       window.Entities.updateWoodenPalletZone(m.inPallet, inPulse, runtime.time);
       if (m.inPalletB) window.Entities.updateWoodenPalletZone(m.inPalletB, inBPulse, runtime.time);
+      if (m.inPalletC) window.Entities.updateWoodenPalletZone(m.inPalletC, inCPulse, runtime.time);
       if (m.dockPallet) window.Entities.updateWoodenPalletZone(m.dockPallet, m.outQueue.length > 0 ? 1 : 0, runtime.time);
 
-      const hasInputs = m.cfg.inPosB ? m.inQueue.length > 0 && m.inQueueB.length > 0 : m.inQueue.length > 0;
+      const hasInputs =
+        m.inQueue.length > 0 &&
+        (!m.cfg.inPosB || m.inQueueB.length > 0) &&
+        (!m.cfg.inPosC || m.inQueueC.length > 0);
       const isProcessing = hasInputs && m.outQueue.length < 24;
       if (isProcessing) {
         const speedMult = 1 + (m.lv - 1) * 0.28;
@@ -2497,7 +3264,13 @@
           m.craftProgress -= 1;
           m.inQueue.shift();
           if (m.cfg.inPosB) m.inQueueB.shift();
+          if (m.cfg.inPosC) m.inQueueC.shift();
           m.outQueue.push(m.cfg.outputType);
+          const lab3Lv = state.alchemyLab3Lv || 0;
+          if (lab3Lv > 0 && m.outQueue.length < 24 && Math.random() < 0.30 + (lab3Lv - 1) * 0.12) {
+            m.outQueue.push(m.cfg.outputType);
+            spawnFloatingText(m.cfg.x, 2.6, m.cfg.z, "⚡ 1+1 대성공!", "#e879f9");
+          }
           spawnBurstVfx(m.cfg.outPos.x, 1.15, m.cfg.outPos.z, 0xffe066, 4);
         }
       } else if (!hasInputs) {
@@ -2507,6 +3280,7 @@
       window.Entities.animateProductionMachine(m.entity, isProcessing, dt);
       syncCrateStackVisuals(m.inPallet.stackAnchor, m.inQueue, m.inVisuals, { cols: 2, rows: 2, xStep: 1.0, zStep: 0.68, maxDraw: 24 });
       if (m.inPalletB) syncCrateStackVisuals(m.inPalletB.stackAnchor, m.inQueueB, m.inVisualsB, { cols: 2, rows: 2, xStep: 1.0, zStep: 0.68, maxDraw: 24 });
+      if (m.inPalletC) syncCrateStackVisuals(m.inPalletC.stackAnchor, m.inQueueC, m.inVisualsC, { cols: 2, rows: 2, xStep: 1.0, zStep: 0.68, maxDraw: 24 });
       if (m.showcase && m.showcase.stockAnchor) syncCrateStackVisuals(m.showcase.stockAnchor, m.outQueue, m.outVisuals, { cols: 2, rows: 1, xStep: 1.02, zStep: 0.72, maxDraw: 16 });
       else if (m.dockPallet && m.dockPallet.stackAnchor) syncCrateStackVisuals(m.dockPallet.stackAnchor, m.outQueue, m.outVisuals, { cols: 2, rows: 2, xStep: 1.02, zStep: 0.72, maxDraw: 20 });
     }
@@ -2527,47 +3301,49 @@
       maxDraw: 36,
     });
 
-    // Alchemy Research Lab (Lv.1~3): blue_ore -> Dimensional Energy (dim1 / dim2 / dim3)
-    const labPallet = sceneObjs.alchemyLabInPallet || runtime.alchemyLabInPallet;
-    if (!Array.isArray(runtime.alchemyLabQueue)) runtime.alchemyLabQueue = [];
-    if (!Array.isArray(runtime.alchemyLabInVisuals)) runtime.alchemyLabInVisuals = [];
-    let labPulse = 0;
-    if (state.alchemyLabLv >= 1) {
-      if (Math.hypot(player.x - ALCHEMY_LAB_IN_POS.x, player.z - ALCHEMY_LAB_IN_POS.z) < 2.45) {
-        labPulse = 1;
-        if (player.transferCooldown <= 0 && runtime.alchemyLabQueue.length < 18) {
-          transferTypedFromBagToQueue("blue_ore", ALCHEMY_LAB_IN_POS.x, ALCHEMY_LAB_IN_POS.z, runtime.alchemyLabQueue, 18);
+    // All 4 Alchemy Research Labs (1~4호 연구소) -> Dimensional Energy (dim1 / dim2 / dim3)
+    for (const cfg of LAB_CONFIGS) {
+      const labObj = runtime.labs[cfg.id];
+      if (!labObj) continue;
+      const lv = getUpgradeLevel(cfg.id);
+      let labPulse = 0;
+      if (lv >= 1 && era >= cfg.era) {
+        if (Math.hypot(player.x - cfg.inPos.x, player.z - cfg.inPos.z) < 2.45) {
+          labPulse = 1;
+          if (player.transferCooldown <= 0 && labObj.queue.length < 18) {
+            transferTypedFromBagToQueue(cfg.inputType, cfg.inPos.x, cfg.inPos.z, labObj.queue, 18);
+          }
+        }
+        if (labObj.queue.length > 0) {
+          const cycleSec = Math.max(0.75, 1.45 - (lv - 1) * 0.25);
+          labObj.progress += dt;
+          while (labObj.progress >= cycleSec && labObj.queue.length > 0) {
+            labObj.progress -= cycleSec;
+            labObj.queue.pop();
+            const tierMult = cfg.era;
+            const d1 = (lv >= 3 ? 28 : lv === 2 ? 22 : 18) * tierMult;
+            const d2 = (lv >= 2 || cfg.era >= 2 ? 16 + lv * 4 : 0) * tierMult;
+            const d3 = (lv >= 3 || cfg.era >= 3 ? 12 + lv * 3 : 0) * tierMult;
+            addEnergyAmount(1, d1);
+            if (d2 > 0) addEnergyAmount(2, d2);
+            if (d3 > 0) addEnergyAmount(3, d3);
+            playTone(940, 0.09, "triangle", 0.04);
+          }
+        } else {
+          labObj.progress = 0;
         }
       }
-      if (runtime.alchemyLabQueue.length > 0) {
-        const cycleSec = Math.max(0.85, 1.45 - (state.alchemyLabLv - 1) * 0.25);
-        runtime.alchemyLabProgress = (runtime.alchemyLabProgress || 0) + dt;
-        while (runtime.alchemyLabProgress >= cycleSec && runtime.alchemyLabQueue.length > 0) {
-          runtime.alchemyLabProgress -= cycleSec;
-          runtime.alchemyLabQueue.pop();
-          const dim1Gain = state.alchemyLabLv >= 3 ? 28 : state.alchemyLabLv === 2 ? 22 : 18;
-          const dim2Gain = state.alchemyLabLv >= 3 ? 20 : state.alchemyLabLv === 2 ? 15 : 0;
-          const dim3Gain = state.alchemyLabLv >= 3 ? 14 : 0;
-          addEnergyAmount(1, dim1Gain);
-          if (dim2Gain > 0) addEnergyAmount(2, dim2Gain);
-          if (dim3Gain > 0) addEnergyAmount(3, dim3Gain);
-          playTone(940, 0.09, "triangle", 0.045);
-          if (dim2Gain > 0 || dim3Gain > 0) playTone(1240, 0.08, "sine", 0.035);
+      if (labObj.inPallet) {
+        window.Entities.updateWoodenPalletZone(labObj.inPallet, labPulse, runtime.time);
+        if (labObj.inPallet.stackAnchor) {
+          syncCrateStackVisuals(labObj.inPallet.stackAnchor, labObj.queue, labObj.visuals, {
+            cols: 2,
+            rows: 2,
+            xStep: 1.04,
+            zStep: 0.74,
+            maxDraw: 18,
+          });
         }
-      } else {
-        runtime.alchemyLabProgress = 0;
-      }
-    }
-    if (labPallet) {
-      window.Entities.updateWoodenPalletZone(labPallet, labPulse, runtime.time);
-      if (labPallet.stackAnchor) {
-        syncCrateStackVisuals(labPallet.stackAnchor, runtime.alchemyLabQueue, runtime.alchemyLabInVisuals, {
-          cols: 2,
-          rows: 2,
-          xStep: 1.04,
-          zStep: 0.74,
-          maxDraw: 18,
-        });
       }
     }
   }
@@ -2651,9 +3427,10 @@
       if (m3.outQueue.length > 0 && Math.floor((w.timer + dt) * 6) !== Math.floor(w.timer * 6)) {
         m3.outQueue.pop();
         w.cargoCount++;
-        addCashToPedestal(3, m3.cfg.salePrice);
+        const earn = Math.round(m3.cfg.salePrice * getPriceMultiplier());
+        addCashToPedestal(3, earn);
         spawnBurstVfx(m3.cfg.cashPos.x, 1.4, m3.cfg.cashPos.z, 0x2ecc71, 10);
-        spawnFloatingText(m3.cfg.cashPos.x, 2.2, m3.cfg.cashPos.z, "+💵 300 👑", "#ffe36e");
+        spawnFloatingText(m3.cfg.cashPos.x, 2.2, m3.cfg.cashPos.z, `+💵 ${earn} 👑`, "#ffe36e");
         playGemChime(14);
       }
       if (w.timer <= 0 && m3.outQueue.length === 0) w.state = "departing";
@@ -2680,12 +3457,102 @@
     }
   }
 
+  function updateSpecialVehicles(dt) {
+    const era = getUnlockedEra();
+    const mult = getPriceMultiplier();
+    // 1) Hot Air Balloon for 4호기 (fire_runestone)
+    const m4 = runtime.machines[3];
+    const b = runtime.balloon;
+    if (b && m4 && m4.lv > 0 && era >= 2) {
+      let moving = false;
+      if (b.state === "dock") {
+        b.x = -15.0; b.z = -29.5; b.y = 2.2 + Math.sin(runtime.time * 2.2) * 0.22;
+        if (m4.outQueue.length > 0 && b.timer <= 0) {
+          m4.outQueue.pop();
+          const earn = Math.round(m4.cfg.salePrice * mult);
+          addCashToPedestal(4, earn);
+          spawnFloatingText(m4.cfg.cashPos.x, 2.5, m4.cfg.cashPos.z, `+💵 ${earn} 🎈`, "#fb7185");
+          b.cargoCount = Math.min(4, b.cargoCount + 1);
+          b.timer = 0.7;
+          if (b.cargoCount >= 2 || m4.outQueue.length === 0) b.state = "depart";
+        } else b.timer = Math.max(0, b.timer - dt);
+      } else if (b.state === "depart") {
+        moving = true;
+        b.x -= 4.8 * dt; b.y = Math.min(5.2, b.y + 1.8 * dt);
+        if (b.x < -27.5) b.state = "return";
+      } else {
+        moving = true;
+        b.x += 5.8 * dt; b.y = Math.max(2.2, b.y - 1.8 * dt);
+        if (b.x >= -15.0) { b.x = -15.0; b.cargoCount = 0; b.state = "dock"; b.timer = 0.5; }
+      }
+      b.entity.root.position.set(b.x, b.y, b.z);
+      if (window.Entities.animateHotAirBalloon) window.Entities.animateHotAirBalloon(b.entity, dt, moving);
+    }
+
+    // 2) Dwarf Armored Train for 6호기 (arcane_core) along railway z = -29.8
+    const m6 = runtime.machines[5];
+    const tr = runtime.train;
+    if (tr && m6 && m6.lv > 0 && era >= 3) {
+      let spd = 0;
+      if (tr.state === "dock") {
+        tr.x = 8.2;
+        if (m6.outQueue.length > 0 && tr.timer <= 0) {
+          m6.outQueue.pop();
+          const earn = Math.round(m6.cfg.salePrice * mult);
+          addCashToPedestal(6, earn);
+          spawnFloatingText(m6.cfg.cashPos.x, 2.5, m6.cfg.cashPos.z, `+💵 ${earn.toLocaleString()} 🚂`, "#facc15");
+          tr.cargoCount = Math.min(4, tr.cargoCount + 1);
+          tr.timer = 0.65;
+          if (tr.cargoCount >= 2 || m6.outQueue.length === 0) tr.state = "depart";
+        } else tr.timer = Math.max(0, tr.timer - dt);
+      } else if (tr.state === "depart") {
+        spd = 7.5; tr.x += spd * dt;
+        if (tr.x > 26.5) tr.state = "return";
+      } else {
+        spd = 7.5; tr.x -= spd * dt;
+        if (tr.x <= 8.2) { tr.x = 8.2; tr.cargoCount = 0; tr.state = "dock"; tr.timer = 0.5; }
+      }
+      tr.entity.root.position.set(tr.x, 0.12, -29.8);
+      if (window.Entities.animateArmoredTrain) window.Entities.animateArmoredTrain(tr.entity, spd, dt);
+    }
+
+    // 3) Giant Golden Sky Airship for 9호기 (philosopher_stone)
+    const m9 = runtime.machines[8];
+    const a = runtime.airship;
+    if (a && m9 && m9.lv > 0 && era >= 4) {
+      const lab4Bonus = (state.alchemyLab4Lv || 0) >= 1 ? 2.0 : 1.0;
+      if (a.state === "dock") {
+        a.x = 15.4; a.z = -40.5; a.y = 3.0 + Math.sin(runtime.time * 1.9) * 0.24;
+        if (m9.outQueue.length > 0 && a.timer <= 0) {
+          m9.outQueue.pop();
+          const earn = Math.round(m9.cfg.salePrice * mult * lab4Bonus);
+          addCashToPedestal(9, earn);
+          spawnFloatingText(m9.cfg.cashPos.x, 3.0, m9.cfg.cashPos.z, `+💵 ${earn.toLocaleString()} 🛸`, "#fde047");
+          playGemChime(18);
+          a.cargoCount = Math.min(4, a.cargoCount + 1);
+          a.timer = 0.8;
+          if (a.cargoCount >= 2 || m9.outQueue.length === 0) a.state = "depart";
+        } else a.timer = Math.max(0, a.timer - dt);
+      } else if (a.state === "depart") {
+        a.x += 6.2 * dt; a.z -= 2.4 * dt; a.y = Math.min(7.5, a.y + 1.4 * dt);
+        if (a.x > 29.5) a.state = "return";
+      } else {
+        a.x -= 6.5 * dt; a.z = Math.min(-40.5, a.z + 2.4 * dt); a.y = Math.max(3.0, a.y - 1.4 * dt);
+        if (a.x <= 15.4) { a.x = 15.4; a.cargoCount = 0; a.state = "dock"; a.timer = 0.6; }
+      }
+      a.entity.root.position.set(a.x, a.y, a.z);
+      if (window.Entities.animateGoldenAirship) window.Entities.animateGoldenAirship(a.entity, dt);
+    }
+  }
+
   function updateCustomersAndCashPedestals(dt) {
+    const era = getUnlockedEra();
+    const mult = getPriceMultiplier();
     if (runtime.sellCooldown > 0) runtime.sellCooldown -= dt;
     if (runtime.sellCooldown <= 0 && runtime.sellPalletQueue.length > 0) {
       runtime.sellCooldown = 0.55;
       runtime.sellPalletQueue.pop();
-      addCashToPedestal(0, 10);
+      addCashToPedestal(0, Math.round(10 * mult));
       spawnBurstVfx(STALL_POS.x + 0.5, 1.4, STALL_POS.z + 1.5, 0x2ecc71, 4);
 
       const lead = runtime.customers.find((c) => c.slot === 0 && !c.leaving);
@@ -2697,14 +3564,15 @@
     }
     advanceCustomerQueue(runtime.customers, dt, STALL_POS.x - 3.2, STALL_POS.z - 2.6, 1.45, Math.PI * 0.5, -5.2, STALL_POS.z + 5.8);
 
-    for (let i = 0; i < 2; i++) {
+    // Showcase facilities: m1 (idx 0), m2 (idx 1), m5 (idx 4), m7 (idx 6)
+    for (let i = 0; i < runtime.machines.length; i++) {
       const m = runtime.machines[i];
-      if (!m || m.lv <= 0 || !m.showcase) continue;
+      if (!m || m.lv <= 0 || !m.showcase || era < (m.cfg.era || 1)) continue;
       if (m.saleCooldown > 0) m.saleCooldown -= dt;
       if (m.saleCooldown <= 0 && m.outQueue.length > 0) {
-        m.saleCooldown = 0.65;
+        m.saleCooldown = m.cfg.id === "m7" ? 0.45 : 0.65;
         m.outQueue.pop();
-        addCashToPedestal(i + 1, m.cfg.salePrice);
+        addCashToPedestal(i + 1, Math.round(m.cfg.salePrice * mult));
         spawnBurstVfx(m.cfg.outPos.x, 1.35, m.cfg.outPos.z, 0x2ecc71, 6);
 
         const lead = m.customers.find((c) => c.slot === 0 && !c.leaving);
@@ -2717,15 +3585,29 @@
       advanceCustomerQueue(m.customers, dt, m.cfg.custQueueX, m.cfg.custQueueZ0, 1.35, -Math.PI * 0.5, 1.4, m.cfg.custQueueZ0 + 6.8);
     }
 
+    // m8 Philosopher Stone direct monetization buffer if m9 not yet built
+    const m8 = runtime.machines[7];
+    const m9 = runtime.machines[8];
+    if (m8 && m8.lv > 0 && (!m9 || m9.lv <= 0) && m8.outQueue.length > 6) {
+      if (m8.saleCooldown > 0) m8.saleCooldown -= dt;
+      if (m8.saleCooldown <= 0) {
+        m8.saleCooldown = 1.5;
+        m8.outQueue.pop();
+        addCashToPedestal(8, Math.round(m8.cfg.salePrice * mult));
+      }
+    }
+
     updateWagon(dt);
+    updateSpecialVehicles(dt);
 
     if (runtime.gemVacuumCooldown > 0) runtime.gemVacuumCooldown -= dt;
+    const magnetRad = getCashMagnetRadius();
     let activePed = null;
     for (let i = 0; i < runtime.pedestals.length; i++) {
       const ped = runtime.pedestals[i];
       if (i > 0 && runtime.machines[i - 1] && runtime.machines[i - 1].lv <= 0) continue;
       if (ped.cashValues.length === 0) continue;
-      if (Math.hypot(player.x - ped.x, player.z - ped.z) < 2.8) {
+      if (Math.hypot(player.x - ped.x, player.z - ped.z) < magnetRad) {
         activePed = ped;
         break;
       }
@@ -2780,11 +3662,20 @@
     const m1 = runtime.machines[0];
     const m2 = runtime.machines[1];
     const m3 = runtime.machines[2];
+    const era = getUnlockedEra();
+    const m5AuraMult = (state.m5Lv || 0) > 0 && era >= 2 ? 1.3 : 1.0;
+    const hasTeleport = (state.alchemyLab4Lv || 0) >= 1 && era >= 4;
+
+    // Build pool of currently unlocked & needed raw resources
+    const wantedTypes = ["blue_ore"];
+    if (state.herbGroveUnlocked) wantedTypes.push("rainbow_herb");
+    if (era >= 2) wantedTypes.push("fire_mana_stone", "spirit_dew");
+    if (era >= 3) wantedTypes.push("lightning_crystal", "moon_mushroom");
+    if (era >= 4) wantedTypes.push("star_meteorite", "dragon_scale_flower");
 
     for (const f of runtime.fairies) {
       if (f.workTimer > 0) f.workTimer -= dt;
-      const wantHerb = f.idx % 2 === 1 && state.herbGroveUnlocked;
-      const wantedType = wantHerb ? "rainbow_herb" : "blue_ore";
+      const wantedType = wantedTypes[f.idx % wantedTypes.length];
 
       let tx = f.x;
       let tz = f.z;
@@ -2808,64 +3699,80 @@
         if (f.targetNode) {
           tx = f.targetNode.x;
           tz = f.targetNode.z;
+          if (hasTeleport && Math.hypot(tx - f.x, tz - f.z) > 12.0) {
+            spawnBurstVfx(f.x, 1.0, f.z, 0xe879f9, 5);
+            f.x = tx - 0.8;
+            f.z = tz - 0.8;
+            spawnBurstVfx(f.x, 1.0, f.z, 0xfacc15, 6);
+          }
           if (Math.hypot(tx - f.x, tz - f.z) < 1.25 && f.workTimer <= 0) {
-            f.workTimer = 0.42;
+            f.workTimer = 0.38;
             harvestNode(f.targetNode, 1, f.bag, f.x, f.z, false);
             if (f.bag.length >= cap) f.state = "deliver";
           }
         }
       } else {
-        const hasHerb = f.bag.includes("rainbow_herb");
+        const carryType = f.bag[0] || "blue_ore";
         let destPos = SELL_PALLET_POS;
         let destQueue = runtime.sellPalletQueue;
         let maxQ = 36;
-        let deliverType = "blue_ore";
+        let deliverType = carryType;
 
-        if (hasHerb) {
-          deliverType = "rainbow_herb";
-          if (m3 && m3.lv > 0 && m3.inQueueB.length < 18 && (!m2 || m3.inQueueB.length <= m2.inQueue.length)) {
-            destPos = m3.cfg.inPosB;
-            destQueue = m3.inQueueB;
-            maxQ = 24;
-          } else if (m2 && m2.lv > 0 && m2.inQueue.length < 24) {
-            destPos = m2.cfg.inPos;
-            destQueue = m2.inQueue;
-            maxQ = 24;
-          } else if (m3 && m3.lv > 0 && m3.inQueueB.length < 24) {
-            destPos = m3.cfg.inPosB;
-            destQueue = m3.inQueueB;
-            maxQ = 24;
-          }
-        } else {
-          deliverType = "blue_ore";
+        if (carryType === "blue_ore") {
           if (!Array.isArray(runtime.alchemyLabQueue)) runtime.alchemyLabQueue = [];
           if (state.alchemyLabLv >= 1 && runtime.alchemyLabQueue.length < 6) {
-            destPos = ALCHEMY_LAB_IN_POS;
-            destQueue = runtime.alchemyLabQueue;
-            maxQ = 18;
+            destPos = ALCHEMY_LAB_IN_POS; destQueue = runtime.alchemyLabQueue; maxQ = 18;
           } else if (m3 && m3.lv > 0 && m3.inQueue.length < 18 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
-            destPos = m3.cfg.inPos;
-            destQueue = m3.inQueue;
-            maxQ = 24;
+            destPos = m3.cfg.inPos; destQueue = m3.inQueue; maxQ = 24;
           } else if (m1 && m1.lv > 0 && m1.inQueue.length < 24) {
-            destPos = m1.cfg.inPos;
-            destQueue = m1.inQueue;
-            maxQ = 24;
+            destPos = m1.cfg.inPos; destQueue = m1.inQueue; maxQ = 24;
+          }
+        } else {
+          // Match exotic & herb resources directly to active labs or machines
+          let matched = false;
+          for (const m of runtime.machines) {
+            if (m.lv <= 0 || era < (m.cfg.era || 1)) continue;
+            if (m.cfg.inputType === carryType && m.inQueue.length < 22) {
+              destPos = m.cfg.inPos; destQueue = m.inQueue; maxQ = 24; matched = true; break;
+            }
+            if (m.cfg.inputTypeB === carryType && m.inQueueB.length < 22) {
+              destPos = m.cfg.inPosB; destQueue = m.inQueueB; maxQ = 24; matched = true; break;
+            }
+          }
+          if (!matched) {
+            for (const cfg of LAB_CONFIGS) {
+              if (era >= cfg.era && getUpgradeLevel(cfg.id) > 0 && cfg.inputType === carryType) {
+                const lObj = runtime.labs[cfg.id];
+                if (lObj && lObj.queue.length < 18) {
+                  destPos = cfg.inPos; destQueue = lObj.queue; maxQ = 18; matched = true; break;
+                }
+              }
+            }
+          }
+          if (!matched && carryType === "rainbow_herb" && m2 && m2.lv > 0) {
+            destPos = m2.cfg.inPos; destQueue = m2.inQueue; maxQ = 24;
           }
         }
 
         tx = destPos.x;
         tz = destPos.z;
+        if (hasTeleport && Math.hypot(tx - f.x, tz - f.z) > 12.0) {
+          spawnBurstVfx(f.x, 1.0, f.z, 0xe879f9, 5);
+          f.x = tx;
+          f.z = tz + 0.8;
+          spawnBurstVfx(f.x, 1.0, f.z, 0xfacc15, 6);
+        }
         if (Math.hypot(tx - f.x, tz - f.z) < 1.45) {
           for (let bi = f.bag.length - 1; bi >= 0 && destQueue.length < maxQ; bi--) {
-            if (f.bag[bi] === deliverType || (!hasHerb && f.bag[bi] === "blue_ore")) {
-              destQueue.push(f.bag.splice(bi, 1)[0]);
-            }
+            if (f.bag[bi] === deliverType) destQueue.push(f.bag.splice(bi, 1)[0]);
           }
           if (f.bag.length === 0) f.state = "seek_node";
-          else if (!hasHerb && destPos === SELL_PALLET_POS) {
+          else if (destPos === SELL_PALLET_POS) {
             f.bag.length = 0;
             f.state = "seek_node";
+          } else {
+            f.bag.pop();
+            if (f.bag.length === 0) f.state = "seek_node";
           }
         }
       }
@@ -2874,7 +3781,7 @@
       const dz = tz - f.z;
       const dist = Math.hypot(dx, dz);
       if (dist > 0.15) {
-        const spd = 6.4 + state.speedLv * 0.4;
+        const spd = (6.4 + state.speedLv * 0.35) * m5AuraMult;
         f.x += (dx / dist) * Math.min(dist, spd * dt);
         f.z += (dz / dist) * Math.min(dist, spd * dt);
         f.entity.root.rotation.y = Math.atan2(dx, dz);
@@ -2885,18 +3792,22 @@
     }
   }
 
-  function updateHarvesterTruck(dt) {
-    const tr = runtime.truck;
+  function stepSingleTruck(tr, dt) {
     if (!tr) return;
+    const era = getUnlockedEra();
+    const m5AuraMult = (state.m5Lv || 0) > 0 && era >= 2 ? 1.3 : 1.0;
     const maxCargo = 14 + state.truckLv * 6;
-    const speed = 5.4 + state.truckLv * 0.8;
+    const speed = (5.4 + state.truckLv * 0.75) * m5AuraMult;
 
     let tx = 0.0;
     let tz = 26.5;
     if (tr.state === "harvest") {
-      const waypoints = state.herbGroveUnlocked
-        ? [{ x: -12.0, z: 24.5 }, { x: -12.0, z: 29.0 }, { x: 12.0, z: 29.0 }, { x: 12.0, z: 24.5 }]
-        : [{ x: -13.0, z: 24.2 }, { x: -6.5, z: 24.2 }, { x: -6.5, z: 29.0 }, { x: -13.0, z: 29.0 }];
+      const waypoints = [{ x: -12.0, z: 24.5 }, { x: -12.0, z: 29.0 }];
+      if (state.herbGroveUnlocked) waypoints.push({ x: 12.0, z: 29.0 }, { x: 12.0, z: 24.5 });
+      if (era >= 2) waypoints.push({ x: -12.0, z: 41.2 }, { x: 12.0, z: 41.2 });
+      if (era >= 3) waypoints.push({ x: -12.0, z: 48.8 }, { x: 12.0, z: 48.8 });
+      if (era >= 4) waypoints.push({ x: -12.0, z: 56.4 }, { x: 12.0, z: 56.4 });
+
       const wp = waypoints[tr.waypointIdx % waypoints.length];
       tx = wp.x;
       tz = wp.z;
@@ -2905,47 +3816,48 @@
       for (const node of runtime.farmNodes) {
         if (!isZoneUnlocked(node.zone) || node.respawnTimer > 0) continue;
         if (tr.bag.length >= maxCargo) break;
-        if (Math.hypot(node.x - tr.x, node.z - tr.z) < 3.2) harvestNode(node, 1, tr.bag, tr.x, tr.z, false);
+        if (Math.hypot(node.x - tr.x, node.z - tr.z) < 3.4) harvestNode(node, 1, tr.bag, tr.x, tr.z, false);
       }
       if (tr.bag.length >= maxCargo) tr.state = "return";
     } else if (tr.state === "return") {
       if (tr.z > 21.8) {
-        tx = 0.0;
-        tz = 21.2;
+        tx = 0.0; tz = 21.2;
       } else if (tr.z > 18.0) {
-        tx = 0.0;
-        tz = 17.0;
+        tx = 0.0; tz = 17.0;
       } else {
-        tx = 0.0;
-        tz = -7.0;
+        tx = 0.0; tz = -7.0;
         if (Math.hypot(tx - tr.x, tz - tr.z) < 2.2) {
           const m1 = runtime.machines[0];
           const m2 = runtime.machines[1];
           const m3 = runtime.machines[2];
           while (tr.bag.length > 0) {
             const item = tr.bag.pop();
-            if (item === "rainbow_herb") {
-              if (m3 && m3.lv > 0 && m3.inQueueB.length < 24 && (!m2 || m3.inQueueB.length <= m2.inQueue.length)) {
-                m3.inQueueB.push(item);
-              } else if (m2 && m2.lv > 0 && m2.inQueue.length < 24) {
-                m2.inQueue.push(item);
+            let delivered = false;
+            if (item === "blue_ore") {
+              if (m3 && m3.lv > 0 && m3.inQueue.length < 24 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
+                m3.inQueue.push(item); delivered = true;
+              } else if (m1 && m1.lv > 0 && m1.inQueue.length < 24) {
+                m1.inQueue.push(item); delivered = true;
               }
             } else {
-              if (m3 && m3.lv > 0 && m3.inQueue.length < 24 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
-                m3.inQueue.push(item);
-              } else if (m1 && m1.lv > 0 && m1.inQueue.length < 24) {
-                m1.inQueue.push(item);
-              } else if (runtime.sellPalletQueue.length < 36) {
-                runtime.sellPalletQueue.push(item);
+              for (const m of runtime.machines) {
+                if (m.lv <= 0 || era < (m.cfg.era || 1)) continue;
+                if (m.cfg.inputType === item && m.inQueue.length < 24) { m.inQueue.push(item); delivered = true; break; }
+                if (m.cfg.inputTypeB === item && m.inQueueB.length < 24) { m.inQueueB.push(item); delivered = true; break; }
               }
+            }
+            if (!delivered && item === "rainbow_herb" && m2 && m2.lv > 0 && m2.inQueue.length < 24) {
+              m2.inQueue.push(item); delivered = true;
+            }
+            if (!delivered && runtime.sellPalletQueue.length < 36) {
+              runtime.sellPalletQueue.push(item);
             }
           }
           tr.state = "exit";
         }
       }
     } else {
-      tx = 0.0;
-      tz = 22.8;
+      tx = 0.0; tz = 22.8;
       if (Math.hypot(tx - tr.x, tz - tr.z) < 1.5) tr.state = "harvest";
     }
 
@@ -2965,11 +3877,19 @@
     syncCrateStackVisuals(tr.entity.cargoAnchor, tr.bag, tr.bagVisuals, { cols: 1, yStep: 0.21, maxDraw: 14 });
   }
 
+  function updateHarvesterTruck(dt) {
+    stepSingleTruck(runtime.truck, dt);
+    stepSingleTruck(runtime.truck2, dt);
+  }
+
   function updateStepPads(dt) {
     for (const sp of runtime.stepPads) {
+      if (!isEraUnlockedFor(sp.id)) continue;
       const def = UPGRADE_DEFS[sp.id];
-      const isMax = isUpgradeMax(sp.id);
       const spec = getUpgradeCostSpec(sp.id);
+      const isGlobalMax = getUpgradeLevel(sp.id) >= def.maxLv;
+      const isCapped = spec.mode === "locked";
+      const isMax = isGlobalMax;
       const lv = getUpgradeLevel(sp.id);
 
       const dx = Math.abs(player.x - sp.x);
@@ -2977,11 +3897,11 @@
       const isStepped = dx < sp.w * 0.48 && dz < sp.d * 0.48;
       if (!isStepped) sp._justUpgraded = false;
 
-      let priceText = "MAX";
-      let ratio = 1;
+      let priceText = isCapped ? spec.text : "MAX";
+      let ratio = isGlobalMax ? 1 : 0;
       let canAfford = false;
 
-      if (!isMax) {
+      if (!isMax && !isCapped) {
         if (spec.mode === "cash") {
           const cost = spec.cash;
           const paid = state.padPaid[sp.id] || 0;
@@ -3001,7 +3921,7 @@
           }
           const newRemaining = Math.max(0, cost - (state.padPaid[sp.id] || 0));
           ratio = cost > 0 ? (state.padPaid[sp.id] || 0) / cost : 0;
-          priceText = `💵 ${newRemaining}`;
+          priceText = `💵 ${newRemaining.toLocaleString()}`;
           canAfford = state.gems >= newRemaining;
         } else if (spec.mode === "energy") {
           const cost = spec.energy;
@@ -3042,13 +3962,13 @@
         dirLabel: def.dirLabel || "",
         icon: def.icon,
         title: def.title,
-        price: isMax ? "MAX" : priceText,
-        levelText: isMax ? "MAX" : `Lv.${lv}`,
+        price: priceText,
+        levelText: isGlobalMax ? "MAX" : `Lv.${lv}`,
         accentHex: def.accent,
         paidRatio: ratio,
-        isMax,
-        unlocked: true,
-        canAfford: !isMax && canAfford,
+        isMax: isGlobalMax,
+        unlocked: !isCapped,
+        canAfford: !isMax && !isCapped && canAfford,
         isStepped,
       });
     }
@@ -3248,21 +4168,17 @@
 
     const cap = getHeroBagCap();
     const isMax = total >= cap;
-    let oreCount = 0;
-    let herbCount = 0;
+    const counts = {};
     for (const t of player.bagItems) {
-      if (t === "blue_ore") oreCount++;
-      else if (t === "rainbow_herb") herbCount++;
+      counts[t] = (counts[t] || 0) + 1;
     }
-
-    const countsStr =
-      oreCount > 0 && herbCount > 0
-        ? `⛏️ 광석 ${oreCount} | 🌿 약초 ${herbCount}`
-        : oreCount > 0
-        ? `⛏️ 광석 ${oreCount}`
-        : herbCount > 0
-        ? `🌿 약초 ${herbCount}`
-        : `📦 ${total}`;
+    const parts = Object.entries(counts)
+      .slice(0, 3)
+      .map(([k, cnt]) => {
+        const meta = ITEM_META[k];
+        return meta ? `${meta.icon} ${meta.short} ${cnt}` : `📦 ${cnt}`;
+      });
+    const countsStr = parts.length ? parts.join(" | ") : `📦 ${total}`;
 
     const countsEl = document.getElementById("hbf-counts");
     const capEl = document.getElementById("hbf-cap");
@@ -3319,12 +4235,15 @@
     setText("ui-shop-dim", `🔮 ${(state.dim1 || 0).toLocaleString()} · 💠 ${(state.dim2 || 0).toLocaleString()} · 🌟 ${(state.dim3 || 0).toLocaleString()}`);
 
     // Top-Center Wave HUD
+    const era = getUnlockedEra();
+    const eInfo = ERA_INFO[era] || ERA_INFO[1];
     const waveHud = document.getElementById("wave-hud");
     if (waveHud) waveHud.classList.toggle("combat-active", runtime.waveActive);
-    setText("ui-wave-badge", `🌊 WAVE ${state.wave} / 10`);
+    setText("ui-wave-badge", `🌊 WAVE ${state.wave} / ${TOTAL_WAVES}`);
+    setText("ui-wave-expansion", eInfo.nextText);
     if (state.allWavesCleared) {
-      setText("ui-wave-timer", "🏆 10웨이브 완파!");
-      setText("ui-wave-monsters", "공방 평화 달성");
+      setText("ui-wave-timer", "🏆 20웨이브 완파!");
+      setText("ui-wave-monsters", "황금 대성채 수호 완료");
     } else if (runtime.waveActive) {
       setText("ui-wave-timer", "⚔️ 성문 교전 중!");
       setText("ui-wave-monsters", `남은 적 ${runtime.monsters.length} · 출현 ${runtime.waveSpawnCount}/${runtime.waveTotalToSpawn || WAVE_TOTAL_MONSTERS}`);
@@ -3360,8 +4279,9 @@
     const statsEl = document.getElementById("ui-shop-stats");
     if (statsEl) {
       const spdPct = Math.round((getHeroMoveSpeed() / 7.6) * 100);
-      statsEl.textContent = `이동 ${spdPct}% · 요정 ${state.fairyCount}/15 · WAVE ${state.wave}/10 · ${Math.round(runtime.fpsSmooth)} FPS`;
+      statsEl.textContent = `이동 ${spdPct}% · 요정 ${state.fairyCount}/20 · WAVE ${state.wave}/${TOTAL_WAVES} · ${Math.round(runtime.fpsSmooth)} FPS`;
     }
+    setText("ui-shop-era", `🗺️ ${eInfo.name} (스킬/포탑 상한 Lv.${eInfo.maxCap})`);
   }
 
   function openShop(tab) {
@@ -3397,9 +4317,11 @@
 
     for (const def of items) {
       const lv = getUpgradeLevel(def.id);
-      const isMax = isUpgradeMax(def.id);
       const spec = getUpgradeCostSpec(def.id);
-      const afford = !isMax && canAffordUpgrade(def.id);
+      const isGlobalMax = lv >= def.maxLv;
+      const isLocked = spec.mode === "locked";
+      const isMax = isUpgradeMax(def.id);
+      const afford = !isMax && !isLocked && canAffordUpgrade(def.id);
       const pct = Math.min(100, (lv / def.maxLv) * 100);
 
       const card = document.createElement("div");
@@ -3411,7 +4333,7 @@
             <div class="shop-item-title-row">
               <span class="shop-item-title">${def.title}</span>
               ${def.stars ? `<span class="shop-item-stars">★${def.stars}</span>` : ""}
-              <span class="lv-badge">${isMax ? "MAX" : `Lv.${lv}/${def.maxLv}`}</span>
+              <span class="lv-badge">${isGlobalMax ? "MAX" : `Lv.${lv}/${def.maxLv}`}</span>
             </div>
             <div class="shop-item-desc">${def.desc}</div>
           </div>
@@ -3420,8 +4342,8 @@
           <div class="shop-item-prog-wrap">
             <div class="shop-item-prog-fill" style="width:${pct}%"></div>
           </div>
-          <button class="shop-buy-btn ${afford ? "afford" : "locked"}" data-upgrade-id="${def.id}" ${isMax || !afford ? "disabled" : ""}>
-            ${isMax ? "MAX" : lv === 0 && (def.tab === "skills" || def.tab === "defense") ? `해금 ${spec.text}` : spec.text}
+          <button class="shop-buy-btn ${afford ? "afford" : "locked"}" data-upgrade-id="${def.id}" ${isGlobalMax || isLocked || !afford ? "disabled" : ""}>
+            ${isGlobalMax ? "MAX" : isLocked ? spec.text : lv === 0 && (def.tab === "skills" || def.tab === "defense") ? `해금 ${spec.text}` : spec.text}
           </button>
         </div>
       `;
@@ -3481,9 +4403,14 @@
     runtime.sellPalletQueue.length = 0;
     if (Array.isArray(runtime.alchemyLabQueue)) runtime.alchemyLabQueue.length = 0;
     runtime.alchemyLabProgress = 0;
-    const labPallet = sceneObjs.alchemyLabInPallet || runtime.alchemyLabInPallet;
-    if (labPallet && labPallet.stackAnchor && Array.isArray(runtime.alchemyLabInVisuals)) {
-      syncCrateStackVisuals(labPallet.stackAnchor, runtime.alchemyLabQueue, runtime.alchemyLabInVisuals);
+    for (const cfg of LAB_CONFIGS) {
+      const lObj = runtime.labs[cfg.id];
+      if (!lObj) continue;
+      lObj.queue.length = 0;
+      lObj.progress = 0;
+      if (lObj.inPallet && lObj.inPallet.stackAnchor) {
+        syncCrateStackVisuals(lObj.inPallet.stackAnchor, lObj.queue, lObj.visuals);
+      }
     }
     runtime.waveTimer = FIRST_WAVE_DELAY;
     runtime.waveActive = false;
@@ -3528,6 +4455,7 @@
       m.lv = 0;
       m.inQueue.length = 0;
       m.inQueueB.length = 0;
+      if (m.inQueueC) m.inQueueC.length = 0;
       m.outQueue.length = 0;
       m.craftProgress = 0;
     }
@@ -3549,14 +4477,16 @@
     syncFairiesCount();
     ensureTruckSpawned();
     ensureWagonSpawned();
+    ensureSpecialVehiclesSpawned();
     if (sceneObjs.hero) {
       window.Entities.updateHeroTier(sceneObjs.hero, 0);
+      syncHeroArchmageAura();
       syncCrateStackVisuals(sceneObjs.hero.backStackAnchor, player.bagItems, runtime.heroBackVisuals);
     }
     updateStepPads(0.016);
     updateGuideArrow();
     syncHUD(true);
-    showToast("💵 새로운 연금술 디펜스 공방이 시작되었습니다!");
+    showToast("💵 새로운 20웨이브 연금술 공방이 시작되었습니다!");
   }
 
   function setInput(dx, dz) {
@@ -3765,7 +4695,8 @@
 
     sceneObjs.hero = window.Entities.createPlayerHero();
     sceneObjs.hero.root.position.set(player.x, 0, player.z);
-    window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 2)));
+    window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 4)));
+    syncHeroArchmageAura();
     if (window.Engine) window.Engine.unitGroup.add(sceneObjs.hero.root);
 
     buildDenseFarmNodes();
@@ -3776,10 +4707,12 @@
     syncFairiesCount();
     ensureTruckSpawned();
     ensureWagonSpawned();
+    ensureSpecialVehiclesSpawned();
+    refreshFacilityVisibility();
     updateStepPads(0.016);
     updateGuideArrow();
     syncHUD(true);
-    showToast("🎯 남쪽 출입구에서 자원을 캐 기술을 개발하고, 5분 뒤 동쪽 성문으로 오는 몬스터를 막아내세요!");
+    showToast("🎯 남쪽 출입구에서 자원을 캐 4대 연구소 & 1~9호기를 키우고, 10분 뒤 20웨이브 공세를 막아내세요!");
 
     if (typeof window !== "undefined" && !window.__NO_AUTO_RAF__ && typeof window.requestAnimationFrame === "function") {
       _rafId = window.requestAnimationFrame(rafLoop);
@@ -3799,6 +4732,9 @@
   window.Gameplay = {
     UPGRADE_DEFS,
     MACHINE_CONFIGS,
+    LAB_CONFIGS,
+    ERA_INFO,
+    TOTAL_WAVES,
     SKILL_IDS,
     DEFENSE_IDS,
     GATE_POS,
@@ -3811,8 +4747,18 @@
     WAVE_INTERVAL,
     WAVE_TOTAL_MONSTERS,
     WAVE_BATCH_SIZE,
+    getUnlockedEra,
+    getEraSkillCap,
+    getHeroPickRadius,
+    getHeroMultiHit,
+    getHeroDoubleDropChance,
+    getCashMagnetRadius,
+    getPriceMultiplier,
     getUpgradeCostSpec,
     canAffordUpgrade,
+    refreshFarmZoneVisibility,
+    refreshFacilityVisibility,
+    ensureSpecialVehiclesSpawned,
     init,
     step,
     startWaveNow,

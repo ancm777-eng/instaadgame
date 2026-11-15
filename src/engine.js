@@ -318,7 +318,7 @@
       envGroup.add(soil);
     }
 
-    // Dedicated Southern Resource Valley (z in [22.6, 37.4], strictly separated from East Monster Gate)
+    // Dedicated Southern Resource Valley (Zones 1~10, z in [22.6, 60.5], strictly separated from East Monster Gate)
     // Zone 1: South-West Ore Mine Quarry
     addFarmPlot(-10.0, 26.4, 13.6, 7.6, 0x627394, 0x434d68);
     // Zone 2: South-East Rainbow Herb Grove
@@ -327,13 +327,64 @@
     addFarmPlot(-10.0, 33.8, 13.6, 7.2, 0x5c6d8e, 0x3f4962);
     // Zone 4: Deep Rainbow Herb Annex (outer SE)
     addFarmPlot(10.0, 33.8, 13.6, 7.2, 0x4e9c50, 0x356b38);
+    // Era 2~4 Expanded Resource Plots (Zones 5~10)
+    addFarmPlot(-10.0, 41.4, 13.6, 7.2, 0x7c3b2c, 0xc2410c); // Zone 5: Fire Mana Stone
+    addFarmPlot(10.0, 41.4, 13.6, 7.2, 0x165e73, 0x0891b2);  // Zone 6: Spirit Dew
+    addFarmPlot(-10.0, 49.0, 13.6, 7.2, 0x4c401d, 0xca8a04); // Zone 7: Lightning Crystal
+    addFarmPlot(10.0, 49.0, 13.6, 7.2, 0x422466, 0x7e22ce);  // Zone 8: Moon Mushroom
+    addFarmPlot(-10.0, 56.6, 13.6, 7.2, 0x221f54, 0xf59e0b); // Zone 9: Star Meteorite
+    addFarmPlot(10.0, 56.6, 13.6, 7.2, 0x661b33, 0xe11d48);  // Zone 10: Dragon Scale Flower
+
+    // Era 2 (NW Spirit Engineering), Era 3 (NE Lightning Smelting), Era 4 (North Golden Citadel) Expansion Decks
+    const era2Group = new THREE.Group();
+    era2Group.visible = false;
+    const nwDeck = new THREE.Mesh(new THREE.BoxGeometry(23.5, 0.14, 12.2), new THREE.MeshLambertMaterial({ color: 0x3b6e5c }));
+    nwDeck.position.set(-12.2, -0.02, -26.2);
+    nwDeck.receiveShadow = true;
+    era2Group.add(nwDeck);
+    envGroup.add(era2Group);
+    envGroup.userData.era2Group = era2Group;
+
+    const era3Group = new THREE.Group();
+    era3Group.visible = false;
+    const neDeck = new THREE.Mesh(new THREE.BoxGeometry(23.5, 0.14, 12.2), new THREE.MeshLambertMaterial({ color: 0x3b4463 }));
+    neDeck.position.set(12.2, -0.02, -26.2);
+    neDeck.receiveShadow = true;
+    era3Group.add(neDeck);
+    // Dwarf Armored Train Railway Tracks along NE zone (z = -29.8)
+    const railBed = new THREE.Mesh(new THREE.BoxGeometry(24.0, 0.06, 2.2), new THREE.MeshLambertMaterial({ color: 0x475569 }));
+    railBed.position.set(14.5, 0.04, -29.8);
+    era3Group.add(railBed);
+    const sleeperMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
+    for (let rx = 3.0; rx <= 26.0; rx += 1.2) {
+      const tie = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.05, 1.9), sleeperMat);
+      tie.position.set(rx, 0.08, -29.8);
+      era3Group.add(tie);
+    }
+    const ironRailMat = new THREE.MeshLambertMaterial({ color: 0xcbd5e1 });
+    for (const rz of [-30.4, -29.2]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(24.0, 0.06, 0.14), ironRailMat);
+      rail.position.set(14.5, 0.11, rz);
+      era3Group.add(rail);
+    }
+    envGroup.add(era3Group);
+    envGroup.userData.era3Group = era3Group;
+
+    const era4Group = new THREE.Group();
+    era4Group.visible = false;
+    const citadelDeck = new THREE.Mesh(new THREE.BoxGeometry(48.0, 0.16, 12.5), new THREE.MeshLambertMaterial({ color: 0xe2c785 }));
+    citadelDeck.position.set(0, -0.01, -38.4);
+    citadelDeck.receiveShadow = true;
+    era4Group.add(citadelDeck);
+    envGroup.add(era4Group);
+    envGroup.userData.era4Group = era4Group;
 
     // Dual Entrances:
-    // 1) South Resource Gathering Road leading out of South Gate (x = 0, z = 20.0) into Southern Resource Valley
+    // 1) South Resource Gathering Road leading out of South Gate (x = 0, z = 20.0) into Southern Resource Valley (z = 20..61)
     const pathMat = new THREE.MeshLambertMaterial({ color: 0xd9be8c });
     const stoneRoadMat = new THREE.MeshLambertMaterial({ color: 0xb0b8ce });
-    const southPath = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.04, 17.5), pathMat);
-    southPath.position.set(0, 0.005, 28.75);
+    const southPath = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.04, 41.5), pathMat);
+    southPath.position.set(0, 0.005, 40.75);
     southPath.receiveShadow = true;
     envGroup.add(southPath);
 
@@ -428,6 +479,36 @@
     return g;
   }
 
+  const camPan = { active: false, tx: 0, tz: 0, timer: 0, duration: 1.8 };
+  let currentUnlockedEra = 1;
+  let nwFenceGroup = null;
+  let neFenceGroup = null;
+  let era2NorthWallGroup = null;
+
+  function setUnlockedEraVisuals(era) {
+    currentUnlockedEra = Math.max(1, Math.min(4, Number(era) || 1));
+    if (nwFenceGroup) nwFenceGroup.visible = currentUnlockedEra < 2;
+    if (neFenceGroup) neFenceGroup.visible = currentUnlockedEra < 3;
+    if (era2NorthWallGroup) era2NorthWallGroup.visible = currentUnlockedEra >= 2 && currentUnlockedEra < 4;
+    if (envGroup && envGroup.userData) {
+      if (envGroup.userData.era2Group) envGroup.userData.era2Group.visible = currentUnlockedEra >= 2;
+      if (envGroup.userData.era3Group) envGroup.userData.era3Group.visible = currentUnlockedEra >= 3;
+      if (envGroup.userData.era4Group) envGroup.userData.era4Group.visible = currentUnlockedEra >= 4;
+    }
+  }
+
+  function panCameraTo(tx, tz, durationSec = 1.8) {
+    camPan.active = true;
+    camPan.tx = Number(tx) || 0;
+    camPan.tz = Number(tz) || 0;
+    camPan.timer = 0;
+    camPan.duration = Math.max(0.4, Number(durationSec) || 1.8);
+  }
+
+  function getCameraPanState() {
+    return { ...camPan, unlockedEra: currentUnlockedEra };
+  }
+
   function populateGlbScenery() {
     if (_sceneryPopulated || !envGroup) return;
     _sceneryPopulated = true;
@@ -436,13 +517,13 @@
     const hasFence = Loader && Loader.hasRole && Loader.hasRole("fence");
     const hasTree = Loader && Loader.hasRole && Loader.hasRole("tree");
 
-    function placeFence(x, z, rotY) {
+    function placeFence(x, z, rotY, targetGroup = envGroup) {
       if (hasFence) {
         const inst = Loader.createInstance("fence", { targetHeight: 1.55, castShadow: true, receiveShadow: true });
         if (inst && inst.root) {
           inst.root.position.set(x, 0, z);
           inst.root.rotation.y = rotY;
-          envGroup.add(inst.root);
+          targetGroup.add(inst.root);
           return;
         }
       }
@@ -453,7 +534,7 @@
       fallback.position.set(x, 0.55, z);
       fallback.rotation.y = rotY;
       fallback.castShadow = true;
-      envGroup.add(fallback);
+      targetGroup.add(fallback);
     }
 
     // Perimeter fence segments around x in [-24, 24], z in [-20, 20]
@@ -466,9 +547,32 @@
     for (let z = -17.5; z <= 17.5; z += 3.0) {
       placeFence(-24.0, z, Math.PI * 0.5);
     }
-    // North border (z = -20, completely closed)
+    // North border (z = -20): split into removable NW (Era 2) and NE (Era 3) wall groups
+    nwFenceGroup = new THREE.Group();
+    neFenceGroup = new THREE.Group();
+    era2NorthWallGroup = new THREE.Group();
+    envGroup.add(nwFenceGroup);
+    envGroup.add(neFenceGroup);
+    envGroup.add(era2NorthWallGroup);
+
     for (let x = -21.5; x <= 21.5; x += 3.0) {
-      placeFence(x, -20.0, 0);
+      if (x < 0) placeFence(x, -20.0, 0, nwFenceGroup);
+      else placeFence(x, -20.0, 0, neFenceGroup);
+      placeFence(x, -32.2, 0, era2NorthWallGroup);
+    }
+    // Side fences enclosing Era 2/3 & Era 4 Citadel once unlocked
+    if (envGroup.userData.era2Group) {
+      for (let z = -30.5; z <= -21.5; z += 3.0) placeFence(-24.0, z, Math.PI * 0.5, envGroup.userData.era2Group);
+    }
+    if (envGroup.userData.era3Group) {
+      for (let z = -30.5; z <= -21.5; z += 3.0) placeFence(24.0, z, Math.PI * 0.5, envGroup.userData.era3Group);
+    }
+    if (envGroup.userData.era4Group) {
+      for (let z = -42.5; z <= -33.5; z += 3.0) {
+        placeFence(-24.0, z, Math.PI * 0.5, envGroup.userData.era4Group);
+        placeFence(24.0, z, Math.PI * 0.5, envGroup.userData.era4Group);
+      }
+      for (let x = -21.5; x <= 21.5; x += 3.0) placeFence(x, -44.6, 0, envGroup.userData.era4Group);
     }
     // East border (x = +24, leave ONLY Single Central East Monster Gate at z in [-4.2, +4.2])
     for (let z = -17.5; z <= 17.5; z += 3.0) {
@@ -483,13 +587,16 @@
     envGroup.add(makeGatePillar(24.0, -4.4, 0xff9b52));
     envGroup.add(makeGatePillar(24.0, 4.4, 0xff6b8b));
 
-    // Outer Forest Trees: strictly OUTSIDE 48x40 village AND clear of Southern Resource Valley (x in [-18,18], z in [20,39]) & East Battlefield (x in [24,42], z in [-7,7])
+    setUnlockedEraVisuals(currentUnlockedEra);
+
+    // Outer Forest Trees: keep North Expansion Terrains (z in [-45, -20]) & Extended Southern Valley (z in [20, 61]) completely clear!
     const treeSpots = [
-      [-28.5, -24], [-30.0, -16], [-29.0, -8], [-29.5, 0], [-28.8, 8], [-29.5, 16], [-27.5, 22],
-      [-21.0, -25.5], [-12.0, -26.0], [-3.0, -25.5], [6.0, -26.0], [15.0, -25.5], [23.5, -25.0],
+      [-29.5, -42], [-29.5, -34], [-29.5, -25], [-29.5, -16], [-29.0, -8], [-29.5, 0], [-28.8, 8], [-29.5, 16], [-27.5, 22],
+      [-21.0, -49.5], [-12.0, -50.0], [-3.0, -49.5], [6.0, -50.0], [15.0, -49.5], [23.5, -49.0],
       [29.5, -18.0], [36.0, -14.0], [43.5, -16.0], [44.5, -9.0], [44.5, 9.0], [43.5, 16.0], [36.0, 14.0], [29.5, 18.0],
-      [-23.5, 26.5], [-23.5, 34.0], [23.5, 26.5], [23.5, 34.0],
-      [-15.0, 41.5], [-5.0, 42.0], [5.0, 42.0], [15.0, 41.5],
+      [-23.5, 26.5], [-23.5, 36.0], [-23.5, 46.0], [-23.5, 56.0],
+      [23.5, 26.5], [23.5, 36.0], [23.5, 46.0], [23.5, 56.0],
+      [-15.0, 63.5], [-5.0, 64.0], [5.0, 64.0], [15.0, 63.5],
     ];
     for (let i = 0; i < treeSpots.length; i++) {
       const [tx, tz] = treeSpots[i];
@@ -644,10 +751,15 @@
     lookAheadVec.x += (desiredAheadX - lookAheadVec.x) * laLerp;
     lookAheadVec.z += (desiredAheadZ - lookAheadVec.z) * laLerp;
 
-    const tx = (targetPos ? targetPos.x : 0) + lookAheadVec.x;
-    const tz = (targetPos ? targetPos.z : 0) + lookAheadVec.z;
+    if (camPan.active) {
+      camPan.timer += step;
+      if (camPan.timer >= camPan.duration) camPan.active = false;
+    }
 
-    const camLerp = 1 - Math.exp(-6.5 * step);
+    const tx = camPan.active ? camPan.tx : ((targetPos ? targetPos.x : 0) + lookAheadVec.x);
+    const tz = camPan.active ? camPan.tz : ((targetPos ? targetPos.z : 0) + lookAheadVec.z);
+
+    const camLerp = 1 - Math.exp(-(camPan.active ? 4.2 : 6.5) * step);
     camTarget.x += (tx - camTarget.x) * camLerp;
     camTarget.z += (tz - camTarget.z) * camLerp;
     camTarget.y = 0.85;
@@ -701,6 +813,9 @@
     TOWN_BOUNDS,
     init,
     populateGlbScenery,
+    setUnlockedEraVisuals,
+    panCameraTo,
+    getCameraPanState,
     resize,
     addShake,
     update,

@@ -108,16 +108,216 @@
     return chibi().animateDefenseTurret(turret, active, dt);
   }
 
+  function drawOverheadBannerCanvas(canvas, ctx, opts) {
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const bgColor = opts.bgColor || "rgba(20, 16, 40, 0.92)";
+    const borderColor = opts.borderColor || "#fbbf24";
+    const accentColor = opts.accentColor || "#fffbeb";
+    const pad = 10;
+    const r = 24;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pad + r, pad);
+    ctx.lineTo(w - pad - r, pad);
+    ctx.quadraticCurveTo(w - pad, pad, w - pad, pad + r);
+    ctx.lineTo(w - pad, h - pad - r);
+    ctx.quadraticCurveTo(w - pad, h - pad, w - pad - r, h - pad);
+    ctx.lineTo(pad + r, h - pad);
+    ctx.quadraticCurveTo(pad, h - pad, pad, h - pad - r);
+    ctx.lineTo(pad, pad + r);
+    ctx.quadraticCurveTo(pad, pad, pad + r, pad);
+    ctx.closePath();
+
+    ctx.fillStyle = bgColor;
+    ctx.fill();
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = borderColor;
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const hasSub = Boolean(opts.subtitle);
+    ctx.font = `900 ${hasSub ? 42 : 48}px "Pretendard", "Jua", "Malgun Gothic", sans-serif`;
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "rgba(10, 8, 22, 0.95)";
+    const titleY = hasSub ? h * 0.37 : h * 0.51;
+    ctx.strokeText(opts.text || "", w * 0.5, titleY);
+    ctx.fillStyle = accentColor;
+    ctx.fillText(opts.text || "", w * 0.5, titleY);
+
+    if (hasSub) {
+      ctx.font = '700 28px "Pretendard", "Malgun Gothic", sans-serif';
+      ctx.lineWidth = 4;
+      ctx.strokeText(opts.subtitle, w * 0.5, h * 0.74);
+      ctx.fillStyle = "#e2e8f0";
+      ctx.fillText(opts.subtitle, w * 0.5, h * 0.74);
+    }
+    ctx.restore();
+  }
+
+  function createOverheadBannerSprite(opts = {}) {
+    const canvas = document.createElement("canvas");
+    canvas.width = opts.canvasW || 640;
+    canvas.height = opts.canvasH || 156;
+    const ctx = canvas.getContext("2d");
+    const normOpts = {
+      text: opts.text || "",
+      subtitle: opts.subtitle || "",
+      accentColor: opts.accentColor || "#fffbeb",
+      bgColor: opts.bgColor || "rgba(20, 16, 40, 0.92)",
+      borderColor: opts.borderColor || "#fbbf24",
+    };
+    drawOverheadBannerCanvas(canvas, ctx, normOpts);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    const mat = new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const sprite = new THREE.Sprite(mat);
+    sprite.position.set(opts.x || 0, opts.y != null ? opts.y : 4.1, opts.z || 0);
+    sprite.scale.set(opts.w || 4.8, opts.h || 1.15, 1);
+    sprite.renderOrder = opts.renderOrder != null ? opts.renderOrder : 999;
+    sprite.userData = { canvas, ctx, tex, opts: normOpts, _lastKey: `${normOpts.text}|${normOpts.subtitle}|${normOpts.accentColor}|${normOpts.borderColor}` };
+    return sprite;
+  }
+
+  function updateOverheadBannerSprite(sprite, text, accentColor, subtitle, borderColor) {
+    if (!sprite || !sprite.userData || !sprite.userData.canvas) return;
+    const u = sprite.userData;
+    const nextText = text != null ? String(text) : u.opts.text;
+    const nextSub = subtitle !== undefined ? String(subtitle) : u.opts.subtitle;
+    const nextAcc = accentColor || u.opts.accentColor;
+    const nextBorder = borderColor || u.opts.borderColor;
+    const key = `${nextText}|${nextSub}|${nextAcc}|${nextBorder}`;
+    if (key === u._lastKey) return;
+    u._lastKey = key;
+    u.opts.text = nextText;
+    u.opts.subtitle = nextSub;
+    u.opts.accentColor = nextAcc;
+    u.opts.borderColor = nextBorder;
+    drawOverheadBannerCanvas(u.canvas, u.ctx, u.opts);
+    if (u.tex) u.tex.needsUpdate = true;
+  }
+
+  function createZoneHeaderBanner(title, subtitle = "", x = 0, y = 5.4, z = 0, accentColor = "#fffbeb", borderColor = "#f59e0b") {
+    return createOverheadBannerSprite({
+      text: title,
+      subtitle,
+      x,
+      y,
+      z,
+      w: 7.2,
+      h: 1.65,
+      canvasW: 768,
+      canvasH: 184,
+      accentColor,
+      bgColor: "rgba(16, 12, 32, 0.94)",
+      borderColor,
+      renderOrder: 1000,
+    });
+  }
+
+  function createDistrictPlatform(opts = {}) {
+    const theme = opts.theme || "alchemy";
+    const x = opts.x || 0;
+    const z = opts.z || 0;
+    const w = opts.w || 14;
+    const d = opts.d || 11;
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+
+    const palettes = {
+      alchemy: { fill: "#4a2570", rim: "#f1c40f", sub: "#9b59b6", hex: 0x9b59b6 },
+      defense: { fill: "#23395d", rim: "#00e5ff", sub: "#2980b9", hex: 0x00e5ff },
+      training: { fill: "#1b5e3a", rim: "#a3ffcb", sub: "#2ecc71", hex: 0x2ecc71 },
+      factory: { fill: "#5c2e1f", rim: "#fbbf24", sub: "#e67e22", hex: 0xe67e22 },
+      guild: { fill: "#145352", rim: "#f9e79f", sub: "#1abc9c", hex: 0x1abc9c },
+    };
+    const pal = palettes[theme] || palettes.alchemy;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = pal.fill;
+    ctx.fillRect(0, 0, 512, 512);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 4;
+    for (let i = 64; i < 512; i += 64) {
+      ctx.beginPath(); ctx.moveTo(i, 16); ctx.lineTo(i, 496); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(16, i); ctx.lineTo(496, i); ctx.stroke();
+    }
+
+    ctx.strokeStyle = pal.sub;
+    ctx.lineWidth = 22;
+    ctx.strokeRect(14, 14, 484, 484);
+    ctx.strokeStyle = pal.rim;
+    ctx.lineWidth = 7;
+    ctx.strokeRect(24, 24, 464, 464);
+
+    if (theme === "alchemy") {
+      ctx.strokeStyle = "rgba(241, 196, 15, 0.55)";
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(256, 256, 175, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(256, 256, 128, 0, Math.PI * 2); ctx.stroke();
+    } else if (theme === "factory") {
+      ctx.fillStyle = "rgba(251, 191, 36, 0.65)";
+      for (const ax of [128, 256, 384]) {
+        ctx.beginPath();
+        ctx.moveTo(ax, 380);
+        ctx.lineTo(ax - 24, 420);
+        ctx.lineTo(ax + 24, 420);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const slab = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: false })
+    );
+    slab.rotation.x = -Math.PI * 0.5;
+    slab.position.y = 0.016;
+    root.add(slab);
+
+    if (theme === "defense") {
+      const stoneMat = chibi().makeToonMat(0x334155);
+      const cyanMat = chibi().makeToonMat(0x00e5ff, { emissive: 0x0ea5e9, emissiveIntensity: 0.55 });
+      for (const [cx, cz] of [[-w * 0.46, -d * 0.45], [w * 0.46, -d * 0.45], [-w * 0.46, d * 0.45], [w * 0.46, d * 0.45]]) {
+        chibi().addOutlinedMesh(root, new THREE.CylinderGeometry(0.38, 0.46, 1.35, 6), stoneMat, { pos: [cx, 0.68, cz] });
+        chibi().addOutlinedMesh(root, new THREE.OctahedronGeometry(0.28, 0), cyanMat, { pos: [cx, 1.58, cz] });
+      }
+    }
+    return root;
+  }
+
   function createVillageGate(x = 24.0, z = 0.0, badgeText = "🏰 동쪽 수호 성문") {
     const gate = chibi().createVillageGate();
     gate.root.position.set(x, 0, z);
     if (badgeText) {
-      // Positioned cleanly outside East threshold above stoneRoad so towers & arch bridge never obscure it
-      const apron = createFloorApronBanner(3.3, badgeText, "#38bdf8", "rgba(16, 28, 56, 0.94)");
-      if (apron) {
-        apron.position.set(2.35, 0.036, 0);
-        gate.root.add(apron);
-      }
+      const sprite = createOverheadBannerSprite({
+        text: badgeText,
+        x: 0,
+        y: 4.5,
+        z: 0,
+        w: 5.0,
+        h: 1.15,
+        accentColor: "#ffe4e6",
+        borderColor: "#38bdf8",
+        renderOrder: 999,
+      });
+      gate.root.add(sprite);
+      gate.bannerSprite = sprite;
     }
     return gate;
   }
@@ -140,11 +340,19 @@
       group.add(post);
     });
     if (badgeText) {
-      const apron = createFloorApronBanner(3.8, badgeText, "#4ade80", "rgba(14, 38, 28, 0.94)");
-      if (apron) {
-        apron.position.set(0, 0.036, -1.65);
-        group.add(apron);
-      }
+      const sprite = createOverheadBannerSprite({
+        text: badgeText,
+        x: 0,
+        y: 4.1,
+        z: 0,
+        w: 5.2,
+        h: 1.15,
+        accentColor: "#dcfce7",
+        borderColor: "#4ade80",
+        renderOrder: 999,
+      });
+      group.add(sprite);
+      group.userData.bannerSprite = sprite;
     }
     return group;
   }
@@ -161,11 +369,19 @@
     const bld = chibi().createCategoryBuilding(kind);
     bld.root.position.set(x, 0, z);
     if (badgeText) {
-      const apron = createFloorApronBanner(3.2, badgeText, accentHex, "rgba(18, 26, 48, 0.94)");
-      if (apron) {
-        apron.position.set(0, 0.036, 1.98);
-        bld.root.add(apron);
-      }
+      const sprite = createOverheadBannerSprite({
+        text: badgeText,
+        x: 0,
+        y: 4.35,
+        z: 0,
+        w: 5.0,
+        h: 1.18,
+        accentColor: accentHex,
+        borderColor: accentHex,
+        renderOrder: 999,
+      });
+      bld.root.add(sprite);
+      bld.bannerSprite = sprite;
     }
     return bld;
   }
@@ -265,11 +481,18 @@
     });
 
     if (badgeText) {
-      const apron = createFloorApronBanner(2.9, badgeText, "#38bdf8", "rgba(18, 28, 52, 0.94)");
-      if (apron) {
-        apron.position.set(0, 0.036, 1.55);
-        root.add(apron);
-      }
+      const sprite = createOverheadBannerSprite({
+        text: badgeText,
+        x: 0,
+        y: 3.85,
+        z: 0,
+        w: 4.5,
+        h: 1.05,
+        accentColor: "#e0f2fe",
+        borderColor: "#38bdf8",
+        renderOrder: 999,
+      });
+      root.add(sprite);
     }
 
     const stockAnchor = new THREE.Group();
@@ -368,12 +591,55 @@
     const visualRoot = new THREE.Group();
     root.add(visualRoot);
 
+    const V10_NODES = {
+      fire_mana_stone: { ring: 0xff6b35, build: () => {
+        chibi().addOutlinedMesh(visualRoot, new THREE.DodecahedronGeometry(0.62, 0), chibi().makeToonMat(0x3f2e3e), { pos: [0, 0.42, 0], scale: [1.15, 0.78, 1.1] });
+        const flameMat = chibi().makeToonMat(0xff6b35, { emissive: 0xe63946, emissiveIntensity: 0.45 });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.45, 0), flameMat, { pos: [0, 0.92, 0], scale: [0.9, 1.5, 0.9] });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.28, 0), flameMat, { pos: [-0.34, 0.62, 0.2], rot: [-0.3, 0.2, 0.4], scale: [0.85, 1.3, 0.85] });
+      }},
+      spirit_dew: { ring: 0x22d3ee, build: () => {
+        chibi().addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.72, 0.78, 0.14, 12), chibi().makeToonMat(0x10b981), { pos: [0, 0.12, 0] });
+        const dewMat = chibi().makeToonMat(0x67e8f9, { emissive: 0x06b6d4, emissiveIntensity: 0.42 });
+        chibi().addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.36, 12, 12), dewMat, { pos: [0, 0.62, 0], scale: [1, 1.32, 1] });
+        chibi().addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.22, 10, 10), dewMat, { pos: [0.32, 0.42, 0.22], scale: [1, 1.25, 1] });
+      }},
+      lightning_crystal: { ring: 0xfacc15, build: () => {
+        chibi().addOutlinedMesh(visualRoot, new THREE.DodecahedronGeometry(0.58, 0), chibi().makeToonMat(0x334155), { pos: [0, 0.36, 0], scale: [1.15, 0.72, 1.1] });
+        const zapMat = chibi().makeToonMat(0xfef08a, { emissive: 0xfacc15, emissiveIntensity: 0.55 });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.42, 0), zapMat, { pos: [0, 0.95, 0], rot: [0.2, 0.4, -0.2], scale: [0.65, 1.65, 0.65] });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.28, 0), zapMat, { pos: [0.34, 0.68, -0.18], rot: [-0.25, 0.1, -0.35], scale: [0.65, 1.4, 0.65] });
+      }},
+      moon_mushroom: { ring: 0xa855f7, build: () => {
+        const stemM = chibi().makeToonMat(0xfef3c7);
+        const capM = chibi().makeToonMat(0x8b5cf6, { emissive: 0x6d28d9, emissiveIntensity: 0.42 });
+        for (const [mx, mz, sc] of [[0, 0, 1.0], [-0.36, 0.26, 0.68], [0.34, -0.18, 0.72]]) {
+          chibi().addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.14 * sc, 0.18 * sc, 0.55 * sc, 8), stemM, { pos: [mx, 0.28 * sc, mz] });
+          chibi().addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.42 * sc, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.56), capM, { pos: [mx, 0.52 * sc, mz] });
+        }
+      }},
+      star_meteorite: { ring: 0xfbbf24, build: () => {
+        chibi().addOutlinedMesh(visualRoot, new THREE.IcosahedronGeometry(0.62, 0), chibi().makeToonMat(0x312e81), { pos: [0, 0.52, 0] });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.36, 0), chibi().makeToonMat(0xfbbf24, { emissive: 0xf59e0b, emissiveIntensity: 0.55 }), { pos: [0.16, 0.98, 0.12] });
+      }},
+      dragon_scale_flower: { ring: 0xf43f5e, build: () => {
+        chibi().addOutlinedMesh(visualRoot, new THREE.DodecahedronGeometry(0.55, 0), chibi().makeToonMat(0x15803d), { pos: [0, 0.34, 0], scale: [1.15, 0.68, 1.15] });
+        const roseMat = chibi().makeToonMat(0xf43f5e, { emissive: 0xe11d48, emissiveIntensity: 0.45 });
+        chibi().addOutlinedMesh(visualRoot, new THREE.ConeGeometry(0.44, 0.62, 6), roseMat, { pos: [0, 0.74, 0], rot: [Math.PI, 0, 0] });
+        chibi().addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.2, 10, 10), chibi().makeToonMat(0xfde047), { pos: [0, 0.95, 0] });
+      }},
+    };
+
+    const customNode = V10_NODES[kind];
     const isOre = kind === "blue_ore" || kind === "crystal";
     const role = isOre ? "rock_crystal" : "berry_bush";
     const L = loader();
 
     let built = false;
-    if (L && L.hasRole && L.hasRole(role)) {
+    if (customNode) {
+      customNode.build();
+      built = true;
+    } else if (L && L.hasRole && L.hasRole(role)) {
       const inst = L.createInstance(role, {
         targetHeight: isOre ? 1.55 : 1.42,
         tint: isOre ? 0x3b9eff : 0x52eb7d,
@@ -429,7 +695,7 @@
 
     // Subtle ground highlight ring
     const ringMat = new THREE.MeshBasicMaterial({
-      color: isOre ? 0x3b9eff : 0x52eb7d,
+      color: customNode ? customNode.ring : (isOre ? 0x3b9eff : 0x52eb7d),
       transparent: true,
       opacity: 0.34,
       depthWrite: false,
@@ -548,16 +814,32 @@
     stackAnchor.position.set(0, 0.17, 0);
     root.add(stackAnchor);
 
-    // Uncovered Front Floor-Apron Label ("📦 광석 파는 곳", "⛏️ 광석 넣는 곳", etc.)
+    let bannerSprite = null;
     if (badgeText) {
-      const apron = createFloorApronBanner(w * 1.15, badgeText, accentHex, "rgba(18, 28, 52, 0.94)");
-      if (apron) {
-        apron.position.set(0, 0.035, d * 0.5 + 0.52);
-        root.add(apron);
+      if (opts.overheadY != null) {
+        bannerSprite = createOverheadBannerSprite({
+          text: badgeText,
+          subtitle: opts.overheadSub || "",
+          x: 0,
+          y: opts.overheadY,
+          z: 0,
+          w: opts.overheadW || 4.8,
+          h: opts.overheadH || 1.12,
+          accentColor: accentHex,
+          borderColor: accentHex,
+          renderOrder: 999,
+        });
+        root.add(bannerSprite);
+      } else {
+        const apron = createFloorApronBanner(w * 1.15, badgeText, accentHex, "rgba(18, 28, 52, 0.94)");
+        if (apron) {
+          apron.position.set(0, 0.035, d * 0.5 + 0.52);
+          root.add(apron);
+        }
       }
     }
 
-    return { root, matMesh, floorMat, palletGroup, stackAnchor, w, d };
+    return { root, matMesh, floorMat, palletGroup, stackAnchor, bannerSprite, w, d };
   }
 
   function updateWoodenPalletZone(zone, activeRatio = 0, pulseTime = 0) {
@@ -844,7 +1126,30 @@
     }
   }
 
+  function createHotAirBalloon() {
+    return chibi().createHotAirBalloon ? chibi().createHotAirBalloon() : { root: new THREE.Group() };
+  }
+  function animateHotAirBalloon(b, dt, moving) {
+    return chibi().animateHotAirBalloon ? chibi().animateHotAirBalloon(b, dt, moving) : undefined;
+  }
+  function createArmoredTrain() {
+    return chibi().createArmoredTrain ? chibi().createArmoredTrain() : { root: new THREE.Group() };
+  }
+  function animateArmoredTrain(tr, speed, dt) {
+    return chibi().animateArmoredTrain ? chibi().animateArmoredTrain(tr, speed, dt) : undefined;
+  }
+  function createGoldenAirship() {
+    return chibi().createGoldenAirship ? chibi().createGoldenAirship() : { root: new THREE.Group() };
+  }
+  function animateGoldenAirship(ship, dt) {
+    return chibi().animateGoldenAirship ? chibi().animateGoldenAirship(ship, dt) : undefined;
+  }
+
   window.Entities = {
+    createOverheadBannerSprite,
+    updateOverheadBannerSprite,
+    createZoneHeaderBanner,
+    createDistrictPlatform,
     createPlayerHero,
     updateHeroTier,
     animatePlayerHero,
@@ -860,6 +1165,12 @@
     animateHarvesterTruck,
     createRoyalTradeWagon,
     animateRoyalTradeWagon,
+    createHotAirBalloon,
+    animateHotAirBalloon,
+    createArmoredTrain,
+    animateArmoredTrain,
+    createGoldenAirship,
+    animateGoldenAirship,
     createCuteMonster,
     animateCuteMonster,
     createDefenseTurret,

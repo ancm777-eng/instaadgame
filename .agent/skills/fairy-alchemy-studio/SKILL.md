@@ -1,70 +1,47 @@
 ---
 name: fairy-alchemy-studio
-description: Studio production pipeline, UI/Market visibility standards, Chibi 3D rendering architecture, and 10-Wave Elemental Defense specification for Fairy Alchemy Tycoon & Defense.
+description: Studio production pipeline, UI/Market visibility standards, Chibi 3D rendering architecture, 20-Wave Territory Expansion, Lv.20 Mastery, 4 Alchemy Labs, 9 Production Facilities, and Overhead Billboard UI specs for Fairy Alchemy Tycoon & Defense.
 ---
 
-# Fairy Alchemy Studio Pipeline Skill
+# Fairy Alchemy Tycoon & Defense — Studio Specification (v10)
 
-이 Skill은 **동화풍 연금술 타이쿤 & 원소 디펜스 3D 아케이드** (`요정의 연금술 타이쿤 3D`)의 공식 스튜디오 기획, 시각화 원칙, 기술 규격을 정의한다.
+## 1. Visual & Chibi 3D Art Direction
+- **Strict No-Robot Rule**: Never load `RobotExpressive.glb`. Every character (Alchemist Hero, Fairies, Customers, Waves 1~20 Monsters) and facility must be built procedurally with **2-head Chibi toon proportions** (`MeshToonMaterial` + dark brown/indigo silhouette outline meshes via `addOutlinedMesh`).
+- **Dual-Walled Town & Territory Expansion**:
+  - South Wall Gate (`z = 20`): Safe resource farming corridor leading to Southern Resource Valleys (Zones 1~10). Hero combat skills cannot fire inside town; East Siege Gate (`x = 24`) is the sole monster ingress point.
+  - 5-Wave Expansion eras tear down north barriers (`z = -20` NW/NE and `z = -32` North Citadel) and pan the camera (`Engine.panCameraTo`) with celebration banners.
+- **Chunky Crate Stacking**: Carried resources stack on the wooden backpack/fairy tray as wide `0.95m x 0.20m x 0.62m` themed crates with distinct 3D tops for all raw ores/herbs/stones/crystals/fungi/meteorites/scales and crafted goods (`cut_gem`, `magic_potion`, `royal_elixir`, `fire_runestone`, `spirit_music_box`, `arcane_core`, `moon_perfume`, `philosopher_stone`).
 
----
+## 2. World Readability & UI Visibility Standards
+- **Overhead Floating Billboard Sprites (Zero Roof Occlusion)**:
+  - All District Hub Buildings, Production Machines (`m1..m9`), Energy Converters, Market/Envoy Stalls, and Gates must use overhead `THREE.Sprite` banners at `y = 3.8~4.5m` with `depthTest: false`, `depthWrite: false`, and `renderOrder: 999`.
+  - Floor nameplates on buildings/machines/stalls are forbidden because roofs or stacked crates occlude them.
+  - Banners displaying levels (e.g., `🔮 제1연금술 연구소 Lv.2`) must update dynamically via `updateOverheadBannerSprite`.
+- **1.5x Giant Floating Zone Headers**:
+  - Major districts render enlarged `7.2m x 1.65m` floating zone title headers at `y = 5.3~5.8m` (`renderOrder: 1000`, `depthTest: false`) so players identify districts even at zoomed-out camera scale.
+- **Wide Cross (`+`) Step Pads (`+1.3m` clearance)**:
+  - Category Hub spoke arms (`hub_spoke_x`, `hub_spoke_z`) span `8.4m`, keeping N/S/E/W step pads clear of building roofs.
+- **Distinct Color-Coded District Floor Platforms**:
+  - `alchemy`: Royal purple velvet stone with gold rune border (`#9b59b6` / `#f1c40f`).
+  - `defense`: Slate-blue fortress tile with cyan energy border (`#2980b9` / `#00e5ff`) and 4 corner shield pillars.
+  - `training`: Emerald academy tile (`#2ecc71` / `#a3ffcb`).
+  - `factory`: Warm iron-brick workshop with orange-brass frame (`#e67e22` / `#ffd280`) and floor directional input arrows.
+  - `guild`: Teal & gold logistics tile (`#1abc9c` / `#f9e79f`).
 
-## 1. 핵심 비주얼·엔지니어링 아키텍처 (Chibi 2등신 + 유형별 3D 건물 + 이중 출입구 분리 & 3단 요새 성문)
-
-1. **캐릭터 & 5단계 판타지 테마 몬스터 비주얼 표준 (Chibi Toon Shading)**
-   - 회색 로봇/졸라맨 사용을 전면 금지한다. 주인공·요정 일꾼·동물 후드 손님은 모두 **2등신 동화풍 카툰 셰이딩**(`MeshToonMaterial` + 진갈색 외곽선)으로 제작한다.
-   - 디펜스 웨이브 몬스터는 **징그럽거나 기괴한 무형상 금지** 규정에 따라, 직관적인 5단계 판타지 테마 몬스터로 구현한다:
-     - **1단계 (`Wave 1~2`)**: 🐻 **숲속 동물들** (`forest`: 귀여운 야생 멧돼지·늑대·곰 실루엣)
-     - **2단계 (`Wave 3~4`)**: 🧟 **좀비** (`zombie`: 민트색 피부, 해진 외투, 앞으로 뻗은 팔의 꼬마 좀비)
-     - **3단계 (`Wave 5~6`)**: 🧛 **뱀파이어** (`vampire`: 창백한 얼굴, 하이칼라 검붉은 망토, 송곳니와 박쥐 날개)
-     - **4단계 (`Wave 7~8`)**: 🐺 **늑대인간** (`werewolf`: 은회색 털·갈기·뾰족한 늑대 귀·발톱·늑대 꼬리)
-     - **5단계 (`Wave 9~10`)**: 😈 **악마** (`demon`: 진홍/흑요석 피부, 굽은 뿔, 박쥐 날개, 지옥불 코어, 화살촉 꼬리)
-2. **시장 가림 금지 & 판매·수금 구역 직관화 규칙 (Mandatory Open Market Rule)**
-   - **천막 지붕 가림 금지**: 서쪽 원석 교역소(`createSalesStall`)에는 플레이어나 팔레트를 위에서 가리는 거대한 천막 지붕 GLB를 씌우지 않는다. 반드시 **낮은 오픈형 목재 카운터(`height <= 1.25m`)** 를 사용해 캐릭터가 시장 구역에 들어서도 100% 선명하게 보이도록 설계한다.
-   - **전면 바닥 앞치마 배너(`Floor Apron Banner`) 필수**: 모든 투입/판매 팔레트(`createWoodenPalletZone`), 캐시 수금대(`createGemPedestal`), 유형별 건물(`createCategoryBuilding`), 성문(`(2.35, 0.036, 0)` 앞치마) 앞쪽에는 상자·지폐 기둥·성문 타워에 가려지지 않는 고대비 한글 바닥 배너(`📦 광석 파는 곳`, `💵 돈 받는 곳`, `⛏️ 광석 넣는 곳`, `🌿 약초 넣는 곳`, `🔮 연구소 광석 투입`, `👑 마차 상차장`, `⚒️ 장비 강화 대장간`, `🧚 자동화·채집 길드`, `🛡️ 디펜스 기술 연구소`, `🔮 연금술 연구소`, `🏰 동쪽 수호 성문`, `⛏️ 남쪽 자원 채집 출입구`)를 반드시 부착하고, 판매대(`SELL`)와 수금대(`CASH`) 사이 최소 `5m` 이상 이격한다.
-3. **모던 게임 UI/타이포그래피 & 오프닝 미션 브리핑 & 평상시/웨이브 BGM**
-   - `Pretendard Variable` + `Jua` 웹폰트 조합과 2열 카드 그리드, 등급 별 배지(`★1`~`★5`), 차원 에너지 비용 배지(`🔮/💠/🌟`), 레벨 프로그레스 바, 입체 3D 버튼을 사용한다.
-   - **게임 시작 시 오프닝 미션 브리핑 모달(`#opening-modal`)** 을 크게 띄워 목표(`광석 채집 → 연금술 연구소(1~3단계) 차원 에너지 연성 → 기술/스킬 강화 및 60마리 웨이브 방어`)를 명확히 안내한다.
-   - **평상시 / 웨이브 시 절차적 WebAudio 배경음악(BGM)** 을 생성해 깔아준다(평상시 잔잔한 펜타토닉 하프·오르골 선율 / 웨이브 시 부드럽고 긴장감 있는 단조 리듬 선율, 음소거 버튼 연동).
-4. **넓어진 마을(`48m x 40m`) 6대 지구 구분 & 건물 중심 동·서·남·북 방향 선택 구조**
-   - 중앙 광장(`0.0, -2.5`)에 **3단계 [연금술 연구소]** 를 배치해 `◀ 서쪽` 광석 투입 팔레트(`-3.8, -2.5`)와 `▼ 남쪽` 연구소 증축 패드(`0.0, 1.5`)를 제공한다.
-   - **자원·몬스터 출입구 완전 분리**: 남쪽 중앙(`x = 0.0, z = 20.0`)은 **자원 채집 전용 출입구**, 동쪽 중앙(`x = 24.0, z = 0.0`)의 **왕실 요새 성문** 은 **몬스터 웨이브 전용 단일 침공 출입구**로 운용한다.
-
----
-
-## 2. 스토리 & 경제 시스템: "캐시 vs 1~3차 차원 에너지 & 60마리 호드 디펜스"
-
-- **이원화 연금 경제 (`건물은 💵 캐시`, `기술 개발은 🔮/💠/🌟 차원 에너지`)**:
-  1. **건물·생산시설 (`1호기~3호기`, `요정`, `트럭`, `심층 광산/약초`, `1단계 연금술 연구소`)**: 오직 **💵 캐시(초록 지폐)** 로 건설·확장한다.
-  2. **3단계 연금술 연구소 (`연금술 연구소` Lv.1~3)**:
-     - `Lv.1 (1단계)`: **💵 40** 으로 건설 · `푸른 광석` 투입 시 **🔮 1차 차원 에너지(`dim1`)** 생산.
-     - `Lv.2 (2단계)`: **💵 160 + 🔮 30** 으로 증축 · `푸른 광석` 투입 시 **🔮 1차 + 💠 2차 차원 에너지(`dim2`)** 동시 생산.
-     - `Lv.3 (3단계)`: **💵 420 + 💠 45** 으로 초월 증축 · `푸른 광석` 투입 시 **🔮 1차 + 💠 2차 + 🌟 3차 차원 에너지(`dim3`)** 동시 생산.
-  3. **기술 개발 & 원소 스킬 (`장비 강화`, `방어 포탑 3종`, `3단 성문 증축`, `원소 스킬 ★1~★5 Lv.1~10`)**: 오직 **차원 에너지(`🔮/💠/🌟`)** 를 소모하여 개발하며, 스킬 등급(`★1~★5`)과 레벨(`Lv.1~10`)이 올라갈수록 상위 차원 에너지(`🔮 1차 → 💠 2차 → 🌟 3차`)를 요구한다.
-- **60초 호드 웨이브 & 2배속 광역 스킬 전투 밸런스**:
-  1. **첫 웨이브 5분(`300초`) 준비 & 1분간 60마리 호드 출격**: 웨이브가 시작되면 **60초에 걸쳐 10초마다 10마리씩(0s/10s/20s/30s/40s/50s = 총 60마리)** 5단계 테마 몬스터가 동쪽 전장에 출현한다.
-  2. **2배 빠른 투사체·시전 속도 & 고등급 광역(AoE) + 딜레이 밸런스**:
-     - 모든 스킬 투사체·포탑 탄환 속도를 **2배 이상(`26~28m/s`)**, 영웅 시전 모션과 운석 낙하 속도를 **2배** 빠르게 가속해 답답함을 제거한다.
-     - 고등급(`★3~★5`) 및 고레벨(`Lv.4+`, `Lv.7+`) 스킬은 광역 폭발 반경과 다중 웨이브 이펙트가 대폭 확대되며, 강력한 광역 화력에 맞춰 자동 시전 쿨타임(딜레이)을 등급별로 길게 조절(`★1 0.85s` → `★2 4.2s` → `★3 6.8s` → `★4 10.5s` → `★5 15.0s`)한다.
-  3. **성문 밖 직접 교전 & 3단 성문**: 주인공의 스킬 공격은 **동쪽 성문 밖 전장(`player.x >= 24.3`)** 에서만 발동 가능하며, 성문 내구도(`500 → 900 → 1,450 → 2,200`)가 0이 되면 미션 실패한다.
-
----
-
-## 3. 마을 6대 지구 건물 & 원소 스킬(★1~★5, Lv.1~10) & 방어 명세
-
-1. **서쪽 [원석 교역소 지구] (`🏛️ 원석 교역소` `(-16.5, 0.5)`)**: `▼ 남쪽` 광석 파는 곳 `(-16.5, 5.2)` / `▲ 북쪽` 돈 받는 곳 `(-16.5, -4.2)`
-2. **중앙 광장 [3단계 연금술 연구소] (`🔮 연금술 연구소` `(0.0, -2.5)`)**: `◀ 서쪽` 광석 투입 팔레트 `(-3.8, -2.5)` / `▼ 남쪽` 연구소 건설·증축(1~3단계) `(0.0, 1.5)`
-3. **북쪽 [연금 생산 공방 지구] (`z = -14.2`)**: 1호기(`-14.0`), 2호기(`-1.2`), 3호기(`11.6`) — `💵 캐시` 전용
-4. **남서쪽 [장비 강화 대장간 지구] (`⚒️ 장비 강화 대장간` `(-12.5, 13.0)`)**: `◀ 서쪽` 채집 곡괭이 / `▼ 남쪽` 배낭 적재 / `▶ 동쪽` 신속 부츠 (`🔮/💠/🌟 차원 에너지`)
-5. **남동쪽 [자동화·채집 길드 지구] (`🧚 자동화·채집 길드` `(11.5, 13.0)`)**: `◀ 서쪽` 요정 일꾼 / `▶ 동쪽` 수확 트럭 / `▲ 북쪽` 심층 광산 확장 / `▼ 남쪽` 심층 약초 확장 (`💵 캐시`)
-6. **동쪽 성문 앞 [디펜스 기술 연구소 지구] (`🛡️ 디펜스 기술 연구소` `(13.5, 0.0)`)**: `▲ 북쪽` 화염 포탑 / `▼ 남쪽` 빙결 탑 / `▶ 동쪽` 뇌전 오벨리스크 / `◀ 서쪽` 3단 성문 증축 (`🔮/💠/🌟 차원 에너지`)
-
-| 구분 | 이름 | 등급/최대Lv | 요구 에너지 | 쿨타임 · 2배속 탄속 · 광역(AoE) 효과 |
-|---|---|---|---|---|
-| **스킬 1** | `🔥 화염구 연사` | ★1 / Lv.10 (**기본 Lv.1**) | Lv.1~3 `🔮` / Lv.4~6 `💠` / Lv.7~10 `🌟` | 쿨 `0.85s` · 탄속 `28m/s` · `Lv.4+` 다발 화구 + 광역 폭발(`1.8~3.8m`) |
-| **스킬 2** | `❄️ 혹한의 눈보라` | ★2 / Lv.10 | Lv.1~3 `🔮` / Lv.4~6 `💠` / Lv.7~10 `🌟` | 쿨 `4.2s` · 반경 `3.8~6.6m` 다중 빙결 폭풍 + `50%` 감속 |
-| **스킬 3** | `⚡ 천둥 연쇄 낙뢰` | ★3 / Lv.10 | Lv.1~2 `🔮` / Lv.3~6 `💠` / Lv.7~10 `🌟` | 쿨 `6.8s` · `4+Lv` 연쇄 낙뢰 + 피격마다 `2.4~4.2m` 광역 감전 파동 + `0.7s` 기절 |
-| **스킬 4** | `☄️ 대지의 운석 폭풍` | ★4 / Lv.10 | Lv.1~5 `💠` / Lv.6~10 `🌟` | 쿨 `10.5s` · `0.20s` 초고속 운석 `3~8`발 + 각 `3.8~6.2m` 대폭발 넉백 |
-| **스킬 5** | `🌈 에테르 초신성` | ★5 / Lv.10 | **전 레벨 `🌟 3차`** | 쿨 `15.0s` · 반경 `9.5m` 초대형 다중 초신성 + 성문 내구도 `30%` 즉시 수복 |
-| **방어 1~3** | `🔥/❄️/⚡ 성문 흉벽 포탑` | Lv.0~10 | `🔮 → 💠 → 🌟` | 동쪽 성문 흉벽(`x = 23.2`) 배치, 탄속 `26m/s` 초고속 자동 포격 |
-| **방어 4** | `🏰 성문 증축·강화` | Lv.0~3 (3단계) | `Lv.1 🔮` / `Lv.2 💠` / `Lv.3 🌟` | 왕립 석조(`500`) → 철갑 룬(`900`) → 에메랄드 성채(`1,450`) → 황실 신성 요새(`2,200`) |
+## 3. Core Economy, Territory Eras & 20-Wave Loop
+- **Unified Cash Currency**: All pad prices, coin stacks, customer payments, and top-right HUD display Cash (`💵`). Dimensional Energies (`🌟`, `🌌`, `🔱`) power skill/tech/lab/gate progression.
+- **20 Waves & 10-Min Initial Prep**:
+  - `TOTAL_WAVES = 20`, `FIRST_WAVE_DELAY = 600` (10 minutes), `WAVE_INTERVAL = 180` (3 minutes). Each wave spawns 60 non-grotesque themed Chibi monsters (10 every 10s over 60s).
+  - **Era 1 (Wave 1~5)**: Base Workshop Town (Cap `Lv.5`, Lab #1 `Lv.1~3`, Machines `1~3호기`, Zones `1~4`).
+  - **Era 2 (Wave 6~10)**: NW `정령 공학 지구` unlocked (`Lv.10` cap, Lab #2 `Lv.4~6`, 🔥 화염 마나석 & 💧 정령의 이슬 Zones `5~6`, Machines `4~5호기` + `마법 길드 열기구`).
+  - **Era 3 (Wave 11~15)**: NE `번개 제련 단지` unlocked (`Lv.15` cap, Lab #3 `Lv.7~9`, ⚡ 번개 수정 & 🍄 달빛 버섯 Zones `7~8`, Machines `6~7호기` + rail tracks & `드워프 장갑열차`).
+  - **Era 4 (Wave 16~20)**: North `황금 대성채 & 비공정 부두` unlocked (`Lv.20 MAX` cap, Lab #4 `Lv.10~12`, 🌟 별똥별 운석 & 🌺 용의 비늘꽃 Zones `9~10`, Machines `8~9호기` + `거대 황금 비공정`).
+- **Lv.20 Mastery & 5-Level Milestone Passives**:
+  - `Lv.5`: Expanded harvest radius (`2.65 -> 4.0m`).
+  - `Lv.10`: Dual-node multi-hit (`2` nodes) + `2x` cash vacuum radius (`2.8 -> 5.6m`).
+  - `Lv.15`: `30%` chance for double (`2x`) resource yield.
+  - `Lv.20`: **Archmage Golden Aura** (visible gold ring, zero-cooldown instant pass-by harvest, `1.5x` all Cash sale prices).
+- **4 Labs Auto-Logistics**:
+  - Lab #2 enables auto-conveyors (`m1 -> m4`, `m2 -> m6`, `m6 -> m8`) + Harvester Truck #2.
+  - Lab #3 grants `30%` (`+5%/lv` above Lv.7) chance of 1+1 bonus output on all production machines.
+  - Lab #4 grants fairy instant warp teleportation + `2x` Golden Airship payout.
