@@ -1444,6 +1444,267 @@
     }
   }
 
+  // ===========================================================================
+  // 8. Non-Creepy Cute 3D Defense Trio Monsters (Slime, Shroom, Clockwork Golem)
+  // ===========================================================================
+  const MONSTER_PALETTES = [
+    0x6ee7b7, // Mint wave
+    0xfda4af, // Peach berry
+    0x93c5fd, // Sky pudding
+    0xc4b5fd, // Lavender
+    0xfde047, // Lemon drop
+    0xf9a8d4, // Strawberry
+    0x5eead4, // Aqua
+    0xfdba74, // Tangerine
+    0xa5b4fc, // Periwinkle
+    0xf472b6, // Starlight pink
+  ];
+
+  function buildMonsterHpBar(yHeight = 1.65) {
+    const barRoot = new THREE.Group();
+    barRoot.position.set(0, yHeight, 0);
+
+    const bgMat = new THREE.MeshBasicMaterial({ color: 0x1e132e });
+    const fgMat = new THREE.MeshBasicMaterial({ color: 0xff5277 });
+    const bg = new THREE.Mesh(
+      cachedGeo("mon_hp_bg", () => new THREE.BoxGeometry(1.18, 0.14, 0.08)),
+      bgMat
+    );
+    barRoot.add(bg);
+
+    const fillPivot = new THREE.Group();
+    fillPivot.position.set(-0.55, 0, 0.02);
+    const fill = new THREE.Mesh(
+      cachedGeo("mon_hp_fg", () => new THREE.BoxGeometry(1.10, 0.09, 0.07)),
+      fgMat
+    );
+    fill.position.set(0.55, 0, 0);
+    fillPivot.add(fill);
+    barRoot.add(fillPivot);
+
+    return { barRoot, fillPivot };
+  }
+
+  function createCuteMonster(species = "slime", waveTier = 1) {
+    const root = new THREE.Group();
+    const tierIdx = Math.max(0, (waveTier - 1) % MONSTER_PALETTES.length);
+    const baseHex = MONSTER_PALETTES[tierIdx];
+
+    root.add(makeShadowCircle(species === "golem" ? 0.85 : 0.62, 0.24));
+
+    const bodyPivot = new THREE.Group();
+    root.add(bodyPivot);
+
+    let windUpKey = null;
+    let capGroup = null;
+    let hpHeight = 1.45;
+
+    if (species === "slime") {
+      // 말랑 젤리 슬라임: bouncy translucent jelly blob with sparkles & leaf/star sprout
+      const jellyMat = new THREE.MeshToonMaterial({
+        color: baseHex,
+        emissive: baseHex,
+        emissiveIntensity: 0.16,
+        transparent: true,
+        opacity: 0.90,
+      });
+      addOutlinedMesh(
+        bodyPivot,
+        cachedGeo("slime_dome", () => new THREE.SphereGeometry(0.58, 16, 12)),
+        jellyMat,
+        { pos: [0, 0.48, 0], scale: [1.14, 0.88, 1.08], outlineScale: 1.06 }
+      );
+      const faceGroup = new THREE.Group();
+      faceGroup.position.set(0, 0.50, 0.12);
+      buildCuteEyesAndCheeks(faceGroup, 0.48, 0.16, 0.02);
+      bodyPivot.add(faceGroup);
+
+      // Tiny golden dewdrop sprout on top
+      addOutlinedMesh(
+        bodyPivot,
+        cachedGeo("slime_sprout", () => new THREE.OctahedronGeometry(0.14, 0)),
+        makeToonMat(0xffe15a, { emissive: 0xffb824, emissiveIntensity: 0.25 }),
+        { pos: [0, 1.04, 0], outlineScale: 1.06 }
+      );
+      hpHeight = 1.42;
+    } else if (species === "shroom") {
+      // 통통 버섯 정령: round plush stem + polka-dot pastel cap
+      const capHex = tierIdx % 2 === 0 ? 0xff77a8 : 0x7a9cff;
+      const matStem = makeToonMat(0xfff1d6);
+      const matCap = makeToonMat(capHex);
+      const matDot = makeToonMat(0xffffff);
+
+      addOutlinedMesh(
+        bodyPivot,
+        cachedGeo("shroom_stem", () => new THREE.CylinderGeometry(0.32, 0.40, 0.58, 14)),
+        matStem,
+        { pos: [0, 0.36, 0], outlineScale: 1.05 }
+      );
+      const faceGroup = new THREE.Group();
+      faceGroup.position.set(0, 0.40, 0.04);
+      buildCuteEyesAndCheeks(faceGroup, 0.36, 0.14, 0);
+      bodyPivot.add(faceGroup);
+
+      capGroup = new THREE.Group();
+      capGroup.position.set(0, 0.66, 0);
+      addOutlinedMesh(
+        capGroup,
+        cachedGeo("shroom_cap", () => new THREE.SphereGeometry(0.62, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.56)),
+        matCap,
+        { pos: [0, -0.04, 0], scale: [1.08, 0.85, 1.08], outlineScale: 1.05 }
+      );
+      [[0.32, 0.24, 0.28], [-0.34, 0.22, 0.22], [0.04, 0.36, -0.32]].forEach(([dx, dy, dz]) => {
+        const dot = new THREE.Mesh(cachedGeo("shroom_dot", () => new THREE.SphereGeometry(0.10, 8, 8)), matDot);
+        dot.position.set(dx, dy, dz);
+        capGroup.add(dot);
+      });
+      bodyPivot.add(capGroup);
+      hpHeight = 1.55;
+    } else {
+      // 태엽 별골렘 인형: chubby rounded toy stone golem with spinning wind-up key
+      const matStone = makeToonMat(0x9fb4d9);
+      const matGold = makeToonMat(0xffd24c, { emissive: 0xd99b00, emissiveIntensity: 0.2 });
+      const matChestGem = makeToonMat(0x66e8ff, { emissive: 0x2bc4ff, emissiveIntensity: 0.35 });
+
+      addOutlinedMesh(
+        bodyPivot,
+        cachedGeo("golem_body", () => new THREE.BoxGeometry(0.92, 0.88, 0.78)),
+        matStone,
+        { pos: [0, 0.58, 0], outlineScale: 1.05 }
+      );
+      addOutlinedMesh(
+        bodyPivot,
+        cachedGeo("golem_head", () => new THREE.BoxGeometry(0.76, 0.62, 0.66)),
+        matStone,
+        { pos: [0, 1.24, 0.04], outlineScale: 1.05 }
+      );
+      const faceGroup = new THREE.Group();
+      faceGroup.position.set(0, 1.22, 0.02);
+      buildCuteEyesAndCheeks(faceGroup, 0.36, 0.17, 0);
+      bodyPivot.add(faceGroup);
+
+      // Glowing Chest Star Core
+      addOutlinedMesh(
+        bodyPivot,
+        cachedGeo("golem_star", () => new THREE.OctahedronGeometry(0.18, 0)),
+        matChestGem,
+        { pos: [0, 0.62, 0.42], outlineScale: 1.06 }
+      );
+
+      // Cute rotating golden wind-up key on its back
+      windUpKey = new THREE.Group();
+      windUpKey.position.set(0, 0.68, -0.45);
+      addOutlinedMesh(
+        windUpKey,
+        cachedGeo("golem_key_stem", () => new THREE.CylinderGeometry(0.06, 0.06, 0.32, 8)),
+        matGold,
+        { pos: [0, 0, -0.14], rot: [Math.PI * 0.5, 0, 0], outline: false }
+      );
+      addOutlinedMesh(
+        windUpKey,
+        cachedGeo("golem_key_ring", () => new THREE.TorusGeometry(0.15, 0.05, 8, 12)),
+        matGold,
+        { pos: [0, 0.14, -0.28], outlineScale: 1.05 }
+      );
+      addOutlinedMesh(
+        windUpKey,
+        cachedGeo("golem_key_ring", () => new THREE.TorusGeometry(0.15, 0.05, 8, 12)),
+        matGold,
+        { pos: [0, -0.14, -0.28], outlineScale: 1.05 }
+      );
+      bodyPivot.add(windUpKey);
+      hpHeight = 1.98;
+    }
+
+    const hpBar = buildMonsterHpBar(hpHeight);
+    root.add(hpBar.barRoot);
+
+    return {
+      root,
+      bodyPivot,
+      windUpKey,
+      capGroup,
+      hpFillPivot: hpBar.fillPivot,
+      species,
+      _phase: Math.random() * 6.28,
+    };
+  }
+
+  function animateCuteMonster(monster, dt, slowed = false) {
+    if (!monster || !monster.bodyPivot) return;
+    const rate = slowed ? 3.5 : 8.5;
+    monster._phase = (monster._phase || 0) + (dt || 0.016) * rate;
+    const p = monster._phase;
+
+    if (monster.species === "slime") {
+      const s = Math.sin(p);
+      monster.bodyPivot.position.y = Math.max(0, s) * 0.24;
+      const sxz = s > 0 ? 1 - s * 0.14 : 1 + Math.abs(s) * 0.16;
+      const sy = s > 0 ? 1 + s * 0.18 : 1 - Math.abs(s) * 0.18;
+      monster.bodyPivot.scale.set(sxz, sy, sxz);
+    } else if (monster.species === "shroom") {
+      monster.bodyPivot.position.y = Math.abs(Math.sin(p)) * 0.11;
+      monster.bodyPivot.rotation.z = Math.sin(p * 0.5) * 0.12;
+      if (monster.capGroup) {
+        monster.capGroup.rotation.x = Math.sin(p) * 0.08;
+      }
+    } else {
+      monster.bodyPivot.position.y = Math.abs(Math.sin(p)) * 0.08;
+      monster.bodyPivot.rotation.z = Math.sin(p * 0.5) * 0.07;
+      if (monster.windUpKey) {
+        monster.windUpKey.rotation.z += (dt || 0.016) * (slowed ? 2.0 : 5.5);
+      }
+    }
+  }
+
+  // ===========================================================================
+  // 9. Stylized Defense R&D Turrets (Flame, Frost, Thunder, Aegis Shrine)
+  // ===========================================================================
+  function createDefenseTurret(kind = "flame") {
+    const root = new THREE.Group();
+    const matStone = makeToonMat(0x52527a);
+    const matGold = makeToonMat(0xf4c43a);
+
+    addOutlinedMesh(
+      root,
+      cachedGeo("tur_pedestal", () => new THREE.CylinderGeometry(0.82, 1.05, 0.65, 10)),
+      matStone,
+      { pos: [0, 0.32, 0], outlineScale: 1.04 }
+    );
+
+    const headPivot = new THREE.Group();
+    headPivot.position.set(0, 0.72, 0);
+    root.add(headPivot);
+
+    if (kind === "flame") {
+      const matFire = makeToonMat(0xff5e3a, { emissive: 0xd93814, emissiveIntensity: 0.35 });
+      addOutlinedMesh(headPivot, cachedGeo("tur_fire_bowl", () => new THREE.CylinderGeometry(0.55, 0.42, 0.52, 10)), matFire, { pos: [0, 0.34, 0] });
+      addOutlinedMesh(headPivot, cachedGeo("tur_fire_orb", () => new THREE.SphereGeometry(0.30, 12, 10)), makeToonMat(0xffe15a, { emissive: 0xff9b1a, emissiveIntensity: 0.45 }), { pos: [0, 0.72, 0] });
+    } else if (kind === "frost") {
+      const matIce = makeToonMat(0x5ae8ff, { emissive: 0x1cb4ff, emissiveIntensity: 0.38 });
+      addOutlinedMesh(headPivot, cachedGeo("tur_ice_spire", () => new THREE.OctahedronGeometry(0.42, 0)), matIce, { pos: [0, 0.68, 0], scale: [0.85, 1.65, 0.85] });
+    } else if (kind === "thunder") {
+      const matVolt = makeToonMat(0xb678ff, { emissive: 0x8b3aff, emissiveIntensity: 0.4 });
+      addOutlinedMesh(headPivot, cachedGeo("tur_volt_coil", () => new THREE.ConeGeometry(0.38, 1.05, 8)), matGold, { pos: [0, 0.54, 0] });
+      addOutlinedMesh(headPivot, cachedGeo("tur_volt_ring", () => new THREE.TorusGeometry(0.52, 0.08, 8, 16)), matVolt, { pos: [0, 0.88, 0], rot: [Math.PI * 0.5, 0, 0] });
+    } else {
+      // aegis shrine
+      const matAegis = makeToonMat(0x3ce88a, { emissive: 0x1eb862, emissiveIntensity: 0.36 });
+      addOutlinedMesh(headPivot, cachedGeo("tur_aegis_gem", () => new THREE.OctahedronGeometry(0.48, 0)), matAegis, { pos: [0, 0.72, 0], scale: [1.0, 1.35, 0.7] });
+      addOutlinedMesh(headPivot, cachedGeo("tur_aegis_halo", () => new THREE.TorusGeometry(0.68, 0.07, 8, 20)), matGold, { pos: [0, 0.68, 0], rot: [Math.PI * 0.5, 0, 0] });
+    }
+
+    return { root, headPivot, kind, _phase: 0 };
+  }
+
+  function animateDefenseTurret(turret, active, dt) {
+    if (!turret || !turret.headPivot) return;
+    const d = dt || 0.016;
+    turret._phase = (turret._phase || 0) + d * (active ? 4.2 : 1.5);
+    turret.headPivot.rotation.y += d * (active ? 2.8 : 0.9);
+    turret.headPivot.position.y = 0.72 + Math.sin(turret._phase) * 0.08;
+  }
+
   window.ChibiCharacters = {
     CRATE_W,
     CRATE_H,
@@ -1464,5 +1725,9 @@
     animateHarvesterTruck,
     createRoyalTradeWagon,
     animateRoyalTradeWagon,
+    createCuteMonster,
+    animateCuteMonster,
+    createDefenseTurret,
+    animateDefenseTurret,
   };
 })();

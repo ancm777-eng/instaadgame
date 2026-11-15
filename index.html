@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>요정의 연금술 타이쿤 3D · Fairy Alchemy Tycoon</title>
+  <title>요정의 연금술 타이쿤 & 원소 디펜스 3D · Fairy Alchemy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -38,6 +42,13 @@
       <div class="bar-track xp-track">
         <div class="bar-fill xp-fill" id="ui-xp-fill"></div>
       </div>
+      <div class="stat-row hp-row">
+        <span class="hp-label">❤️ 체력</span>
+        <span class="hp-val num" id="ui-hp">180 / 180</span>
+      </div>
+      <div class="bar-track hp-track">
+        <div class="bar-fill hp-fill" id="ui-hp-fill"></div>
+      </div>
     </div>
 
     <div class="glass-card bag-card">
@@ -70,6 +81,14 @@
     </div>
   </aside>
 
+  <!-- Top-Center Wave Countdown HUD -->
+  <div id="wave-hud" class="wave-hud">
+    <span class="wave-badge" id="ui-wave-badge">🌊 WAVE 1 / 10</span>
+    <span class="wave-timer num" id="ui-wave-timer">다음 습격 03:00</span>
+    <span class="wave-monsters num" id="ui-wave-monsters">평화 상태</span>
+    <button class="fairy-btn wave-now-btn" id="btn-wave-now" title="다음 웨이브 즉시 시작">⚔️ 즉시 시작</button>
+  </div>
+
   <!-- Giant Playable-Ad Objective Guide Banner -->
   <div id="guide-banner" class="guide-banner">
     <span class="guide-step-badge" id="ui-guide-step">1단계 채집</span>
@@ -80,6 +99,51 @@
   <!-- Toast Banner -->
   <div id="toast-banner"></div>
 
+  <!-- Bottom Elemental Skill Hotbar (★1 ~ ★5, Keys 1~5) -->
+  <div id="skill-hotbar" class="skill-hotbar">
+    <button class="skill-slot unlocked" id="skill-slot-s1" data-skill-id="s1" title="화염구 연사 (단축키 1)">
+      <span class="skill-stars">★1</span>
+      <span class="skill-ico">🔥</span>
+      <span class="skill-name">화염구</span>
+      <span class="skill-lv num" id="skill-lv-s1">Lv.1</span>
+      <span class="skill-key">1</span>
+      <div class="skill-cd-overlay" id="skill-cd-s1"></div>
+    </button>
+    <button class="skill-slot locked" id="skill-slot-s2" data-skill-id="s2" title="혹한의 눈보라 (단축키 2)">
+      <span class="skill-stars">★2</span>
+      <span class="skill-ico">❄️</span>
+      <span class="skill-name">눈보라</span>
+      <span class="skill-lv num" id="skill-lv-s2">잠금</span>
+      <span class="skill-key">2</span>
+      <div class="skill-cd-overlay" id="skill-cd-s2"></div>
+    </button>
+    <button class="skill-slot locked" id="skill-slot-s3" data-skill-id="s3" title="천둥 연쇄 낙뢰 (단축키 3)">
+      <span class="skill-stars">★3</span>
+      <span class="skill-ico">⚡</span>
+      <span class="skill-name">낙뢰</span>
+      <span class="skill-lv num" id="skill-lv-s3">잠금</span>
+      <span class="skill-key">3</span>
+      <div class="skill-cd-overlay" id="skill-cd-s3"></div>
+    </button>
+    <button class="skill-slot locked" id="skill-slot-s4" data-skill-id="s4" title="대지의 운석 폭풍 (단축키 4)">
+      <span class="skill-stars">★4</span>
+      <span class="skill-ico">☄️</span>
+      <span class="skill-name">운석</span>
+      <span class="skill-lv num" id="skill-lv-s4">잠금</span>
+      <span class="skill-key">4</span>
+      <div class="skill-cd-overlay" id="skill-cd-s4"></div>
+    </button>
+    <button class="skill-slot locked" id="skill-slot-s5" data-skill-id="s5" title="에테르 초신성 (단축키 5)">
+      <span class="skill-stars">★5</span>
+      <span class="skill-ico">🌈</span>
+      <span class="skill-name">초신성</span>
+      <span class="skill-lv num" id="skill-lv-s5">잠금</span>
+      <span class="skill-key">5</span>
+      <div class="skill-cd-overlay" id="skill-cd-s5"></div>
+    </button>
+    <button class="auto-skill-btn on" id="btn-auto-skill" title="자동 스킬 시전 켜기/끄기">AUTO ON</button>
+  </div>
+
   <!-- Full-Screen Touch/Mouse Floating Virtual Joystick Layer -->
   <div id="joystick-zone">
     <div id="joystick-base">
@@ -88,22 +152,39 @@
     <div id="joystick-hint">화면을 드래그하거나 WASD로 숲을 탐험하세요</div>
   </div>
 
-  <!-- Optional Fairy Alchemy Upgrade & Guide Modal -->
+  <!-- Modern Upgrade, Elemental Skills & Defense Tech Modal -->
   <div id="shop-modal" class="modal-backdrop">
     <div class="modal-sheet glass-panel">
       <div class="sheet-header">
         <div>
-          <h2 id="ui-shop-title">📜 연금술 공방 & 성장 상점</h2>
-          <p class="sheet-sub" id="ui-shop-stats">이동 100% · 요정 일꾼 0마리 · 60 FPS</p>
+          <h2 id="ui-shop-title">✨ 연금술 공방 & 원소 디펜스 연구소</h2>
+          <p class="sheet-sub" id="ui-shop-stats">이동 100% · 요정 0/15 · WAVE 1/10 · 60 FPS</p>
         </div>
-        <button class="fairy-btn icon-btn" id="btn-close-shop" title="닫기">✕</button>
+        <div class="sheet-header-right">
+          <span class="modal-cash-chip num" id="ui-shop-cash">💵 20</span>
+          <button class="fairy-btn icon-btn modal-close-x" id="btn-close-shop" title="닫기">✕</button>
+        </div>
       </div>
       <div class="shop-tabs">
-        <button class="shop-tab active" data-tab="wizard">🧙 연금술사 강화</button>
-        <button class="shop-tab" data-tab="automation">🧚 일꾼 · 트럭 · 설비</button>
-        <button class="shop-tab" data-tab="guide">📖 플레이 가이드</button>
+        <button class="shop-tab active" data-tab="wizard">🧙 캐릭터·채집</button>
+        <button class="shop-tab" data-tab="automation">⚙️ 설비·자동화</button>
+        <button class="shop-tab" data-tab="skills">✨ 원소 스킬 (★1~5)</button>
+        <button class="shop-tab" data-tab="defense">🛡️ 디펜스 연구</button>
       </div>
       <div id="shop-body" class="shop-body"></div>
+    </div>
+  </div>
+
+  <!-- Game Over / Wave Victory Modal -->
+  <div id="gameover-modal" class="modal-backdrop">
+    <div class="modal-confirm glass-panel gameover-card">
+      <div class="gameover-badge" id="gameover-badge">💥 DEFEAT</div>
+      <h3 id="gameover-title">💔 연금술사 체력이 모두 깎였습니다!</h3>
+      <p id="gameover-desc">방어 타워와 원소 스킬(★1~★5)을 더 강화해 웨이브를 버텨내세요!</p>
+      <div class="confirm-actions">
+        <button class="fairy-btn shop-btn" id="btn-retry-wave">🔄 현재 웨이브 재도전</button>
+        <button class="fairy-btn danger-btn" id="btn-gameover-reset">🗑️ 처음부터 새로 시작</button>
+      </div>
     </div>
   </div>
 

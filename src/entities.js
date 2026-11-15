@@ -92,50 +92,116 @@
     return chibi().animateRoyalTradeWagon(wagon, speed, dt);
   }
 
+  function createCuteMonster(species, waveTier) {
+    return chibi().createCuteMonster(species, waveTier);
+  }
+
+  function animateCuteMonster(monster, dt, slowed) {
+    return chibi().animateCuteMonster(monster, dt, slowed);
+  }
+
+  function createDefenseTurret(kind) {
+    return chibi().createDefenseTurret(kind);
+  }
+
+  function animateDefenseTurret(turret, active, dt) {
+    return chibi().animateDefenseTurret(turret, active, dt);
+  }
+
   // ---------------------------------------------------------------------------
-  // GLB Props & Environment Stations (Sales Stall, Gem Pedestal, Resource Nodes)
+  // Open Chibi Market Counter (ZERO overhead tent roofs -> Never occludes player!)
+  // & High-Contrast Floor Apron Labels ("📦 광석 파는 곳" vs "💵 돈 받는 곳")
   // ---------------------------------------------------------------------------
-  function createSalesStall(x = -13.5, z = 2.5) {
+  function createFloorApronBanner(w = 2.6, text = "", borderColor = "#ffffff", bgColor = "rgba(18, 26, 48, 0.92)") {
+    if (!text) return null;
+    let tex = null;
+    if (typeof document !== "undefined") {
+      const W = 512;
+      const H = 160;
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, W, H);
+        roundRectPath(ctx, 10, 12, W - 20, H - 24, 28);
+        ctx.fillStyle = bgColor;
+        ctx.fill();
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = borderColor;
+        ctx.stroke();
+
+        ctx.font = "900 54px Jua, Pretendard Variable, Apple SD Gothic Neo, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = "rgba(10, 12, 24, 0.95)";
+        ctx.strokeText(text, W * 0.5, H * 0.52);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(text, W * 0.5, H * 0.52);
+
+        tex = new THREE.CanvasTexture(canvas);
+        if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+        else if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        tex.needsUpdate = true;
+      }
+    }
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      map: tex,
+      transparent: true,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.92), mat);
+    mesh.rotation.x = -Math.PI * 0.5;
+    return mesh;
+  }
+
+  function createSalesStall(x = -15.5, z = 6.0) {
     const root = new THREE.Group();
     root.position.set(x, 0, z);
 
     const visualRoot = new THREE.Group();
     root.add(visualRoot);
 
-    const L = loader();
-    let built = false;
-    if (L && L.hasRole && L.hasRole("sales_stall")) {
-      const inst = L.createInstance("sales_stall", {
-        targetHeight: 2.15,
-        castShadow: true,
-        receiveShadow: true,
-      });
-      if (inst && inst.root) {
-        visualRoot.add(inst.root);
-        built = true;
-      }
-    }
-    if (!built) {
-      const matWood = chibi().makeToonMat(0xb07540);
-      const matCanopy = chibi().makeToonMat(0xe85a72);
-      const matTrim = chibi().makeToonMat(0xfff0cc);
-      chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(3.4, 1.15, 2.0), matWood, { pos: [0, 0.58, 0] });
-      chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(3.7, 0.45, 2.3), matCanopy, { pos: [0, 2.75, 0] });
-      chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(3.75, 0.14, 2.35), matTrim, { pos: [0, 2.48, 0] });
-      [-1.5, 1.5].forEach((px) => {
-        chibi().addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.11, 0.11, 2.6, 8), matWood, { pos: [px, 1.3, 0.85] });
-      });
-    }
+    // Low-profile Open Oak Market Counter (height <= 1.25m, ZERO overhanging canopy!)
+    const matWood = chibi().makeToonMat(0x9b6234);
+    const matCounterTop = chibi().makeToonMat(0xf5dfba);
+    const matStripes = chibi().makeToonMat(0x38bdf8);
+    const matGold = chibi().makeToonMat(0xfacc15);
 
-    // Countertop display anchor + glowing shop sign crystal
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.95, 0.92, 1.75), matWood, {
+      pos: [0, 0.46, 0],
+      castShadow: true,
+      receiveShadow: true,
+      outlineScale: 1.035,
+    });
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(3.15, 0.14, 1.92), matCounterTop, {
+      pos: [0, 0.98, 0],
+      castShadow: true,
+      receiveShadow: true,
+      outlineScale: 1.03,
+    });
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.8, 0.24, 0.10), matStripes, {
+      pos: [0, 0.72, 0.89],
+      castShadow: false,
+      outline: false,
+    });
+    // Low side sample barrel & glowing signpost totem on West back-corner (max y = 1.25m)
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(0.85, 0.22, 0.65), matGold, {
+      pos: [-0.8, 1.15, -0.35],
+      castShadow: false,
+      outlineScale: 1.04,
+    });
+
     const stockAnchor = new THREE.Group();
-    stockAnchor.position.set(0, 1.24, 0);
+    stockAnchor.position.set(0.35, 1.08, 0);
     root.add(stockAnchor);
 
     return { root, visualRoot, stockAnchor };
   }
 
-  function createGemPedestal(x = -9.6, z = -2.2) {
+  function createGemPedestal(x = -10.4, z = 0.4, badgeText = "💵 돈 받는 곳") {
     const root = new THREE.Group();
     root.position.set(x, 0, z);
 
@@ -143,8 +209,8 @@
     root.add(visualRoot);
 
     // Wide sturdy 3x3 Cash Collection Platform Base (초록 지폐 수금대)
-    const baseMat = chibi().makeToonMat(0x28593c);
-    const rimMat = chibi().makeToonMat(0x2ecc71, { emissive: 0x16a34a, emissiveIntensity: 0.34 });
+    const baseMat = chibi().makeToonMat(0x1f5e3b);
+    const rimMat = chibi().makeToonMat(0x2ecc71, { emissive: 0x16a34a, emissiveIntensity: 0.38 });
     const goldMat = chibi().makeToonMat(0xf7cb4d);
     chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.55, 0.24, 2.25), baseMat, {
       pos: [0, 0.12, 0],
@@ -163,6 +229,13 @@
       castShadow: false,
       outline: false,
     });
+
+    // Dedicated uncovered Front Floor-Apron Label ("💵 돈 받는 곳")
+    const apron = createFloorApronBanner(2.9, badgeText, "#4ade80", "rgba(12, 62, 34, 0.94)");
+    if (apron) {
+      apron.position.set(0, 0.035, 1.62);
+      root.add(apron);
+    }
 
     // 3x3 Tall Cash Bundle Skyscraper Anchor
     const stackAnchor = new THREE.Group();
@@ -348,8 +421,8 @@
     const root = new THREE.Group();
     root.position.set(x, 0, z);
 
-    // White-bordered floor mat
-    const matTex = makePalletMatTexture(256, 256, accentHex, badgeText);
+    // White-bordered floor mat (uncovered label is drawn separately on front floor apron)
+    const matTex = makePalletMatTexture(256, 256, accentHex, "");
     const floorMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       map: matTex,
@@ -396,6 +469,15 @@
     const stackAnchor = new THREE.Group();
     stackAnchor.position.set(0, 0.17, 0);
     root.add(stackAnchor);
+
+    // Uncovered Front Floor-Apron Label ("📦 광석 파는 곳", "⛏️ 광석 넣는 곳", etc.)
+    if (badgeText) {
+      const apron = createFloorApronBanner(w * 1.15, badgeText, accentHex, "rgba(18, 28, 52, 0.94)");
+      if (apron) {
+        apron.position.set(0, 0.035, d * 0.5 + 0.52);
+        root.add(apron);
+      }
+    }
 
     return { root, matMesh, floorMat, palletGroup, stackAnchor, w, d };
   }
@@ -679,6 +761,10 @@
     animateHarvesterTruck,
     createRoyalTradeWagon,
     animateRoyalTradeWagon,
+    createCuteMonster,
+    animateCuteMonster,
+    createDefenseTurret,
+    animateDefenseTurret,
     createSalesStall,
     createShowcaseCounter,
     createGemPedestal,
