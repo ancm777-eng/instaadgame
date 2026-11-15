@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>요정의 연금술 숲 3D · Fairy Alchemy Forest</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <!-- Three.js WebGL 3D Viewport -->
+  <div id="webgl-container"></div>
+
+  <!-- 3D -> 2D Projected Floating Combat & Loot Text Layer -->
+  <div id="fx-overlay"></div>
+
+  <!-- Top-Left: Game Title, Wizard Level & Backpack Gauge -->
+  <header id="hud-top-left" class="hud-cluster">
+    <div class="title-pill">✨ 요정의 연금술 숲 3D</div>
+
+    <div class="glass-card stat-card">
+      <div class="stat-row">
+        <span class="lv-badge" id="ui-lv">Lv.1</span>
+        <span class="hero-role" id="ui-title">견습 꼬마 마법사</span>
+      </div>
+      <div class="bar-track xp-track">
+        <div class="bar-fill xp-fill" id="ui-xp-fill"></div>
+      </div>
+    </div>
+
+    <div class="glass-card bag-card">
+      <div class="stat-row">
+        <span class="bag-label">🎒 배낭 적재</span>
+        <span class="bag-value num" id="ui-bag">0 / 25</span>
+      </div>
+      <div class="bar-track bag-track">
+        <div class="bar-fill bag-fill" id="ui-bag-fill"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Top-Right: Currencies & Compact Fairy-Tale Controls -->
+  <aside id="hud-top-right" class="hud-cluster">
+    <div class="currency-row">
+      <div class="currency-pill gem-pill" title="마나 보석">
+        <span class="cur-icon">💎</span>
+        <span class="cur-name">마나 보석</span>
+        <b class="cur-val num" id="ui-gems">0</b>
+      </div>
+      <div class="currency-pill crystal-pill" title="별빛 수정">
+        <span class="cur-icon">🔮</span>
+        <span class="cur-name">별빛 수정</span>
+        <b class="cur-val num" id="ui-crystals">0</b>
+      </div>
+      <div class="currency-pill potion-pill" title="보유 및 연성된 무지개 포션">
+        <span class="cur-icon">🧪</span>
+        <span class="cur-name">포션</span>
+        <b class="cur-val num" id="ui-potions">0</b>
+      </div>
+    </div>
+
+    <div class="control-row">
+      <button class="fairy-btn boss-btn" id="btn-summon-boss" title="대왕 슬라임 보스 소환">
+        👑 대왕 슬라임 소환 <span class="boss-timer num" id="ui-boss-timer">02:00</span>
+      </button>
+      <button class="fairy-btn shop-btn" id="btn-open-shop" title="성장 상점 열기">📜 성장 상점</button>
+      <button class="fairy-btn icon-btn" id="btn-home" title="중앙 광장으로 귀환">🏡</button>
+      <button class="fairy-btn icon-btn" id="btn-mute" title="효과음 켜기/끄기">🔊</button>
+      <button class="fairy-btn icon-btn" id="btn-save" title="지금 저장">💾</button>
+      <button class="fairy-btn icon-btn danger" id="btn-reset" title="진행 초기화">🗑️</button>
+    </div>
+  </aside>
+
+  <!-- King Slime Boss Bar -->
+  <div id="boss-bar-wrap" class="glass-card">
+    <div class="boss-header">
+      <span id="ui-boss-name">👑 대왕 슬라임</span>
+      <span class="num" id="ui-boss-hp">600 / 600</span>
+    </div>
+    <div class="bar-track boss-track">
+      <div class="bar-fill boss-fill" id="ui-boss-fill"></div>
+    </div>
+  </div>
+
+  <!-- Toast Banner -->
+  <div id="toast-banner"></div>
+
+  <!-- Full-Screen Touch/Mouse Floating Virtual Joystick Layer -->
+  <div id="joystick-zone">
+    <div id="joystick-base">
+      <div id="joystick-stick"></div>
+    </div>
+    <div id="joystick-hint">화면을 드래그하거나 WASD로 숲을 탐험하세요</div>
+  </div>
+
+  <!-- Optional Fairy Alchemy Upgrade & Guide Modal -->
+  <div id="shop-modal" class="modal-backdrop">
+    <div class="modal-sheet glass-panel">
+      <div class="sheet-header">
+        <div>
+          <h2 id="ui-shop-title">📜 연금술 공방 & 성장 상점</h2>
+          <p class="sheet-sub" id="ui-shop-stats">이동 100% · 요정 일꾼 0마리 · 60 FPS</p>
+        </div>
+        <button class="fairy-btn icon-btn" id="btn-close-shop" title="닫기">✕</button>
+      </div>
+      <div class="shop-tabs">
+        <button class="shop-tab active" data-tab="wizard">🧙 마법사 강화</button>
+        <button class="shop-tab" data-tab="automation">🧚 일꾼 · 수레 · 가마솥</button>
+        <button class="shop-tab" data-tab="guide">📖 플레이 가이드</button>
+      </div>
+      <div id="shop-body" class="shop-body"></div>
+    </div>
+  </div>
+
+  <!-- Save Reset Confirmation Modal -->
+  <div id="reset-modal" class="modal-backdrop">
+    <div class="modal-confirm glass-panel">
+      <h3>🗑️ 모험 기록 초기화</h3>
+      <p>현재 모은 마나 보석, 요정 일꾼, 수레 및 강화 레벨이 모두 초기화됩니다. 처음부터 다시 시작할까요?</p>
+      <div class="confirm-actions">
+        <button class="fairy-btn neutral-btn" id="btn-cancel-reset">취소</button>
+        <button class="fairy-btn danger-btn" id="btn-confirm-reset">초기화하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 2 Real CC0 GLB Asset Loader & 3D Game Modules -->
+  <script src="src/vendor/GLTFLoader.js"></script>
+  <script src="src/vendor/SkeletonUtils.js"></script>
+  <script src="src/vendor/RoomEnvironment.js"></script>
+  <script src="src/asset-loader.js"></script>
+  <script src="src/engine.js"></script>
+  <script src="src/entities.js"></script>
+  <script src="src/gameplay.js"></script>
+</body>
+</html>
