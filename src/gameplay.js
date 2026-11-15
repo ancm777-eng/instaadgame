@@ -256,6 +256,7 @@
     stall: null,
     sellPallet: null,
     gemPedestal: null,
+    guideWidgets: null,
   };
 
   let _initialized = false;
@@ -1496,32 +1497,151 @@
     const hero = sceneObjs.hero;
     if (!hero || !hero.guideArrowGroup) return;
 
-    let tx = 25.0;
+    const hasRaw = player.bagItems.some(
+      (t) => t === "starlight_crystal" || t === "rainbow_berry"
+    );
+    const hasCrafted = player.bagItems.some(
+      (t) => t === "potion_2x" || t === "cut_gem_3x" || t === "elixir_5x"
+    );
+    const nearestOut = runtime.machines.find((m) => m.outQueue.length >= 1);
+
+    let tx = 23.0;
     let tz = 0;
-    if (runtime.pedestalGems.length >= 3) {
+    let stepLabel = "1단계 채집";
+    let guideText = "👉 오른쪽 동쪽 농장으로 가서 수정·열매를 수확하세요!";
+    let colorHex = 0xffe629;
+
+    if (runtime.pedestalGems.length >= 1) {
       tx = GEM_PEDESTAL_POS.x;
       tz = GEM_PEDESTAL_POS.z;
-    } else if (player.bagItems.length >= Math.max(6, Math.floor(getHeroBagCap() * 0.55))) {
+      stepLabel = "수금";
+      guideText = "💎 왼쪽 마나 보석 타워로 가서 보석을 흡수하세요!";
+      colorHex = 0x42f2ff;
+    } else if (state.m1Lv === 0 && state.gems >= getUpgradeCost("m1")) {
+      tx = MACHINE_CONFIGS[0].padPos.x;
+      tz = MACHINE_CONFIGS[0].padPos.z;
+      stepLabel = "설비 해금";
+      guideText = "⚗️ 북서쪽 [1호기 가마솥] 발판을 밟아 2배 포션 설비를 여세요!";
+      colorHex = 0x52ff9b;
+    } else if (state.toolLv === 0 && state.bagLv === 0 && state.gems >= getUpgradeCost("tool")) {
+      tx = -3.8;
+      tz = 7.5;
+      stepLabel = "강화";
+      guideText = "🪄 아래쪽 [수확 속도] 카드를 밟아 채집 속도를 높이세요!";
+      colorHex = 0x52ff9b;
+    } else if (state.fairyCount === 0 && state.gems >= getUpgradeCost("fairy")) {
+      tx = -3.8;
+      tz = 12.2;
+      stepLabel = "일꾼 고용";
+      guideText = "🧚 아래쪽 [요정 일꾼] 카드를 밟아 자동 수확 요정을 고용하세요!";
+      colorHex = 0xff88c2;
+    } else if (nearestOut && player.bagItems.length < getHeroBagCap()) {
+      tx = nearestOut.cfg.outPos.x;
+      tz = nearestOut.cfg.outPos.z;
+      stepLabel = "가공품 회수";
+      guideText = "🧪 설비 OUT 팔레트에서 완성된 고가치 상자를 챙기세요!";
+      colorHex = 0xffd85e;
+    } else if (hasCrafted || player.bagItems.length >= (state.totalEarnedGems < 80 ? 3 : 6)) {
       const m1 = runtime.machines[0];
-      if (m1 && m1.lv > 0 && m1.inQueue.length < 12 && player.bagItems.some((t) => t === "starlight_crystal" || t === "rainbow_berry")) {
+      if (state.m1Lv > 0 && m1 && m1.inQueue.length < 8 && hasRaw && !hasCrafted) {
         tx = m1.cfg.inPos.x;
         tz = m1.cfg.inPos.z;
+        stepLabel = "원석 투입";
+        guideText = "⚗️ 1호기 가마솥 IN 팔레트에 수확 상자를 투입하세요!";
+        colorHex = 0x5ef0ff;
       } else {
         tx = SELL_PALLET_POS.x;
         tz = SELL_PALLET_POS.z;
+        stepLabel = "상자 판매";
+        guideText = "💰 왼쪽 판매대 SELL 팔레트에 상자를 내려놓으세요!";
+        colorHex = 0x58ff9c;
       }
     } else {
-      const nearestOut = runtime.machines.find((m) => m.outQueue.length >= 2);
-      if (nearestOut && player.bagItems.length < getHeroBagCap()) {
-        tx = nearestOut.cfg.outPos.x;
-        tz = nearestOut.cfg.outPos.z;
+      // Nearest active Zone 1 (or unlocked farm) node
+      let bestDist = Infinity;
+      for (const n of runtime.farmNodes) {
+        if (!isZoneUnlocked(n.zone) || n.respawnTimer > 0) continue;
+        const d = Math.hypot(n.x - player.x, n.z - player.z);
+        if (d < bestDist) {
+          bestDist = d;
+          tx = n.x;
+          tz = n.z;
+        }
       }
     }
 
-    const ang = Math.atan2(tx - player.x, tz - player.z);
+    const dx = tx - player.x;
+    const dz = tz - player.z;
+    const distToTarget = Math.hypot(dx, dz);
+    const ang = Math.atan2(dx, dz);
+
     hero.guideArrowGroup.rotation.y = ang - player.rotY;
-    const pulse = 1 + Math.sin(runtime.time * 5.2) * 0.12;
+    const pulse = 1.12 + Math.sin(runtime.time * 6.5) * 0.14;
     hero.guideArrowGroup.scale.set(pulse, pulse, pulse);
+    if (hero.guideArrowMat && hero.guideArrowMat.color) {
+      hero.guideArrowMat.color.setHex(colorHex);
+    }
+
+    // Marching chevrons inside hero directional ring
+    const chevrons = hero.guideArrowGroup.userData && hero.guideArrowGroup.userData.chevrons;
+    if (chevrons && chevrons.length) {
+      for (let i = 0; i < chevrons.length; i++) {
+        const wave = ((runtime.time * 2.8 + i * 0.33) % 1);
+        chevrons[i].position.z = 1.1 + wave * 1.45;
+        const sc = 0.85 + Math.sin(wave * Math.PI) * 0.32;
+        chevrons[i].scale.set(sc, sc, sc);
+      }
+    }
+
+    // World marching chevron ground highway trail & giant floating target beacon
+    const gw = sceneObjs.guideWidgets;
+    if (gw) {
+      if (gw.trailMat && gw.trailMat.color) gw.trailMat.color.setHex(colorHex);
+      if (gw.beaconRingMat && gw.beaconRingMat.color) gw.beaconRingMat.color.setHex(colorHex);
+
+      if (gw.beaconGroup) {
+        gw.beaconGroup.position.set(tx, 0, tz);
+      }
+      if (gw.beaconArrow) {
+        gw.beaconArrow.position.y = 2.75 + Math.sin(runtime.time * 5.5) * 0.42;
+        gw.beaconArrow.rotation.y += (dt || 0.016) * 2.1;
+      }
+      if (gw.beaconRing) {
+        const rp = 1 + Math.sin(runtime.time * 4.5) * 0.14;
+        gw.beaconRing.scale.set(rp, rp, 1);
+      }
+
+      if (gw.trailNodes && gw.trailNodes.length) {
+        const spacing = 2.2;
+        const marchOffset = ((runtime.time * 2.8) % 1) * spacing;
+        const ux = distToTarget > 0.01 ? dx / distToTarget : 1;
+        const uz = distToTarget > 0.01 ? dz / distToTarget : 0;
+
+        for (let i = 0; i < gw.trailNodes.length; i++) {
+          const node = gw.trailNodes[i];
+          const dAlong = 3.5 + i * spacing + marchOffset;
+          if (distToTarget < 1.6 || dAlong > distToTarget - 1.2) {
+            node.visible = false;
+          } else {
+            node.visible = true;
+            node.position.set(player.x + ux * dAlong, 0.04, player.z + uz * dAlong);
+            node.rotation.y = ang;
+            const sc = 0.96 + Math.sin(runtime.time * 7 - i * 0.8) * 0.12;
+            node.scale.set(sc, 1, sc);
+          }
+        }
+      }
+    }
+
+    if (typeof document !== "undefined") {
+      const stepEl = document.getElementById("ui-guide-step");
+      const textEl = document.getElementById("ui-guide-text");
+      const distEl = document.getElementById("ui-guide-dist");
+      if (stepEl && stepEl.textContent !== stepLabel) stepEl.textContent = stepLabel;
+      if (textEl && textEl.textContent !== guideText) textEl.textContent = guideText;
+      const distStr = `${Math.max(0, Math.round(distToTarget))}m`;
+      if (distEl && distEl.textContent !== distStr) distEl.textContent = distStr;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1710,6 +1830,7 @@
     }
     syncGemPedestalVisuals();
     updateStepPads(0.016);
+    updateGuideArrow(0.016);
     syncHUD(true);
     showToast("🌱 새로운 연금술 공방이 시작되었습니다!");
   }
@@ -1889,6 +2010,13 @@
     window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 2)));
     if (window.Engine) window.Engine.unitGroup.add(sceneObjs.hero.root);
 
+    if (window.ChibiCharacters && typeof window.ChibiCharacters.createWorldGuideWidgets === "function") {
+      sceneObjs.guideWidgets = window.ChibiCharacters.createWorldGuideWidgets();
+      if (window.Engine && window.Engine.vfxGroup) {
+        window.Engine.vfxGroup.add(sceneObjs.guideWidgets.root);
+      }
+    }
+
     buildDenseFarmNodes();
     buildProductionMachines();
     buildMarketAndQueue();
@@ -1896,6 +2024,7 @@
     syncFairiesCount();
     ensureTruckSpawned();
     updateStepPads(0.016);
+    updateGuideArrow(0.016);
     syncHUD(true);
 
     if (typeof window !== "undefined" && !window.__NO_AUTO_RAF__ && typeof window.requestAnimationFrame === "function") {
