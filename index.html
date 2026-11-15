@@ -43,8 +43,8 @@
         <div class="bar-fill xp-fill" id="ui-xp-fill"></div>
       </div>
       <div class="stat-row hp-row">
-        <span class="hp-label">❤️ 체력</span>
-        <span class="hp-val num" id="ui-hp">180 / 180</span>
+        <span class="hp-label">🏰 성문 내구도</span>
+        <span class="hp-val num" id="ui-hp">500 / 500</span>
       </div>
       <div class="bar-track hp-track">
         <div class="bar-fill hp-fill" id="ui-hp-fill"></div>
@@ -84,9 +84,14 @@
   <!-- Top-Center Wave Countdown HUD -->
   <div id="wave-hud" class="wave-hud">
     <span class="wave-badge" id="ui-wave-badge">🌊 WAVE 1 / 10</span>
-    <span class="wave-timer num" id="ui-wave-timer">다음 습격 03:00</span>
-    <span class="wave-monsters num" id="ui-wave-monsters">평화 상태</span>
+    <span class="wave-timer num" id="ui-wave-timer">첫 웨이브 05:00</span>
+    <span class="wave-monsters num" id="ui-wave-monsters">평화 준비 중</span>
     <button class="fairy-btn wave-now-btn" id="btn-wave-now" title="다음 웨이브 즉시 시작">⚔️ 즉시 시작</button>
+  </div>
+
+  <!-- Mission Objective Purpose Banner -->
+  <div id="mission-banner" class="mission-banner">
+    🎯 목표: 동쪽 외곽에서 자원을 캐고 건물별 기술을 개발해 5분 뒤 성문을 막아내세요!
   </div>
 
   <!-- Giant Playable-Ad Objective Guide Banner -->
@@ -179,8 +184,8 @@
   <div id="gameover-modal" class="modal-backdrop">
     <div class="modal-confirm glass-panel gameover-card">
       <div class="gameover-badge" id="gameover-badge">💥 DEFEAT</div>
-      <h3 id="gameover-title">💔 연금술사 체력이 모두 깎였습니다!</h3>
-      <p id="gameover-desc">방어 타워와 원소 스킬(★1~★5)을 더 강화해 웨이브를 버텨내세요!</p>
+      <h3 id="gameover-title">💔 마을 출입구 성문이 무너졌습니다!</h3>
+      <p id="gameover-desc">동쪽 디펜스 기술 연구소에서 수호 포탑과 방벽, 원소 스킬(★1~★5)을 강화해 성문을 지켜내세요!</p>
       <div class="confirm-actions">
         <button class="fairy-btn shop-btn" id="btn-retry-wave">🔄 현재 웨이브 재도전</button>
         <button class="fairy-btn danger-btn" id="btn-gameover-reset">🗑️ 처음부터 새로 시작</button>

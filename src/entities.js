@@ -108,6 +108,40 @@
     return chibi().animateDefenseTurret(turret, active, dt);
   }
 
+  function createVillageGate(x = 24.0, z = 0.0, badgeText = "🏰 마을 수호 성문") {
+    const gate = chibi().createVillageGate();
+    gate.root.position.set(x, 0, z);
+    if (badgeText) {
+      const apron = createFloorApronBanner(3.3, badgeText, "#38bdf8", "rgba(16, 28, 56, 0.94)");
+      if (apron) {
+        apron.position.set(0, 0.036, 3.15);
+        gate.root.add(apron);
+      }
+    }
+    return gate;
+  }
+
+  function animateVillageGate(gate, underAttack, dt) {
+    return chibi().animateVillageGate(gate, underAttack, dt);
+  }
+
+  function createCategoryBuilding(kind, x = 0, z = 0, badgeText = "", accentHex = "#ffd56b") {
+    const bld = chibi().createCategoryBuilding(kind);
+    bld.root.position.set(x, 0, z);
+    if (badgeText) {
+      const apron = createFloorApronBanner(3.2, badgeText, accentHex, "rgba(18, 26, 48, 0.94)");
+      if (apron) {
+        apron.position.set(0, 0.036, 1.98);
+        bld.root.add(apron);
+      }
+    }
+    return bld;
+  }
+
+  function animateCategoryBuilding(building, dt) {
+    return chibi().animateCategoryBuilding(building, dt);
+  }
+
   // ---------------------------------------------------------------------------
   // Open Chibi Market Counter (ZERO overhead tent roofs -> Never occludes player!)
   // & High-Contrast Floor Apron Labels ("📦 광석 파는 곳" vs "💵 돈 받는 곳")
@@ -157,7 +191,7 @@
     return mesh;
   }
 
-  function createSalesStall(x = -15.5, z = 6.0) {
+  function createSalesStall(x = -16.5, z = 0.5, badgeText = "🏛️ 원석 교역소") {
     const root = new THREE.Group();
     root.position.set(x, 0, z);
 
@@ -193,6 +227,14 @@
       castShadow: false,
       outlineScale: 1.04,
     });
+
+    if (badgeText) {
+      const apron = createFloorApronBanner(2.9, badgeText, "#38bdf8", "rgba(18, 28, 52, 0.94)");
+      if (apron) {
+        apron.position.set(0, 0.036, 1.55);
+        root.add(apron);
+      }
+    }
 
     const stockAnchor = new THREE.Group();
     stockAnchor.position.set(0.35, 1.08, 0);
@@ -612,9 +654,26 @@
     ctx.lineTo(x1, y1 - arm);
     ctx.stroke();
 
-    // 5. Integrated Card Typography & Icon on the Floor Mat
+    // 5. Integrated Card Typography, Direction Chip & Icon on the Floor Mat
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+
+    // Optional Directional Selection Badge (◀ 서쪽 / ▶ 동쪽 / ▲ 북쪽 / ▼ 남쪽) at top-left
+    if (opts.dirLabel) {
+      const dirW = 132;
+      const dirH = 40;
+      const dirX = x0 + 20;
+      const dirY = y0 + 24;
+      roundRectPath(ctx, dirX, dirY, dirW, dirH, 16);
+      ctx.fillStyle = "rgba(18, 28, 56, 0.92)";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = accentHex;
+      ctx.stroke();
+      ctx.font = "900 22px Pretendard, system-ui, sans-serif";
+      ctx.fillStyle = "#ffe57f";
+      ctx.fillText(opts.dirLabel, dirX + dirW * 0.5, dirY + dirH * 0.5 + 1);
+    }
 
     // Level pill chip at top-right inside frame
     if (levelText) {
@@ -636,7 +695,7 @@
     // Large crisp Emoji Icon
     ctx.font = "84px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(icon, W * 0.5 - (levelText ? 34 : 0), H * 0.30);
+    ctx.fillText(icon, W * 0.5, H * 0.31);
 
     // Bold readable title with dark drop outline
     ctx.font = "900 38px Pretendard, Apple SD Gothic Neo, system-ui, sans-serif";
@@ -724,6 +783,7 @@
       opts.title || "",
       opts.price || "",
       opts.levelText || "",
+      opts.dirLabel || "",
       qRatio,
       opts.isMax ? 1 : 0,
       opts.unlocked === false ? 0 : 1,
@@ -765,6 +825,10 @@
     animateCuteMonster,
     createDefenseTurret,
     animateDefenseTurret,
+    createVillageGate,
+    animateVillageGate,
+    createCategoryBuilding,
+    animateCategoryBuilding,
     createSalesStall,
     createShowcaseCounter,
     createGemPedestal,

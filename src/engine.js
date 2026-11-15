@@ -1,7 +1,7 @@
 // =============================================================================
 // src/engine.js - 3D Scene, Perspective Zoomed-Out Tycoon Camera (FOV 35,
-// Offset (0, 25, 21)), Lighting, 38x34m Rounded Compound Floor, Perimeter
-// GLB Fences with 3 Wide Gates, and Unobstructed Forest Scenery
+// Offset (0, 25, 21)), Lighting, 48x40m Rounded Compound Floor (5 Zones),
+// Closed Perimeter Fences with Single East Gate, and Outer Resource Valley
 // =============================================================================
 
 (function () {
@@ -10,15 +10,15 @@
   const CAM_FOV = 35;
   const CAM_OFFSET = new THREE.Vector3(0, 25, 21);
   const CAM_LOOK_AHEAD = 1.5;
-  const SHADOW_FRUSTUM_HALF = 34;
+  const SHADOW_FRUSTUM_HALF = 42;
 
-  // 4x Expanded 38m x 34m Rounded Rectangular Workshop Compound
+  // Expanded 48m x 40m Rounded Rectangular Workshop Compound (5 Grouped Zones)
   const TOWN_BOUNDS = {
-    minX: -19,
-    maxX: 19,
-    minZ: -17,
-    maxZ: 17,
-    cornerRadius: 2.8,
+    minX: -24,
+    maxX: 24,
+    minZ: -20,
+    maxZ: 20,
+    cornerRadius: 3.0,
   };
 
   let renderer = null;
@@ -145,15 +145,15 @@
 
   function makeCompoundFloorTexture() {
     if (typeof document === "undefined") return null;
-    const W = 1024;
-    const H = 916;
+    const W = 1200;
+    const H = 1000;
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    // Warm oak timber deck across main workshop compound (38m x 34m)
+    // Warm oak timber deck across main 48m x 40m village compound
     ctx.fillStyle = "#d4a66a";
     ctx.fillRect(0, 0, W, H);
 
@@ -162,16 +162,16 @@
       const row = Math.floor(y / plankH);
       ctx.fillStyle = row % 2 === 0 ? "#d9ae74" : "#cea064";
       ctx.fillRect(0, y, W, plankH - 2);
-      ctx.fillStyle = "rgba(110, 68, 30, 0.26)";
+      ctx.fillStyle = "rgba(110, 68, 30, 0.24)";
       ctx.fillRect(0, y + plankH - 2, W, 2);
       for (let x = (row % 3) * 44; x < W; x += 132) {
         ctx.fillRect(x, y, 2, plankH);
       }
     }
 
-    // Helper: convert world (x in [-19,19], z in [-17,17]) to canvas pixels
-    const wx = (x) => ((x + 19) / 38) * W;
-    const wz = (z) => ((z + 17) / 34) * H;
+    // Helper: convert world (x in [-24,24], z in [-20,20]) to canvas pixels
+    const wx = (x) => ((x + 24) / 48) * W;
+    const wz = (z) => ((z + 20) / 40) * H;
     function fillWorldZone(x0, z0, x1, z1, fill, border, radius = 18) {
       const px = wx(x0);
       const py = wz(z0);
@@ -194,53 +194,57 @@
       ctx.restore();
     }
 
-    // North Production Line Deck (cool stone factory floor along z in [-16.2, -9.2])
-    fillWorldZone(-17.8, -16.2, 17.8, -9.0, "#bfc6d9", "#7b84a3", 22);
-    // Individual stone tiles inside North Production Strip
-    ctx.strokeStyle = "rgba(85, 94, 128, 0.25)";
+    // Main Cross Boulevards connecting the 5 functional zones & East Gate
+    fillWorldZone(-22.5, -2.5, 24.0, 2.5, "#dfc99d", "#a68552", 12);
+    fillWorldZone(-3.0, -18.5, 3.0, 18.5, "#dfc99d", "#a68552", 12);
+
+    // 1. North Production Line District (cool stone factory floor along z in [-19.0, -7.8])
+    fillWorldZone(-22.5, -19.0, 19.5, -7.8, "#bfc6d9", "#7b84a3", 22);
+    ctx.strokeStyle = "rgba(85, 94, 128, 0.24)";
     ctx.lineWidth = 2;
-    for (let gx = -17; gx <= 17; gx += 2) {
+    for (let gx = -21; gx <= 19; gx += 2) {
       ctx.beginPath();
-      ctx.moveTo(wx(gx), wz(-16.0));
-      ctx.lineTo(wx(gx), wz(-9.2));
+      ctx.moveTo(wx(gx), wz(-18.8));
+      ctx.lineTo(wx(gx), wz(-8.0));
       ctx.stroke();
     }
-    for (let gz = -16; gz <= -9; gz += 2) {
+    for (let gz = -18; gz <= -8; gz += 2) {
       ctx.beginPath();
-      ctx.moveTo(wx(-17.6), wz(gz));
-      ctx.lineTo(wx(17.6), wz(gz));
+      ctx.moveTo(wx(-22.2), wz(gz));
+      ctx.lineTo(wx(19.2), wz(gz));
       ctx.stroke();
     }
 
-    // West Market & Queue Cobble Plaza (x in [-18.0, -5.2], z in [-5.8, 12.2])
-    fillWorldZone(-18.0, -5.8, -5.2, 12.2, "#e8dec8", "#b29c78", 22);
-    // Warm cream & pastel sand checkerboard inside Market Plaza
-    for (let x = -17.5; x < -5.8; x += 1.6) {
-      for (let z = -5.3; z < 11.6; z += 1.6) {
+    // 2. West Market Trade Plaza (x in [-22.5, -10.5], z in [-7.0, 8.2])
+    fillWorldZone(-22.5, -7.0, -10.5, 8.2, "#e8dec8", "#b29c78", 22);
+    for (let x = -22.0; x < -11.0; x += 1.6) {
+      for (let z = -6.4; z < 7.6; z += 1.6) {
         const checker = ((Math.floor(x * 2) + Math.floor(z * 2)) & 1) === 0;
         if (checker) {
           ctx.fillStyle = "rgba(198, 172, 132, 0.28)";
-          ctx.fillRect(wx(x), wz(z), (1.6 / 38) * W, (1.6 / 34) * H);
+          ctx.fillRect(wx(x), wz(z), (1.6 / 48) * W, (1.6 / 40) * H);
         }
       }
     }
 
-    // East Gate Garden Walkway (x in [11.5, 19.0], z in [-4.5, 4.5])
-    fillWorldZone(10.5, -4.5, 19.1, 4.5, "#d8b47b", "#997040", 14);
+    // 3. South-West Equipment Forge District (x in [-20.0, -5.2], z in [8.8, 18.8])
+    fillWorldZone(-20.0, 8.8, -5.2, 18.8, "#e3bfa1", "#9e663c", 20);
 
-    // North-East & North-West Gate Paths (z in [-17.1, -14.8])
-    fillWorldZone(5.2, -17.2, 10.8, -14.0, "#d4b37d", "#8d6d43", 10);
-    fillWorldZone(-10.8, -17.2, -5.2, -14.0, "#d4b37d", "#8d6d43", 10);
+    // 4. South-East Automation & Harvest Guild District (x in [-4.6, 8.4], z in [7.2, 18.8])
+    fillWorldZone(-4.6, 7.2, 8.4, 18.8, "#cbe6c8", "#589962", 20);
 
-    // Central Spawn Plaza Medallion around (0, 2.0)
+    // 5. East Defense R&D Lab & Gate Bastion District (x in [7.2, 23.6], z in [-6.8, 6.8])
+    fillWorldZone(7.2, -6.8, 23.6, 6.8, "#c7cde8", "#656ea8", 22);
+
+    // Central Spawn Plaza Medallion around (0, 0)
     ctx.save();
-    ctx.translate(wx(0), wz(2.0));
+    ctx.translate(wx(0), wz(0));
     ctx.beginPath();
-    ctx.arc(0, 0, 82, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 244, 212, 0.42)";
+    ctx.arc(0, 0, 74, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 246, 216, 0.56)";
     ctx.fill();
     ctx.lineWidth = 6;
-    ctx.strokeStyle = "rgba(166, 114, 58, 0.55)";
+    ctx.strokeStyle = "rgba(166, 114, 58, 0.65)";
     ctx.stroke();
     ctx.restore();
 
@@ -285,13 +289,13 @@
     });
     if (!meadowMat.map) meadowMat.color.setHex(0x68be5b);
 
-    const meadow = new THREE.Mesh(new THREE.PlaneGeometry(190, 190), meadowMat);
+    const meadow = new THREE.Mesh(new THREE.PlaneGeometry(230, 230), meadowMat);
     meadow.rotation.x = -Math.PI * 0.5;
     meadow.position.y = -0.06;
     meadow.receiveShadow = true;
     envGroup.add(meadow);
 
-    // 2. Dense Farm Soil & Garden Framing Plots outside East & North Gates
+    // 2. Dense Outer Eastern Resource Valley (strictly outside single East Gate x = 24.0)
     const farmMat = new THREE.MeshLambertMaterial({
       color: 0xffffff,
       map: makeFarmSoilTexture(),
@@ -314,39 +318,29 @@
       envGroup.add(soil);
     }
 
-    // East Ore Mine Quarry (x in [20.4, 35.6], z in [-11.8, -0.6])
-    addFarmPlot(28.0, -6.2, 15.2, 11.2, 0x627394, 0x434d68);
-    // South-East Rainbow Herb Grove (x in [20.4, 35.6], z in [0.6, 11.8])
-    addFarmPlot(28.0, 6.2, 15.2, 11.2, 0x63ad60, 0x3e7844);
-    // North-East Zone 3 Ore Annex (x in [2.5, 18.0], z in [-30.0, -18.8])
-    addFarmPlot(10.2, -24.4, 15.4, 11.2, 0x5c6d8e, 0x3f4962);
-    // North-West Zone 4 Rainbow Herb Garden (x in [-18.0, -2.5], z in [-30.0, -18.8])
-    addFarmPlot(-10.2, -24.4, 15.4, 11.2);
+    // Zone 1: East Ore Mine Quarry (north of East invasion avenue)
+    addFarmPlot(32.8, -7.8, 13.6, 7.6, 0x627394, 0x434d68);
+    // Zone 2: South-East Rainbow Herb Grove (south of East invasion avenue)
+    addFarmPlot(32.8, 7.8, 13.6, 7.6, 0x63ad60, 0x3e7844);
+    // Zone 3: Deep Ore Annex (outer NE)
+    addFarmPlot(32.8, -16.8, 13.6, 7.2, 0x5c6d8e, 0x3f4962);
+    // Zone 4: Deep Rainbow Herb Annex (outer SE)
+    addFarmPlot(32.8, 16.8, 13.6, 7.2, 0x4e9c50, 0x356b38);
 
-    // Bridge paths connecting East, NE, NW gates + Royal Trade Road along z = -14.2
+    // Single East Gate Avenue & Monster Invasion Road leading to x = 24.0, z = 0.0
     const pathMat = new THREE.MeshLambertMaterial({ color: 0xd9be8c });
-    const stoneRoadMat = new THREE.MeshLambertMaterial({ color: 0xaab2c8 });
-    const eastPath = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.04, 8.6), pathMat);
-    eastPath.position.set(19.6, 0.005, 0);
+    const stoneRoadMat = new THREE.MeshLambertMaterial({ color: 0xb0b8ce });
+    const eastPath = new THREE.Mesh(new THREE.BoxGeometry(20.0, 0.04, 6.8), pathMat);
+    eastPath.position.set(33.5, 0.005, 0);
     eastPath.receiveShadow = true;
     envGroup.add(eastPath);
 
-    const royalRoad = new THREE.Mesh(new THREE.BoxGeometry(22.0, 0.04, 2.6), stoneRoadMat);
-    royalRoad.position.set(21.8, 0.008, -14.2);
-    royalRoad.receiveShadow = true;
-    envGroup.add(royalRoad);
+    const stoneRoad = new THREE.Mesh(new THREE.BoxGeometry(19.0, 0.045, 3.8), stoneRoadMat);
+    stoneRoad.position.set(34.0, 0.010, 0);
+    stoneRoad.receiveShadow = true;
+    envGroup.add(stoneRoad);
 
-    const nePath = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.04, 3.6), pathMat);
-    nePath.position.set(8.0, 0.005, -18.2);
-    nePath.receiveShadow = true;
-    envGroup.add(nePath);
-
-    const nwPath = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.04, 3.6), pathMat);
-    nwPath.position.set(-8.0, 0.005, -18.2);
-    nwPath.receiveShadow = true;
-    envGroup.add(nwPath);
-
-    // 3. Raised 38m x 34m Rounded Rectangular Workshop Compound Deck
+    // 3. Raised 48m x 40m Rounded Rectangular Village Compound Deck
     const compTex = makeCompoundFloorTexture();
     const deckMat = new THREE.MeshLambertMaterial({
       color: 0xffffff,
@@ -399,7 +393,7 @@
       topMesh.receiveShadow = true;
       envGroup.add(topMesh);
     } else {
-      const box = new THREE.Mesh(new THREE.BoxGeometry(38, 0.12, 34), deckMat);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(48, 0.12, 40), deckMat);
       box.position.y = -0.04;
       box.receiveShadow = true;
       envGroup.add(box);
@@ -453,44 +447,35 @@
       envGroup.add(fallback);
     }
 
-    // Perimeter fence segments around x in [-19, 19], z in [-17, 17]
-    // South border (z = +17, continuous)
-    for (let x = -16.5; x <= 16.5; x += 3.0) {
-      placeFence(x, 17.0, 0);
+    // Perimeter fence segments around x in [-24, 24], z in [-20, 20]
+    // South border (z = +20, completely closed)
+    for (let x = -21.5; x <= 21.5; x += 3.0) {
+      placeFence(x, 20.0, 0);
     }
-    // West border (x = -19, continuous)
-    for (let z = -14.5; z <= 14.5; z += 3.0) {
-      placeFence(-19.0, z, Math.PI * 0.5);
+    // West border (x = -24, completely closed)
+    for (let z = -17.5; z <= 17.5; z += 3.0) {
+      placeFence(-24.0, z, Math.PI * 0.5);
     }
-    // East border (x = +19, leave wide East Farm Gate at z in [-4.2, +4.2])
-    for (let z = -14.5; z <= 14.5; z += 3.0) {
+    // North border (z = -20, completely closed)
+    for (let x = -21.5; x <= 21.5; x += 3.0) {
+      placeFence(x, -20.0, 0);
+    }
+    // East border (x = +24, leave ONLY Single Central East Gate at z in [-4.2, +4.2])
+    for (let z = -17.5; z <= 17.5; z += 3.0) {
       if (Math.abs(z) < 4.5) continue;
-      placeFence(19.0, z, Math.PI * 0.5);
-    }
-    // North border (z = -17, leave NW gate x in [-11,-5] & NE gate x in [5,11])
-    for (let x = -16.5; x <= 16.5; x += 3.0) {
-      if (x >= -10.8 && x <= -5.2) continue;
-      if (x >= 5.2 && x <= 10.8) continue;
-      placeFence(x, -17.0, 0);
+      placeFence(24.0, z, Math.PI * 0.5);
     }
 
-    // Illuminated wooden gate pillars at all 3 gates
-    envGroup.add(makeGatePillar(19.0, -4.4, 0x52efff));
-    envGroup.add(makeGatePillar(19.0, 4.4, 0xff82b2));
-    envGroup.add(makeGatePillar(5.0, -17.0, 0x62ffaa));
-    envGroup.add(makeGatePillar(11.0, -17.0, 0x62ffaa));
-    envGroup.add(makeGatePillar(-11.0, -17.0, 0xd482ff));
-    envGroup.add(makeGatePillar(-5.0, -17.0, 0xd482ff));
+    // Illuminated Gate Pillars flanking the SINGLE East Entrance (x = 24.0, z = +-4.4)
+    envGroup.add(makeGatePillar(24.0, -4.4, 0x52efff));
+    envGroup.add(makeGatePillar(24.0, 4.4, 0x52ff9b));
 
-    // Outer Forest Trees: strictly OUTSIDE town AND clear of East & North Farms
-    // and clear of south foreground view corridor (z > 17 && |x| < 21)
+    // Outer Forest Trees: strictly OUTSIDE 48x40 village AND clear of East Resource Valley
     const treeSpots = [
-      [-23.5, -28], [-25.0, -21], [-23.8, -14], [-24.5, -7], [-23.8, 0],
-      [-24.2, 7], [-23.5, 14], [-25.5, 20], [-22.5, 24],
-      [23.5, -26], [26.0, -20], [39.0, -14], [40.0, -6], [39.5, 2],
-      [40.0, 10], [38.5, 16], [23.5, 19], [25.5, 24],
-      [-18.0, -34.0], [-10.0, -34.5], [-1.0, -34.2], [7.5, -34.5], [16.5, -34.0],
-      [-28.5, 11.0], [30.0, -18.0], [30.5, 18.0],
+      [-28.5, -24], [-30.0, -16], [-29.0, -8], [-29.5, 0], [-28.8, 8], [-29.5, 16], [-27.5, 22],
+      [-21.0, -25.5], [-12.0, -26.0], [-3.0, -25.5], [6.0, -26.0], [15.0, -25.5], [23.5, -25.0],
+      [43.5, -20.0], [44.5, -12.0], [44.0, -5.5], [44.0, 5.5], [44.5, 12.0], [43.5, 20.0],
+      [27.0, 25.0], [35.0, 25.5], [35.0, -25.5], [28.0, -25.0],
     ];
     for (let i = 0; i < treeSpots.length; i++) {
       const [tx, tz] = treeSpots[i];

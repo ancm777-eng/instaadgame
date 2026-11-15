@@ -541,9 +541,30 @@ html, body {
   color: #ffffff;
 }
 
+.mission-banner {
+  position: fixed;
+  top: calc(50px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 19;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(25, 42, 74, 0.92), rgba(45, 29, 86, 0.92));
+  border: 1.8px solid rgba(255, 224, 138, 0.85);
+  box-shadow: 0 5px 16px rgba(10, 6, 26, 0.38);
+  color: #fff8dc;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  max-width: min(94vw, 620px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 .guide-banner {
   position: fixed;
-  top: calc(52px + var(--safe-top));
+  top: calc(84px + var(--safe-top));
   left: 50%;
   transform: translateX(-50%);
   z-index: 19;
@@ -587,7 +608,7 @@ html, body {
 
 #toast-banner {
   position: fixed;
-  top: calc(96px + var(--safe-top));
+  top: calc(128px + var(--safe-top));
   left: 50%;
   transform: translateX(-50%) translateY(-8px);
   z-index: 22;

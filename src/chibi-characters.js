@@ -1705,6 +1705,247 @@
     turret.headPivot.position.y = 0.72 + Math.sin(turret._phase) * 0.08;
   }
 
+  // ===========================================================================
+  // 10. Single East Entrance Village Gate (🏰 마을 수호 성문 + 3D 내구도 게이지)
+  // ===========================================================================
+  function createVillageGate() {
+    const root = new THREE.Group();
+    const matStone = makeToonMat(0x6b7494);
+    const matWood = makeToonMat(0x8c562c);
+    const matGold = makeToonMat(0xf5c542, { emissive: 0xd99b00, emissiveIntensity: 0.22 });
+    const matRoof = makeToonMat(0x3b82f6);
+    const matShield = new THREE.MeshToonMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.45,
+      transparent: true,
+      opacity: 0.34,
+    });
+
+    // Twin Flanking Gate Bastion Towers at z = -4.2 and z = +4.2
+    [-4.2, 4.2].forEach((tz) => {
+      const tower = new THREE.Group();
+      tower.position.set(0, 0, tz);
+      addOutlinedMesh(
+        tower,
+        cachedGeo("gate_bastion", () => new THREE.BoxGeometry(1.75, 2.25, 1.75)),
+        matStone,
+        { pos: [0, 1.12, 0], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        tower,
+        cachedGeo("gate_cap", () => new THREE.ConeGeometry(1.38, 1.1, 4)),
+        matRoof,
+        { pos: [0, 2.75, 0], rot: [0, Math.PI * 0.25, 0], outlineScale: 1.05 }
+      );
+      addOutlinedMesh(
+        tower,
+        cachedGeo("gate_lantern", () => new THREE.OctahedronGeometry(0.26, 0)),
+        makeToonMat(0x60efff, { emissive: 0x22d3ee, emissiveIntensity: 0.5 }),
+        { pos: [0.95, 1.95, 0], outlineScale: 1.06 }
+      );
+      root.add(tower);
+    });
+
+    // Reinforced Golden Rune Threshold across z in [-3.6, +3.6]
+    addOutlinedMesh(
+      root,
+      cachedGeo("gate_sill", () => new THREE.BoxGeometry(1.15, 0.14, 7.6)),
+      matWood,
+      { pos: [0, 0.07, 0], outlineScale: 1.03 }
+    );
+    addOutlinedMesh(
+      root,
+      cachedGeo("gate_rune_bar", () => new THREE.BoxGeometry(0.32, 0.18, 7.2)),
+      matGold,
+      { pos: [0.35, 0.10, 0], outline: false }
+    );
+
+    // Translucent Arcane Barrier Bars (Blocks monsters outside while letting hero pass freely)
+    const barrierMesh = new THREE.Mesh(
+      cachedGeo("gate_barrier", () => new THREE.BoxGeometry(0.18, 1.65, 7.1)),
+      matShield
+    );
+    barrierMesh.position.set(0.2, 0.92, 0);
+    root.add(barrierMesh);
+
+    // Thin Overhead Arch Beam + Large 3D Gate Durability Bar
+    addOutlinedMesh(
+      root,
+      cachedGeo("gate_arch", () => new THREE.BoxGeometry(0.65, 0.36, 8.6)),
+      matWood,
+      { pos: [0, 2.65, 0], outlineScale: 1.03 }
+    );
+
+    const hpBarGroup = new THREE.Group();
+    hpBarGroup.position.set(0, 3.35, 0);
+    const barBg = new THREE.Mesh(
+      cachedGeo("gate_hp_bg", () => new THREE.BoxGeometry(0.28, 0.34, 5.2)),
+      new THREE.MeshBasicMaterial({ color: 0x1e132e })
+    );
+    hpBarGroup.add(barBg);
+
+    const hpFillPivot = new THREE.Group();
+    hpFillPivot.position.set(0, 0, -2.5);
+    const barFg = new THREE.Mesh(
+      cachedGeo("gate_hp_fg", () => new THREE.BoxGeometry(0.34, 0.22, 5.0)),
+      new THREE.MeshBasicMaterial({ color: 0x4ade80 })
+    );
+    barFg.position.set(0, 0, 2.5);
+    hpFillPivot.add(barFg);
+    hpBarGroup.add(hpFillPivot);
+    root.add(hpBarGroup);
+
+    return {
+      root,
+      barrierMesh,
+      barrierMat: matShield,
+      hpFillPivot,
+      hpFgMesh: barFg,
+      _phase: 0,
+    };
+  }
+
+  function animateVillageGate(gate, underAttack, dt) {
+    if (!gate) return;
+    gate._phase = (gate._phase || 0) + (dt || 0.016) * (underAttack ? 7.0 : 2.5);
+    if (gate.barrierMat) {
+      gate.barrierMat.opacity = (underAttack ? 0.42 : 0.26) + Math.sin(gate._phase) * 0.08;
+    }
+  }
+
+  // ===========================================================================
+  // 11. District Hub 3D Buildings (⚒️ 대장간, 🧚 길드, 🛡️ 디펜스 연구소)
+  // Low-profile <= 2.2m hubs with 4-way directional stone spokes
+  // ===========================================================================
+  function createCategoryBuilding(kind = "forge") {
+    const root = new THREE.Group();
+    const matStone = makeToonMat(0x767a99);
+    const matTimber = makeToonMat(0x9b6236);
+    const matGold = makeToonMat(0xf4be3c, { emissive: 0xb87a10, emissiveIntensity: 0.16 });
+    let accentRotor = null;
+
+    // Central Octagonal Plinth + 4 Directional Stone Spokes (N / S / E / W)
+    addOutlinedMesh(
+      root,
+      cachedGeo("hub_plinth", () => new THREE.CylinderGeometry(1.95, 2.15, 0.24, 8)),
+      matStone,
+      { pos: [0, 0.12, 0], outlineScale: 1.03 }
+    );
+    const spokeX = cachedGeo("hub_spoke_x", () => new THREE.BoxGeometry(5.6, 0.05, 0.85));
+    const spokeZ = cachedGeo("hub_spoke_z", () => new THREE.BoxGeometry(0.85, 0.05, 5.6));
+    const matPath = makeToonMat(0xe5d3b3);
+    const meshSpokeX = new THREE.Mesh(spokeX, matPath);
+    meshSpokeX.position.set(0, 0.03, 0);
+    root.add(meshSpokeX);
+    const meshSpokeZ = new THREE.Mesh(spokeZ, matPath);
+    meshSpokeZ.position.set(0, 0.03, 0);
+    root.add(meshSpokeZ);
+
+    if (kind === "forge") {
+      // ⚒️ Equipment Enhancement Forge (곡괭이·배낭·부츠 대장간)
+      addOutlinedMesh(
+        root,
+        cachedGeo("forge_hearth", () => new THREE.BoxGeometry(2.1, 1.35, 1.45)),
+        makeToonMat(0xb85242),
+        { pos: [0, 0.88, -0.35], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        root,
+        cachedGeo("forge_chimney", () => new THREE.BoxGeometry(0.75, 0.72, 0.75)),
+        matStone,
+        { pos: [-0.45, 1.82, -0.45], outlineScale: 1.05 }
+      );
+      addOutlinedMesh(
+        root,
+        cachedGeo("forge_fire", () => new THREE.SphereGeometry(0.32, 10, 8)),
+        makeToonMat(0xff7728, { emissive: 0xff4500, emissiveIntensity: 0.55 }),
+        { pos: [0, 0.65, 0.35], outline: false }
+      );
+      // Golden Anvil + Spinning Forge Crest
+      addOutlinedMesh(
+        root,
+        cachedGeo("forge_anvil", () => new THREE.BoxGeometry(0.95, 0.42, 0.55)),
+        makeToonMat(0x4c4a6b),
+        { pos: [0.55, 0.48, 0.58], outlineScale: 1.05 }
+      );
+      accentRotor = new THREE.Group();
+      accentRotor.position.set(0.55, 1.65, -0.15);
+      addOutlinedMesh(
+        accentRotor,
+        cachedGeo("forge_emblem", () => new THREE.OctahedronGeometry(0.34, 0)),
+        matGold,
+        { outlineScale: 1.06 }
+      );
+      root.add(accentRotor);
+    } else if (kind === "guild") {
+      // 🧚 Automation & Harvest Guild Hall (요정 일꾼·트럭·광산/약초 확장 길드)
+      addOutlinedMesh(
+        root,
+        cachedGeo("guild_hall", () => new THREE.BoxGeometry(2.35, 1.18, 1.55)),
+        makeToonMat(0x3ba682),
+        { pos: [0, 0.80, -0.25], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        root,
+        cachedGeo("guild_trim", () => new THREE.BoxGeometry(2.55, 0.22, 1.72)),
+        matTimber,
+        { pos: [0, 1.48, -0.25], outlineScale: 1.04 }
+      );
+      // Twin Crystal Spirelets + Floating Guild Star
+      [-0.78, 0.78].forEach((gx) => {
+        addOutlinedMesh(
+          root,
+          cachedGeo("guild_spire", () => new THREE.ConeGeometry(0.38, 0.72, 6)),
+          makeToonMat(0x5eead4),
+          { pos: [gx, 1.92, -0.25], outlineScale: 1.05 }
+        );
+      });
+      accentRotor = new THREE.Group();
+      accentRotor.position.set(0, 1.85, 0.25);
+      addOutlinedMesh(
+        accentRotor,
+        cachedGeo("guild_star", () => new THREE.OctahedronGeometry(0.30, 0)),
+        matGold,
+        { outlineScale: 1.06 }
+      );
+      root.add(accentRotor);
+    } else {
+      // 🛡️ Defense Tech Research Lab (디펜스 기술 연구소)
+      addOutlinedMesh(
+        root,
+        cachedGeo("lab_body", () => new THREE.CylinderGeometry(1.15, 1.38, 1.15, 8)),
+        makeToonMat(0x524c9e),
+        { pos: [0, 0.78, 0], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        root,
+        cachedGeo("lab_ring", () => new THREE.TorusGeometry(0.95, 0.11, 8, 18)),
+        matGold,
+        { pos: [0, 1.42, 0], rot: [Math.PI * 0.5, 0, 0], outlineScale: 1.05 }
+      );
+      accentRotor = new THREE.Group();
+      accentRotor.position.set(0, 1.75, 0);
+      addOutlinedMesh(
+        accentRotor,
+        cachedGeo("lab_crystal", () => new THREE.OctahedronGeometry(0.45, 0)),
+        makeToonMat(0x52efff, { emissive: 0x0ea5e9, emissiveIntensity: 0.45 }),
+        { scale: [0.85, 1.35, 0.85], outlineScale: 1.06 }
+      );
+      root.add(accentRotor);
+    }
+
+    return { root, accentRotor, kind, _phase: 0 };
+  }
+
+  function animateCategoryBuilding(building, dt) {
+    if (!building || !building.accentRotor) return;
+    const d = dt || 0.016;
+    building._phase = (building._phase || 0) + d * 2.2;
+    building.accentRotor.rotation.y += d * 1.4;
+    building.accentRotor.position.y += Math.sin(building._phase) * 0.002;
+  }
+
   window.ChibiCharacters = {
     CRATE_W,
     CRATE_H,
@@ -1729,5 +1970,9 @@
     animateCuteMonster,
     createDefenseTurret,
     animateDefenseTurret,
+    createVillageGate,
+    animateVillageGate,
+    createCategoryBuilding,
+    animateCategoryBuilding,
   };
 })();
