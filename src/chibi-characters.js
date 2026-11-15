@@ -886,6 +886,24 @@
       return g;
     }
 
+    if (type === "dim1" || type === "dim2" || type === "dim3") {
+      const hex = type === "dim1" ? 0xa855f7 : type === "dim2" ? 0x38bdf8 : 0xfacc15;
+      const matCrystal = makeToonMat(hex, { emissive: hex, emissiveIntensity: 0.55 });
+      addOutlinedMesh(
+        g,
+        cachedGeo(`dim_orb_${type}`, () => new THREE.OctahedronGeometry(0.24, 0)),
+        matCrystal,
+        { pos: [0, 0.22, 0], scale: [0.95, 1.32, 0.95], castShadow: false, outlineScale: 1.06 }
+      );
+      addOutlinedMesh(
+        g,
+        cachedGeo("dim_orb_ring", () => new THREE.TorusGeometry(0.28, 0.04, 6, 12)),
+        makeToonMat(0xffffff, { emissive: hex, emissiveIntensity: 0.4 }),
+        { pos: [0, 0.22, 0], rot: [Math.PI * 0.45, 0.3, 0], castShadow: false, outline: false }
+      );
+      return g;
+    }
+
     const isElixir = type === "royal_elixir" || type === "elixir_5x";
     const isCutGem = type === "cut_gem" || type === "cut_gem_3x";
     const isOre = type === "blue_ore" || type === "starlight_crystal";
@@ -1447,18 +1465,27 @@
   // ===========================================================================
   // 8. Non-Creepy Cute 3D Defense Trio Monsters (Slime, Shroom, Clockwork Golem)
   // ===========================================================================
-  const MONSTER_PALETTES = [
-    0x6ee7b7, // Mint wave
-    0xfda4af, // Peach berry
-    0x93c5fd, // Sky pudding
-    0xc4b5fd, // Lavender
-    0xfde047, // Lemon drop
-    0xf9a8d4, // Strawberry
-    0x5eead4, // Aqua
-    0xfdba74, // Tangerine
-    0xa5b4fc, // Periwinkle
-    0xf472b6, // Starlight pink
-  ];
+  // ===========================================================================
+  // 8. 5-Tier Recognizable Fantasy Theme Monsters (Tier 1..5)
+  // 1단계: 숲속 동물들(forest) / 2단계: 좀비(zombie) / 3단계: 뱀파이어(vampire)
+  // 4단계: 늑대인간(werewolf) / 5단계: 악마(demon)
+  // ===========================================================================
+  const MONSTER_THEMES = {
+    1: { key: "forest", name: "숲속 동물", primary: 0x9c6638, secondary: 0x6b4226, eye: 0x1e1320 },
+    2: { key: "zombie", name: "좀비", primary: 0x7bc490, secondary: 0x583c6e, eye: 0xfef08a },
+    3: { key: "vampire", name: "뱀파이어", primary: 0xe6e0f8, secondary: 0x991b1b, eye: 0xef4444 },
+    4: { key: "werewolf", name: "늑대인간", primary: 0x64748b, secondary: 0x334155, eye: 0xf59e0b },
+    5: { key: "demon", name: "악마", primary: 0xdc2626, secondary: 0x1f1224, eye: 0xfacc15 },
+  };
+
+  function resolveMonsterTheme(species, waveTier = 1) {
+    if (species === "forest") return 1;
+    if (species === "zombie") return 2;
+    if (species === "vampire") return 3;
+    if (species === "werewolf") return 4;
+    if (species === "demon") return 5;
+    return Math.min(5, Math.max(1, Math.ceil((Number(waveTier) || 1) / 2)));
+  }
 
   function buildMonsterHpBar(yHeight = 1.65) {
     const barRoot = new THREE.Group();
@@ -1485,135 +1512,264 @@
     return { barRoot, fillPivot };
   }
 
+  function addMonsterEyes(faceGroup, zOffset = 0.34, eyeColor = 0x111118) {
+    const matEye = new THREE.MeshBasicMaterial({ color: eyeColor });
+    const matWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    [-0.14, 0.14].forEach((ex) => {
+      const eye = new THREE.Mesh(cachedGeo("mon_eye", () => new THREE.SphereGeometry(0.065, 8, 8)), matEye);
+      eye.position.set(ex, 0.04, zOffset);
+      faceGroup.add(eye);
+      const spec = new THREE.Mesh(cachedGeo("mon_eye_hi", () => new THREE.SphereGeometry(0.024, 6, 6)), matWhite);
+      spec.position.set(ex + 0.02, 0.065, zOffset + 0.045);
+      faceGroup.add(spec);
+    });
+  }
+
   function createCuteMonster(species = "slime", waveTier = 1) {
     const root = new THREE.Group();
-    const tierIdx = Math.max(0, (waveTier - 1) % MONSTER_PALETTES.length);
-    const baseHex = MONSTER_PALETTES[tierIdx];
+    const themeTier = resolveMonsterTheme(species, waveTier);
+    const theme = MONSTER_THEMES[themeTier] || MONSTER_THEMES[1];
+    const roleScale = species === "golem" ? 1.18 : species === "shroom" ? 0.96 : 0.92;
 
     root.add(makeShadowCircle(species === "golem" ? 0.85 : 0.62, 0.24));
 
     const bodyPivot = new THREE.Group();
+    bodyPivot.scale.set(roleScale, roleScale, roleScale);
     root.add(bodyPivot);
 
-    let windUpKey = null;
-    let capGroup = null;
-    let hpHeight = 1.45;
+    let armL = null;
+    let armR = null;
+    let legL = null;
+    let legR = null;
+    let wingL = null;
+    let wingR = null;
+    let tail = null;
+    let hpHeight = 1.62;
 
-    if (species === "slime") {
-      // 말랑 젤리 슬라임: bouncy translucent jelly blob with sparkles & leaf/star sprout
-      const jellyMat = new THREE.MeshToonMaterial({
-        color: baseHex,
-        emissive: baseHex,
-        emissiveIntensity: 0.16,
-        transparent: true,
-        opacity: 0.90,
+    if (themeTier === 1) {
+      // 1단계: 숲속 동물들 (귀여운 멧돼지/늑대/곰 실루엣)
+      const furHex = species === "shroom" ? 0x8d99ae : species === "golem" ? 0x6b4226 : 0x9c6638;
+      const matFur = makeToonMat(furHex);
+      const matBelly = makeToonMat(0xeed2b2);
+      const matDark = makeToonMat(0x3a2416);
+
+      // Rounded Chibi Animal Body (horizontal quadruped stance)
+      addOutlinedMesh(
+        bodyPivot,
+        cachedGeo("mon_animal_body", () => new THREE.SphereGeometry(0.48, 14, 10)),
+        matFur,
+        { pos: [0, 0.50, -0.05], scale: [1.02, 0.88, 1.25], outlineScale: 1.05 }
+      );
+      addOutlinedMesh(
+        bodyPivot,
+        cachedGeo("mon_animal_belly", () => new THREE.SphereGeometry(0.32, 10, 8)),
+        matBelly,
+        { pos: [0, 0.42, 0.16], scale: [0.9, 0.85, 0.7], outline: false }
+      );
+      // Animal Head + Snout
+      const head = new THREE.Group();
+      head.position.set(0, 0.72, 0.38);
+      addOutlinedMesh(head, cachedGeo("mon_animal_head", () => new THREE.SphereGeometry(0.36, 14, 10)), matFur, { outlineScale: 1.05 });
+      addOutlinedMesh(head, cachedGeo("mon_animal_snout", () => new THREE.CylinderGeometry(0.14, 0.18, 0.24, 10)), matBelly, {
+        pos: [0, -0.06, 0.30],
+        rot: [Math.PI * 0.5, 0, 0],
+        outlineScale: 1.05,
       });
-      addOutlinedMesh(
-        bodyPivot,
-        cachedGeo("slime_dome", () => new THREE.SphereGeometry(0.58, 16, 12)),
-        jellyMat,
-        { pos: [0, 0.48, 0], scale: [1.14, 0.88, 1.08], outlineScale: 1.06 }
-      );
-      const faceGroup = new THREE.Group();
-      faceGroup.position.set(0, 0.50, 0.12);
-      buildCuteEyesAndCheeks(faceGroup, 0.48, 0.16, 0.02);
-      bodyPivot.add(faceGroup);
-
-      // Tiny golden dewdrop sprout on top
-      addOutlinedMesh(
-        bodyPivot,
-        cachedGeo("slime_sprout", () => new THREE.OctahedronGeometry(0.14, 0)),
-        makeToonMat(0xffe15a, { emissive: 0xffb824, emissiveIntensity: 0.25 }),
-        { pos: [0, 1.04, 0], outlineScale: 1.06 }
-      );
-      hpHeight = 1.42;
-    } else if (species === "shroom") {
-      // 통통 버섯 정령: round plush stem + polka-dot pastel cap
-      const capHex = tierIdx % 2 === 0 ? 0xff77a8 : 0x7a9cff;
-      const matStem = makeToonMat(0xfff1d6);
-      const matCap = makeToonMat(capHex);
-      const matDot = makeToonMat(0xffffff);
-
-      addOutlinedMesh(
-        bodyPivot,
-        cachedGeo("shroom_stem", () => new THREE.CylinderGeometry(0.32, 0.40, 0.58, 14)),
-        matStem,
-        { pos: [0, 0.36, 0], outlineScale: 1.05 }
-      );
-      const faceGroup = new THREE.Group();
-      faceGroup.position.set(0, 0.40, 0.04);
-      buildCuteEyesAndCheeks(faceGroup, 0.36, 0.14, 0);
-      bodyPivot.add(faceGroup);
-
-      capGroup = new THREE.Group();
-      capGroup.position.set(0, 0.66, 0);
-      addOutlinedMesh(
-        capGroup,
-        cachedGeo("shroom_cap", () => new THREE.SphereGeometry(0.62, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.56)),
-        matCap,
-        { pos: [0, -0.04, 0], scale: [1.08, 0.85, 1.08], outlineScale: 1.05 }
-      );
-      [[0.32, 0.24, 0.28], [-0.34, 0.22, 0.22], [0.04, 0.36, -0.32]].forEach(([dx, dy, dz]) => {
-        const dot = new THREE.Mesh(cachedGeo("shroom_dot", () => new THREE.SphereGeometry(0.10, 8, 8)), matDot);
-        dot.position.set(dx, dy, dz);
-        capGroup.add(dot);
+      addOutlinedMesh(head, cachedGeo("mon_animal_nose", () => new THREE.SphereGeometry(0.08, 8, 8)), matDark, {
+        pos: [0, -0.02, 0.43],
+        outline: false,
       });
-      bodyPivot.add(capGroup);
-      hpHeight = 1.55;
+      // Perked Animal Ears
+      [-1, 1].forEach((s) => {
+        const isWolf = species === "shroom";
+        addOutlinedMesh(
+          head,
+          isWolf ? cachedGeo("mon_ear_cone", () => new THREE.ConeGeometry(0.12, 0.28, 6)) : cachedGeo("mon_ear_round", () => new THREE.SphereGeometry(0.13, 8, 8)),
+          matFur,
+          { pos: [s * 0.24, 0.30, -0.02], rot: [0, 0, s * -0.25], outlineScale: 1.05 }
+        );
+      });
+      addMonsterEyes(head, 0.32, 0x1a1216);
+      bodyPivot.add(head);
+
+      // 4 Little Paws
+      legL = addOutlinedMesh(bodyPivot, cachedGeo("mon_paw", () => new THREE.CylinderGeometry(0.11, 0.11, 0.32, 8)), matDark, { pos: [-0.24, 0.16, 0.24] });
+      legR = addOutlinedMesh(bodyPivot, cachedGeo("mon_paw", () => new THREE.CylinderGeometry(0.11, 0.11, 0.32, 8)), matDark, { pos: [0.24, 0.16, 0.24] });
+      armL = addOutlinedMesh(bodyPivot, cachedGeo("mon_paw", () => new THREE.CylinderGeometry(0.11, 0.11, 0.32, 8)), matDark, { pos: [-0.24, 0.16, -0.28] });
+      armR = addOutlinedMesh(bodyPivot, cachedGeo("mon_paw", () => new THREE.CylinderGeometry(0.11, 0.11, 0.32, 8)), matDark, { pos: [0.24, 0.16, -0.28] });
+
+      tail = addOutlinedMesh(bodyPivot, cachedGeo("mon_tail_puff", () => new THREE.SphereGeometry(0.15, 8, 8)), matFur, { pos: [0, 0.56, -0.62] });
+      hpHeight = 1.48 * roleScale;
+    } else if (themeTier === 2) {
+      // 2단계: 좀비 (민트색 피부, 해진 보라색 외투, 앞으로 나란히 뻗은 팔)
+      const matSkin = makeToonMat(0x7bc490);
+      const matCoat = makeToonMat(0x5b3f73);
+      const matPants = makeToonMat(0x3a324d);
+      const matHair = makeToonMat(0x28362c);
+
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_z_torso", () => new THREE.BoxGeometry(0.58, 0.62, 0.38)), matCoat, { pos: [0, 0.66, 0], outlineScale: 1.05 });
+      const head = new THREE.Group();
+      head.position.set(0, 1.24, 0.04);
+      addOutlinedMesh(head, cachedGeo("mon_z_head", () => new THREE.BoxGeometry(0.62, 0.56, 0.56)), matSkin, { outlineScale: 1.05 });
+      addOutlinedMesh(head, cachedGeo("mon_z_hair", () => new THREE.BoxGeometry(0.66, 0.16, 0.60)), matHair, { pos: [0, 0.26, -0.02], outline: false });
+      // Cute X bandage on forehead
+      addOutlinedMesh(head, cachedGeo("mon_z_patch", () => new THREE.BoxGeometry(0.22, 0.09, 0.04)), makeToonMat(0xfef3c7), { pos: [0.14, 0.14, 0.29], rot: [0, 0, 0.25], outline: false });
+      addMonsterEyes(head, 0.28, 0xfef08a);
+      bodyPivot.add(head);
+
+      // Outstretched zombie arms pointing forward (+Z)!
+      armL = new THREE.Group();
+      armL.position.set(-0.38, 0.86, 0);
+      addOutlinedMesh(armL, cachedGeo("mon_z_arm", () => new THREE.BoxGeometry(0.18, 0.52, 0.18)), matSkin, { pos: [0, -0.20, 0], outlineScale: 1.05 });
+      armL.rotation.x = -1.38;
+      bodyPivot.add(armL);
+
+      armR = new THREE.Group();
+      armR.position.set(0.38, 0.86, 0);
+      addOutlinedMesh(armR, cachedGeo("mon_z_arm", () => new THREE.BoxGeometry(0.18, 0.52, 0.18)), matSkin, { pos: [0, -0.20, 0], outlineScale: 1.05 });
+      armR.rotation.x = -1.38;
+      bodyPivot.add(armR);
+
+      legL = addOutlinedMesh(bodyPivot, cachedGeo("mon_z_leg", () => new THREE.BoxGeometry(0.22, 0.36, 0.24)), matPants, { pos: [-0.15, 0.18, 0] });
+      legR = addOutlinedMesh(bodyPivot, cachedGeo("mon_z_leg", () => new THREE.BoxGeometry(0.22, 0.36, 0.24)), matPants, { pos: [0.15, 0.18, 0] });
+      hpHeight = 1.82 * roleScale;
+    } else if (themeTier === 3) {
+      // 3단계: 뱀파이어 (창백한 얼굴, 검붉은 하이칼라 망토, 박쥐 날개, 송곳니)
+      const matPale = makeToonMat(0xede9f8);
+      const matCape = makeToonMat(0x991b1b);
+      const matSuit = makeToonMat(0x1f1833);
+      const matRuby = makeToonMat(0xf43f5e, { emissive: 0xe11d48, emissiveIntensity: 0.4 });
+      const matFang = makeToonMat(0xffffff);
+
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_v_body", () => new THREE.CylinderGeometry(0.26, 0.42, 0.72, 10)), matSuit, { pos: [0, 0.56, 0], outlineScale: 1.05 });
+      // Crimson high-collar cape
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_v_cape", () => new THREE.BoxGeometry(0.84, 0.78, 0.12)), matCape, { pos: [0, 0.72, -0.26], outlineScale: 1.04 });
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_v_ruby", () => new THREE.OctahedronGeometry(0.11, 0)), matRuby, { pos: [0, 0.80, 0.28], outline: false });
+
+      const head = new THREE.Group();
+      head.position.set(0, 1.18, 0.02);
+      addOutlinedMesh(head, cachedGeo("mon_v_head", () => new THREE.SphereGeometry(0.36, 14, 10)), matPale, { outlineScale: 1.05 });
+      addOutlinedMesh(head, cachedGeo("mon_v_hair", () => new THREE.SphereGeometry(0.38, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.52)), matSuit, { pos: [0, 0.04, -0.02], outline: false });
+      // Twin little white fangs
+      [-0.08, 0.08].forEach((fx) => {
+        addOutlinedMesh(head, cachedGeo("mon_v_fang", () => new THREE.ConeGeometry(0.036, 0.10, 5)), matFang, {
+          pos: [fx, -0.16, 0.34],
+          rot: [Math.PI, 0, 0],
+          outline: false,
+        });
+      });
+      addMonsterEyes(head, 0.33, 0xef4444);
+      bodyPivot.add(head);
+
+      // Vampire Bat Wings
+      [-1, 1].forEach((s) => {
+        const w = new THREE.Group();
+        w.position.set(s * 0.28, 0.86, -0.32);
+        addOutlinedMesh(w, cachedGeo("mon_bat_wing", () => new THREE.BoxGeometry(0.56, 0.34, 0.06)), matSuit, {
+          pos: [s * 0.28, 0.06, 0],
+          rot: [0, 0, s * 0.28],
+          outlineScale: 1.05,
+        });
+        bodyPivot.add(w);
+        if (s < 0) wingL = w;
+        else wingR = w;
+      });
+      legL = addOutlinedMesh(bodyPivot, cachedGeo("mon_v_boot", () => new THREE.BoxGeometry(0.18, 0.24, 0.24)), matSuit, { pos: [-0.14, 0.12, 0] });
+      legR = addOutlinedMesh(bodyPivot, cachedGeo("mon_v_boot", () => new THREE.BoxGeometry(0.18, 0.24, 0.24)), matSuit, { pos: [0.14, 0.12, 0] });
+      hpHeight = 1.84 * roleScale;
+    } else if (themeTier === 4) {
+      // 4단계: 늑대인간 (은회색 털, 뾰족한 늑대 귀, 갈기, 발톱, 늑대 꼬리)
+      const matWolf = makeToonMat(0x64748b);
+      const matMane = makeToonMat(0x334155);
+      const matClaw = makeToonMat(0xe2e8f0);
+
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_w_torso", () => new THREE.BoxGeometry(0.72, 0.78, 0.48)), matWolf, { pos: [0, 0.72, 0], outlineScale: 1.05 });
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_w_mane", () => new THREE.SphereGeometry(0.46, 10, 8)), matMane, { pos: [0, 1.02, -0.06], scale: [1.15, 0.72, 1.0], outlineScale: 1.04 });
+
+      const head = new THREE.Group();
+      head.position.set(0, 1.34, 0.08);
+      addOutlinedMesh(head, cachedGeo("mon_w_head", () => new THREE.SphereGeometry(0.38, 12, 10)), matWolf, { outlineScale: 1.05 });
+      addOutlinedMesh(head, cachedGeo("mon_w_snout", () => new THREE.ConeGeometry(0.18, 0.36, 8)), matMane, {
+        pos: [0, -0.06, 0.34],
+        rot: [Math.PI * 0.5, 0, 0],
+        outlineScale: 1.05,
+      });
+      [-1, 1].forEach((s) => {
+        addOutlinedMesh(head, cachedGeo("mon_w_ear", () => new THREE.ConeGeometry(0.12, 0.36, 5)), matMane, {
+          pos: [s * 0.24, 0.36, -0.02],
+          rot: [0, 0, s * -0.22],
+          outlineScale: 1.05,
+        });
+      });
+      addMonsterEyes(head, 0.34, 0xf59e0b);
+      bodyPivot.add(head);
+
+      // Clawed werewolf arms
+      armL = new THREE.Group();
+      armL.position.set(-0.46, 0.92, 0.05);
+      addOutlinedMesh(armL, cachedGeo("mon_w_arm", () => new THREE.BoxGeometry(0.22, 0.56, 0.22)), matWolf, { pos: [0, -0.22, 0.08], rot: [-0.6, 0, 0] });
+      addOutlinedMesh(armL, cachedGeo("mon_w_claw", () => new THREE.ConeGeometry(0.08, 0.22, 4)), matClaw, { pos: [0, -0.46, 0.24], rot: [-1.1, 0, 0], outline: false });
+      bodyPivot.add(armL);
+
+      armR = new THREE.Group();
+      armR.position.set(0.46, 0.92, 0.05);
+      addOutlinedMesh(armR, cachedGeo("mon_w_arm", () => new THREE.BoxGeometry(0.22, 0.56, 0.22)), matWolf, { pos: [0, -0.22, 0.08], rot: [-0.6, 0, 0] });
+      addOutlinedMesh(armR, cachedGeo("mon_w_claw", () => new THREE.ConeGeometry(0.08, 0.22, 4)), matClaw, { pos: [0, -0.46, 0.24], rot: [-1.1, 0, 0], outline: false });
+      bodyPivot.add(armR);
+
+      legL = addOutlinedMesh(bodyPivot, cachedGeo("mon_w_leg", () => new THREE.BoxGeometry(0.24, 0.38, 0.26)), matMane, { pos: [-0.18, 0.19, 0] });
+      legR = addOutlinedMesh(bodyPivot, cachedGeo("mon_w_leg", () => new THREE.BoxGeometry(0.24, 0.38, 0.26)), matMane, { pos: [0.18, 0.19, 0] });
+      tail = addOutlinedMesh(bodyPivot, cachedGeo("mon_w_tail", () => new THREE.ConeGeometry(0.16, 0.54, 7)), matWolf, {
+        pos: [0, 0.54, -0.42],
+        rot: [-1.15, 0, 0],
+      });
+      hpHeight = 1.98 * roleScale;
     } else {
-      // 태엽 별골렘 인형: chubby rounded toy stone golem with spinning wind-up key
-      const matStone = makeToonMat(0x9fb4d9);
-      const matGold = makeToonMat(0xffd24c, { emissive: 0xd99b00, emissiveIntensity: 0.2 });
-      const matChestGem = makeToonMat(0x66e8ff, { emissive: 0x2bc4ff, emissiveIntensity: 0.35 });
+      // 5단계: 악마 (진홍/흑요석 피부, 굽은 뿔, 큰 박쥐 날개, 지옥불 코어, 화살촉 꼬리)
+      const matDemon = makeToonMat(0xdc2626);
+      const matObsidian = makeToonMat(0x1f1224);
+      const matHellfire = makeToonMat(0xff9b1a, { emissive: 0xff5500, emissiveIntensity: 0.65 });
 
-      addOutlinedMesh(
-        bodyPivot,
-        cachedGeo("golem_body", () => new THREE.BoxGeometry(0.92, 0.88, 0.78)),
-        matStone,
-        { pos: [0, 0.58, 0], outlineScale: 1.05 }
-      );
-      addOutlinedMesh(
-        bodyPivot,
-        cachedGeo("golem_head", () => new THREE.BoxGeometry(0.76, 0.62, 0.66)),
-        matStone,
-        { pos: [0, 1.24, 0.04], outlineScale: 1.05 }
-      );
-      const faceGroup = new THREE.Group();
-      faceGroup.position.set(0, 1.22, 0.02);
-      buildCuteEyesAndCheeks(faceGroup, 0.36, 0.17, 0);
-      bodyPivot.add(faceGroup);
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_d_torso", () => new THREE.CylinderGeometry(0.36, 0.32, 0.82, 10)), matDemon, { pos: [0, 0.72, 0], outlineScale: 1.05 });
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_d_core", () => new THREE.OctahedronGeometry(0.18, 0)), matHellfire, { pos: [0, 0.78, 0.34], outline: false });
 
-      // Glowing Chest Star Core
-      addOutlinedMesh(
-        bodyPivot,
-        cachedGeo("golem_star", () => new THREE.OctahedronGeometry(0.18, 0)),
-        matChestGem,
-        { pos: [0, 0.62, 0.42], outlineScale: 1.06 }
-      );
+      const head = new THREE.Group();
+      head.position.set(0, 1.36, 0.04);
+      addOutlinedMesh(head, cachedGeo("mon_d_head", () => new THREE.SphereGeometry(0.38, 14, 10)), matDemon, { outlineScale: 1.05 });
+      // Curved Obsidian Demon Horns
+      [-1, 1].forEach((s) => {
+        addOutlinedMesh(head, cachedGeo("mon_d_horn", () => new THREE.ConeGeometry(0.10, 0.48, 7)), matObsidian, {
+          pos: [s * 0.26, 0.38, 0.02],
+          rot: [0.18, 0, s * -0.42],
+          outlineScale: 1.05,
+        });
+      });
+      addMonsterEyes(head, 0.34, 0xfacc15);
+      bodyPivot.add(head);
 
-      // Cute rotating golden wind-up key on its back
-      windUpKey = new THREE.Group();
-      windUpKey.position.set(0, 0.68, -0.45);
-      addOutlinedMesh(
-        windUpKey,
-        cachedGeo("golem_key_stem", () => new THREE.CylinderGeometry(0.06, 0.06, 0.32, 8)),
-        matGold,
-        { pos: [0, 0, -0.14], rot: [Math.PI * 0.5, 0, 0], outline: false }
-      );
-      addOutlinedMesh(
-        windUpKey,
-        cachedGeo("golem_key_ring", () => new THREE.TorusGeometry(0.15, 0.05, 8, 12)),
-        matGold,
-        { pos: [0, 0.14, -0.28], outlineScale: 1.05 }
-      );
-      addOutlinedMesh(
-        windUpKey,
-        cachedGeo("golem_key_ring", () => new THREE.TorusGeometry(0.15, 0.05, 8, 12)),
-        matGold,
-        { pos: [0, -0.14, -0.28], outlineScale: 1.05 }
-      );
-      bodyPivot.add(windUpKey);
-      hpHeight = 1.98;
+      // Large Demon Wings
+      [-1, 1].forEach((s) => {
+        const w = new THREE.Group();
+        w.position.set(s * 0.30, 0.96, -0.26);
+        addOutlinedMesh(w, cachedGeo("mon_d_wing", () => new THREE.BoxGeometry(0.76, 0.44, 0.07)), matObsidian, {
+          pos: [s * 0.36, 0.14, -0.04],
+          rot: [0, s * -0.22, s * 0.36],
+          outlineScale: 1.05,
+        });
+        bodyPivot.add(w);
+        if (s < 0) wingL = w;
+        else wingR = w;
+      });
+
+      armL = addOutlinedMesh(bodyPivot, cachedGeo("mon_d_arm", () => new THREE.BoxGeometry(0.20, 0.50, 0.20)), matDemon, { pos: [-0.42, 0.76, 0.10], rot: [-0.55, 0, 0.2] });
+      armR = addOutlinedMesh(bodyPivot, cachedGeo("mon_d_arm", () => new THREE.BoxGeometry(0.20, 0.50, 0.20)), matDemon, { pos: [0.42, 0.76, 0.10], rot: [-0.55, 0, -0.2] });
+      legL = addOutlinedMesh(bodyPivot, cachedGeo("mon_d_leg", () => new THREE.BoxGeometry(0.22, 0.36, 0.24)), matObsidian, { pos: [-0.16, 0.18, 0] });
+      legR = addOutlinedMesh(bodyPivot, cachedGeo("mon_d_leg", () => new THREE.BoxGeometry(0.22, 0.36, 0.24)), matObsidian, { pos: [0.16, 0.18, 0] });
+      tail = addOutlinedMesh(bodyPivot, cachedGeo("mon_d_tail", () => new THREE.ConeGeometry(0.10, 0.55, 4)), matObsidian, {
+        pos: [0, 0.44, -0.44],
+        rot: [-1.05, 0, 0],
+      });
+      hpHeight = 2.04 * roleScale;
     }
 
     const hpBar = buildMonsterHpBar(hpHeight);
@@ -1622,39 +1778,47 @@
     return {
       root,
       bodyPivot,
-      windUpKey,
-      capGroup,
+      armL,
+      armR,
+      legL,
+      legR,
+      wingL,
+      wingR,
+      tail,
       hpFillPivot: hpBar.fillPivot,
       species,
+      themeTier,
+      themeName: theme.name,
       _phase: Math.random() * 6.28,
     };
   }
 
   function animateCuteMonster(monster, dt, slowed = false) {
     if (!monster || !monster.bodyPivot) return;
-    const rate = slowed ? 3.5 : 8.5;
+    const rate = slowed ? 3.8 : 9.2;
     monster._phase = (monster._phase || 0) + (dt || 0.016) * rate;
     const p = monster._phase;
+    const s = Math.sin(p);
 
-    if (monster.species === "slime") {
-      const s = Math.sin(p);
-      monster.bodyPivot.position.y = Math.max(0, s) * 0.24;
-      const sxz = s > 0 ? 1 - s * 0.14 : 1 + Math.abs(s) * 0.16;
-      const sy = s > 0 ? 1 + s * 0.18 : 1 - Math.abs(s) * 0.18;
-      monster.bodyPivot.scale.set(sxz, sy, sxz);
-    } else if (monster.species === "shroom") {
-      monster.bodyPivot.position.y = Math.abs(Math.sin(p)) * 0.11;
-      monster.bodyPivot.rotation.z = Math.sin(p * 0.5) * 0.12;
-      if (monster.capGroup) {
-        monster.capGroup.rotation.x = Math.sin(p) * 0.08;
-      }
+    if (monster.themeTier === 1) {
+      monster.bodyPivot.position.y = Math.abs(s) * 0.14;
+      monster.bodyPivot.rotation.x = Math.cos(p) * 0.06;
+      if (monster.tail) monster.tail.rotation.y = Math.sin(p * 1.4) * 0.45;
+    } else if (monster.themeTier === 2) {
+      // Zombie shamble wobble
+      monster.bodyPivot.position.y = Math.abs(s) * 0.09;
+      monster.bodyPivot.rotation.z = s * 0.16;
+      if (monster.armL) monster.armL.rotation.x = -1.38 + Math.sin(p * 0.7) * 0.14;
+      if (monster.armR) monster.armR.rotation.x = -1.38 - Math.sin(p * 0.7) * 0.14;
     } else {
-      monster.bodyPivot.position.y = Math.abs(Math.sin(p)) * 0.08;
-      monster.bodyPivot.rotation.z = Math.sin(p * 0.5) * 0.07;
-      if (monster.windUpKey) {
-        monster.windUpKey.rotation.z += (dt || 0.016) * (slowed ? 2.0 : 5.5);
-      }
+      monster.bodyPivot.position.y = Math.abs(s) * 0.11;
+      monster.bodyPivot.rotation.z = s * 0.07;
+      if (monster.wingL) monster.wingL.rotation.y = 0.35 + Math.sin(p * 1.3) * 0.42;
+      if (monster.wingR) monster.wingR.rotation.y = -0.35 - Math.sin(p * 1.3) * 0.42;
     }
+
+    if (monster.legL) monster.legL.rotation.x = s * 0.52;
+    if (monster.legR) monster.legR.rotation.x = -s * 0.52;
   }
 
   // ===========================================================================
@@ -2173,6 +2337,105 @@
         { outlineScale: 1.06 }
       );
       root.add(accentRotor);
+    } else if (kind === "alchemy_lab") {
+      // 🔮 3-Stage Royal Alchemy Research Lab (연금술 연구소 Lv.0~3)
+      const matViolet = makeToonMat(0x6d28d9, { emissive: 0x4c1d95, emissiveIntensity: 0.28 });
+      const matCyan = makeToonMat(0x0ea5e9, { emissive: 0x0284c7, emissiveIntensity: 0.45 });
+      const matAstralGold = makeToonMat(0xfde047, { emissive: 0xf59e0b, emissiveIntensity: 0.55 });
+
+      // Base arcane chamber dome (low profile <= 2.2m so hero stays clearly visible)
+      addOutlinedMesh(
+        root,
+        cachedGeo("alab_base", () => new THREE.CylinderGeometry(1.32, 1.52, 0.72, 8)),
+        matStone,
+        { pos: [0, 0.52, 0], outlineScale: 1.04 }
+      );
+
+      // Lv.0 blueprint orb (shown dimly until built)
+      const blueprintOrb = addOutlinedMesh(
+        root,
+        cachedGeo("alab_bp", () => new THREE.OctahedronGeometry(0.32, 0)),
+        new THREE.MeshToonMaterial({ color: 0xc4b5fd, transparent: true, opacity: 0.55 }),
+        { pos: [0, 1.24, 0], outline: false }
+      );
+
+      // Lv.1 Group: Violet Reactor Core + Primary Rune Ring (🔮 1차 에너지)
+      const tier1Group = new THREE.Group();
+      tier1Group.visible = false;
+      addOutlinedMesh(
+        tier1Group,
+        cachedGeo("alab_t1_chamber", () => new THREE.CylinderGeometry(0.86, 1.04, 0.65, 8)),
+        matViolet,
+        { pos: [0, 1.15, 0], outlineScale: 1.04 }
+      );
+      addOutlinedMesh(
+        tier1Group,
+        cachedGeo("alab_t1_ring", () => new THREE.TorusGeometry(1.08, 0.09, 8, 20)),
+        matGold,
+        { pos: [0, 1.52, 0], rot: [Math.PI * 0.5, 0, 0], outlineScale: 1.05 }
+      );
+      root.add(tier1Group);
+
+      // Lv.2 Group: Twin Cyan Aether Spires + Counter Ring (💠 2차 에너지)
+      const tier2Group = new THREE.Group();
+      tier2Group.visible = false;
+      [-1.08, 1.08].forEach((sx) => {
+        addOutlinedMesh(
+          tier2Group,
+          cachedGeo("alab_t2_spire", () => new THREE.CylinderGeometry(0.18, 0.28, 1.22, 6)),
+          matStone,
+          { pos: [sx, 0.92, -0.35], outlineScale: 1.04 }
+        );
+        addOutlinedMesh(
+          tier2Group,
+          cachedGeo("alab_t2_gem", () => new THREE.OctahedronGeometry(0.24, 0)),
+          matCyan,
+          { pos: [sx, 1.72, -0.35], outlineScale: 1.06 }
+        );
+      });
+      root.add(tier2Group);
+
+      // Lv.3 Group: Golden Celestial Crown Arch + Solar Prisms (🌟 3차 에너지)
+      const tier3Group = new THREE.Group();
+      tier3Group.visible = false;
+      addOutlinedMesh(
+        tier3Group,
+        cachedGeo("alab_t3_halo", () => new THREE.TorusGeometry(1.24, 0.08, 8, 24)),
+        matAstralGold,
+        { pos: [0, 2.02, 0], rot: [Math.PI * 0.42, 0.3, 0], outline: false }
+      );
+      [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].forEach((ang) => {
+        addOutlinedMesh(
+          tier3Group,
+          cachedGeo("alab_t3_prism", () => new THREE.OctahedronGeometry(0.19, 0)),
+          matAstralGold,
+          { pos: [Math.cos(ang) * 1.18, 2.08, Math.sin(ang) * 1.18], outlineScale: 1.06 }
+        );
+      });
+      root.add(tier3Group);
+
+      accentRotor = new THREE.Group();
+      accentRotor.position.set(0, 1.98, 0);
+      const rotorCrystal = addOutlinedMesh(
+        accentRotor,
+        cachedGeo("alab_core", () => new THREE.OctahedronGeometry(0.42, 0)),
+        matViolet,
+        { scale: [0.88, 1.38, 0.88], outlineScale: 1.06 }
+      );
+      root.add(accentRotor);
+
+      return {
+        root,
+        accentRotor,
+        kind,
+        blueprintOrb,
+        tier1Group,
+        tier2Group,
+        tier3Group,
+        rotorCrystal,
+        labTier: 0,
+        _phase: 0,
+      };
     } else {
       // 🛡️ Defense Tech Research Lab (디펜스 기술 연구소)
       addOutlinedMesh(
@@ -2201,12 +2464,31 @@
     return { root, accentRotor, kind, _phase: 0 };
   }
 
+  function updateAlchemyLabTier(lab, tier = 0) {
+    if (!lab || lab.kind !== "alchemy_lab") return;
+    const t = Math.max(0, Math.min(3, Math.floor(Number(tier) || 0)));
+    lab.labTier = t;
+    if (lab.blueprintOrb) lab.blueprintOrb.visible = t === 0;
+    if (lab.tier1Group) lab.tier1Group.visible = t >= 1;
+    if (lab.tier2Group) lab.tier2Group.visible = t >= 2;
+    if (lab.tier3Group) lab.tier3Group.visible = t >= 3;
+    if (lab.accentRotor) lab.accentRotor.visible = t >= 1;
+    if (lab.rotorCrystal && lab.rotorCrystal.material) {
+      const col = t === 3 ? 0xfacc15 : t === 2 ? 0x38bdf8 : 0xa855f7;
+      lab.rotorCrystal.material.color.setHex(col);
+      lab.rotorCrystal.material.emissive.setHex(col);
+    }
+  }
+
   function animateCategoryBuilding(building, dt) {
     if (!building || !building.accentRotor) return;
     const d = dt || 0.016;
     building._phase = (building._phase || 0) + d * 2.2;
-    building.accentRotor.rotation.y += d * 1.4;
+    building.accentRotor.rotation.y += d * (building.labTier ? 1.4 + building.labTier * 0.7 : 1.4);
     building.accentRotor.position.y += Math.sin(building._phase) * 0.002;
+    if (building.tier3Group && building.tier3Group.visible) {
+      building.tier3Group.rotation.y -= d * 0.9;
+    }
   }
 
   window.ChibiCharacters = {
@@ -2237,6 +2519,7 @@
     updateVillageGateTier,
     animateVillageGate,
     createCategoryBuilding,
+    updateAlchemyLabTier,
     animateCategoryBuilding,
   };
 })();

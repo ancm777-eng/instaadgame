@@ -170,6 +170,10 @@
     return bld;
   }
 
+  function updateAlchemyLabTier(lab, tier) {
+    return chibi().updateAlchemyLabTier(lab, tier);
+  }
+
   function animateCategoryBuilding(building, dt) {
     return chibi().animateCategoryBuilding(building, dt);
   }
@@ -737,9 +741,10 @@
     ctx.fillStyle = "#ffffff";
     ctx.fillText(title, W * 0.5, H * 0.57);
 
-    // Bold Price Pill at bottom half
+    // Bold Price Pill at bottom half (adapts cleanly for hybrid prices like "💵160 + 🔮30")
     if (price) {
-      const pillW = Math.min(cw - 76, 336);
+      const longPrice = String(price).length > 9;
+      const pillW = Math.min(cw - 44, longPrice ? 396 : 336);
       const pillH = 66;
       const pillX = (W - pillW) * 0.5;
       const pillY = H * 0.72;
@@ -754,7 +759,9 @@
       ctx.strokeStyle = isMax ? "#fff3a8" : canAfford ? "#8effbe" : "rgba(255,255,255,0.42)";
       ctx.stroke();
 
-      ctx.font = "900 38px Pretendard, system-ui, sans-serif";
+      ctx.font = longPrice
+        ? "900 28px Pretendard, system-ui, sans-serif"
+        : "900 38px Pretendard, system-ui, sans-serif";
       ctx.lineWidth = 6;
       ctx.strokeStyle = "rgba(8, 12, 22, 0.9)";
       ctx.strokeText(price, W * 0.5, pillY + pillH * 0.5 + 2);
@@ -862,6 +869,7 @@
     updateVillageGateTier,
     animateVillageGate,
     createCategoryBuilding,
+    updateAlchemyLabTier,
     animateCategoryBuilding,
     createSalesStall,
     createShowcaseCounter,

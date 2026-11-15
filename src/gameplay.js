@@ -1,16 +1,23 @@
 // =============================================================================
-// src/gameplay.js - 48x40m Expanded Town, Grouped 3D Buildings + Directional Pads,
-// Single East Village Gate Defense, 5-Min First Wave & ★1~★5 Elemental Skills
+// src/gameplay.js - 48x40m Village, 3-Stage Alchemy Lab & Dimensional Energy,
+// Opening Briefing, Peaceful/Wave BGM, 5-Tier 60-Monster Horde Waves & AoE Skills
 // =============================================================================
 
 (function () {
   "use strict";
 
-  const SAVE_KEY = "fairy_alchemy_tycoon_v8";
+  const SAVE_KEY = "fairy_alchemy_tycoon_v9";
   const FIRST_WAVE_DELAY = 300; // 5 minutes before Wave 1!
   const WAVE_INTERVAL = 180; // 3 minutes between subsequent waves
+  const WAVE_TOTAL_MONSTERS = 60;
+  const WAVE_BATCH_SIZE = 10;
+  const WAVE_BATCH_INTERVAL = 10.0; // 10 monsters every 10s over 60s = 60 monsters
   const GATE_POS = { x: 24.0, z: 0.0 };
   const SOUTH_GATE_POS = { x: 0.0, z: 20.0 };
+  const HERO_SPAWN = { x: 0.0, z: 3.5 };
+  const ALCHEMY_LAB_POS = { x: -5.5, z: -2.5 };
+  const ALCHEMY_LAB_IN_POS = { x: -9.2, z: -2.5 };
+  const ALCHEMY_LAB_PAD_POS = { x: -5.5, z: 1.5 };
   const HERO_ATTACK_RANGE = 8.0;
   const TURRET_ATTACK_RANGE = 9.0;
 
@@ -29,10 +36,10 @@
       dirLabel: "◀ 서쪽",
       icon: "⛏️",
       title: "채집 곡괭이",
-      desc: "광석·약초 채집 속도와 수확량을 높입니다.",
+      desc: "차원 에너지 기술 개발! 광석·약초 채집 속도와 수확량을 높입니다.",
       accent: "#52efff",
-      baseCost: 30,
-      mult: 1.85,
+      baseCost: 15,
+      mult: 1.48,
       maxLv: 8,
     },
     bag: {
@@ -41,10 +48,10 @@
       dirLabel: "▼ 남쪽",
       icon: "🎒",
       title: "배낭 적재",
-      desc: "등 뒤 나무 지게에 쌓이는 자원 최대 수를 늘립니다.",
+      desc: "차원 에너지 기술 개발! 등 뒤 나무 지게에 쌓이는 자원 최대 수를 늘립니다.",
       accent: "#ffd24c",
-      baseCost: 35,
-      mult: 1.8,
+      baseCost: 18,
+      mult: 1.48,
       maxLv: 8,
     },
     speed: {
@@ -53,10 +60,10 @@
       dirLabel: "▶ 동쪽",
       icon: "👢",
       title: "신속 부츠",
-      desc: "연금술사의 이동 속도를 크게 높입니다.",
+      desc: "차원 에너지 기술 개발! 연금술사의 이동 속도를 크게 높입니다.",
       accent: "#7effa2",
-      baseCost: 40,
-      mult: 1.8,
+      baseCost: 20,
+      mult: 1.5,
       maxLv: 6,
     },
     m1: {
@@ -143,17 +150,32 @@
       mult: 1,
       maxLv: 1,
     },
-    // Defense R&D Tech Systems (East Defense Bastion: center (13.5, 0.0))
+    alchemy_lab: {
+      id: "alchemy_lab",
+      tab: "automation",
+      dirLabel: "▼ 남쪽",
+      icon: "🔮",
+      title: "연금술 연구소",
+      desc: "1단계(💵40) 건설 · 광석을 1~3차 차원 에너지로 변환! 2·3단계는 캐시+차원 에너지로 증축합니다.",
+      accent: "#c084fc",
+      baseCost: 40,
+      mult: 4.0,
+      maxLv: 3,
+      pos: ALCHEMY_LAB_POS,
+      inPos: ALCHEMY_LAB_IN_POS,
+      padPos: ALCHEMY_LAB_PAD_POS,
+    },
+    // Defense R&D Tech Systems (East Defense Bastion: center (13.5, 0.0)) — Dimensional Energy
     turret_flame: {
       id: "turret_flame",
       tab: "defense",
       dirLabel: "▲ 북쪽",
       icon: "🔥",
       title: "화염 연금 포탑",
-      desc: "동쪽 성문 북측 흉벽에 배치되어 사거리 9m 내 적에게 고폭 화염 포격을 가합니다.",
+      desc: "차원 에너지 R&D! 사거리 9m 내 적에게 2배속 고폭 화염 포격을 가합니다.",
       accent: "#ff6b4a",
-      baseCost: 65,
-      mult: 1.65,
+      baseCost: 20,
+      mult: 1.55,
       maxLv: 10,
       turretPos: { x: 23.2, z: -5.0 },
       padPos: { x: 13.5, z: -3.8 },
@@ -164,10 +186,10 @@
       dirLabel: "▼ 남쪽",
       icon: "❄️",
       title: "빙결 수정 탑",
-      desc: "동쪽 성문 남측 흉벽에 배치되어 사거리 9m 내 적을 40% 감속·타격합니다.",
+      desc: "차원 에너지 R&D! 사거리 9m 내 적을 감속·타격하는 2배속 냉기 탄환을 발사합니다.",
       accent: "#38bdf8",
-      baseCost: 110,
-      mult: 1.7,
+      baseCost: 24,
+      mult: 1.55,
       maxLv: 10,
       turretPos: { x: 23.2, z: 5.0 },
       padPos: { x: 13.5, z: 3.8 },
@@ -178,10 +200,10 @@
       dirLabel: "▶ 동쪽",
       icon: "⚡",
       title: "뇌전 오벨리스크",
-      desc: "동쪽 성문 북중단 흉벽에 배치되어 사거리 9m 내 적을 연쇄 번개로 타격합니다.",
+      desc: "차원 에너지 R&D! 사거리 9m 내 다수 적을 연쇄 번개로 타격합니다.",
       accent: "#c084fc",
-      baseCost: 210,
-      mult: 1.75,
+      baseCost: 30,
+      mult: 1.6,
       maxLv: 10,
       turretPos: { x: 23.2, z: -2.4 },
       padPos: { x: 17.8, z: 0.0 },
@@ -192,27 +214,27 @@
       dirLabel: "◀ 서쪽",
       icon: "🏰",
       title: "성문 증축·강화",
-      desc: "3단계 요새 증축! 성문 최대 내구도(500→900→1,450→2,200)와 고급 요새 외형·결계를 강화합니다.",
+      desc: "차원 에너지 3단 요새 증축(1차→2차→3차)! 성문 내구도(500→900→1,450→2,200)가 진화합니다.",
       accent: "#4ade80",
-      baseCost: 120,
-      mult: 2.2,
+      baseCost: 25,
+      mult: 1.4,
       maxLv: 3,
       turretPos: { x: 23.2, z: 2.4 },
       padPos: { x: 9.2, z: 0.0 },
     },
-    // ★1 ~ ★5 Elemental Hero Skills (tab: "skills", maxLv: 10)
+    // ★1 ~ ★5 Elemental Hero Skills (tab: "skills", maxLv: 10) — Dimensional Energy (2x speed + AoE scaling)
     s1: {
       id: "s1",
       tab: "skills",
       stars: 1,
       icon: "🔥",
       title: "화염구 연사",
-      desc: "불꽃 화염구를 연사해 폭발 화염구와 불티 피해를 입힙니다.",
+      desc: "2배속 초고속 화염구! Lv.4부터 다발 연사 및 광역 폭발(1.8~3.8m)이 적용됩니다.",
       accent: "#ff7849",
-      baseCost: 45,
-      mult: 1.55,
+      baseCost: 16,
+      mult: 1.45,
       maxLv: 10,
-      cooldown: 1.25,
+      cooldown: 0.85,
     },
     s2: {
       id: "s2",
@@ -220,12 +242,12 @@
       stars: 2,
       icon: "❄️",
       title: "혹한의 눈보라",
-      desc: "얼음 회오리를 소환해 광역 냉기 피해와 50% 이동 감속을 겁니다.",
+      desc: "넓은 빙결 회오리(3.8~6.6m)를 소환해 다수의 적을 동시에 50% 감속·타격합니다.",
       accent: "#38bdf8",
-      baseCost: 90,
-      mult: 1.65,
+      baseCost: 24,
+      mult: 1.48,
       maxLv: 10,
-      cooldown: 4.5,
+      cooldown: 4.2,
     },
     s3: {
       id: "s3",
@@ -233,12 +255,12 @@
       stars: 3,
       icon: "⚡",
       title: "천둥 연쇄 낙뢰",
-      desc: "번개 기둥을 다수 내리꽂아 감전 피해와 0.7초 기절을 부여합니다.",
+      desc: "다수 목표(4+Lv)에 번개 기둥과 2.4~4.2m 광역 감전 파동을 일으켜 0.7초 기절시킵니다.",
       accent: "#facc15",
-      baseCost: 190,
-      mult: 1.7,
+      baseCost: 30,
+      mult: 1.5,
       maxLv: 10,
-      cooldown: 5.5,
+      cooldown: 6.8,
     },
     s4: {
       id: "s4",
@@ -246,12 +268,12 @@
       stars: 4,
       icon: "☄️",
       title: "대지의 운석 폭풍",
-      desc: "거대 마그마 운석을 떨어뜨려 강렬한 폭발, 넉백 및 화면 진동을 일으킵니다.",
+      desc: "초고속 거대 마그마 운석 3~8발을 투하해 각 3.8~6.2m 초대형 광역 폭발을 일으킵니다.",
       accent: "#fb7185",
-      baseCost: 380,
-      mult: 1.75,
+      baseCost: 36,
+      mult: 1.52,
       maxLv: 10,
-      cooldown: 7.5,
+      cooldown: 10.5,
     },
     s5: {
       id: "s5",
@@ -259,12 +281,12 @@
       stars: 5,
       icon: "🌈",
       title: "에테르 초신성",
-      desc: "무지개 초신성 파동으로 전장을 휩쓸고 마을 성문 내구도를 30% 즉시 수복합니다.",
+      desc: "3차 에너지 궁극기! 반경 9.5m 전장 초신성 폭발과 함께 성문 내구도를 30% 즉시 수복합니다.",
       accent: "#e879f9",
-      baseCost: 760,
-      mult: 1.85,
+      baseCost: 40,
+      mult: 1.45,
       maxLv: 10,
-      cooldown: 11.0,
+      cooldown: 15.0,
     },
   };
 
@@ -351,8 +373,13 @@
 
   function createDefaultState() {
     return {
-      gems: 20, // 100% Green Cash (💵)
+      gems: 45, // Green Cash (💵) — Builds facilities & Lv.1 Alchemy Lab
       totalEarnedGems: 0,
+      // 3-Tier Dimensional Energy (🔮 1차 / 💠 2차 / 🌟 3차) — Tech & Elemental Skills
+      dim1: 25,
+      dim2: 0,
+      dim3: 0,
+      alchemyLabLv: 0, // 0..3
       xp: 0,
       xpMax: 100,
       level: 1,
@@ -369,7 +396,7 @@
       herbGroveUnlocked: false,
       farm2Unlocked: false,
       farm3Unlocked: false,
-      // 4 Defense R&D Levels (0~10)
+      // 4 Defense R&D Levels (0~10 / Gate 0~3)
       turretFlameLv: 0,
       turretFrostLv: 0,
       turretThunderLv: 0,
@@ -389,14 +416,14 @@
   }
 
   const player = {
-    x: -4.0,
-    z: 2.0,
+    x: HERO_SPAWN.x,
+    z: HERO_SPAWN.z,
     vx: 0,
     vz: 0,
     rotY: 0,
     walkPhase: 0,
     swingTimer: 0,
-    swingDuration: 0.26,
+    swingDuration: 0.14, // 2x faster skill cast & harvest animation!
     bagItems: [],
     harvestCooldown: 0,
     transferCooldown: 0,
@@ -419,7 +446,12 @@
     machines: [],
     stepPads: [],
     turrets: {}, // keyed by defense id
-    buildings: [], // 3D category buildings (forge, guild, defense_lab)
+    buildings: [], // 3D category buildings (forge, guild, defense_lab, alchemy_lab)
+    alchemyLabBuilding: null,
+    alchemyLabInPallet: null,
+    alchemyLabQueue: [],
+    alchemyLabVisuals: [],
+    alchemyLabProgress: 0,
     sellPalletQueue: [],
     sellPalletVisuals: [],
     pedestals: [],
@@ -438,7 +470,10 @@
     skillCooldowns: { s1: 0, s2: 0, s3: 0, s4: 0, s5: 0 },
     waveTimer: FIRST_WAVE_DELAY, // 5-minute peaceful build & upgrade phase before Wave 1!
     waveActive: false,
+    waveCurrentNum: 1,
+    waveTotalToSpawn: WAVE_TOTAL_MONSTERS,
     waveSpawnCount: 0,
+    waveBatchTimer: 0,
     combatGraceTimer: 0,
     gameOver: false,
     sellCooldown: 0,
@@ -448,6 +483,10 @@
     shopTab: "wizard",
     lastHudSync: 0,
     toastTimer: 0,
+    audioUnlocked: false,
+    bgmTimer: 0.4,
+    bgmStep: 0,
+    openingDismissed: false,
   };
 
   const sceneObjs = {
@@ -456,6 +495,7 @@
     sellPallet: null,
     gemPedestal: null,
     villageGate: null,
+    alchemyLab: null,
   };
 
   let _initialized = false;
@@ -464,12 +504,24 @@
   let _lastRafTs = 0;
 
   // ---------------------------------------------------------------------------
-  // WebAudio Harmonic Tycoon & Combat Synthesizer
+  // WebAudio Harmonic Tycoon, Combat & Gentle Peaceful/Wave BGM Synthesizer
   // ---------------------------------------------------------------------------
   let _audioCtx = null;
 
-  function playTone(freq, dur = 0.08, type = "sine", gainVal = 0.06, delay = 0) {
+  function unlockAudio() {
+    if (runtime.audioUnlocked || typeof window === "undefined") return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      if (!_audioCtx) _audioCtx = new AC();
+      if (_audioCtx.state === "suspended") _audioCtx.resume();
+      runtime.audioUnlocked = true;
+    } catch (e) {}
+  }
+
+  function playTone(freq, dur = 0.08, type = "sine", gainVal = 0.06, delay = 0, allowBeforeGesture = false) {
     if (state.muted || typeof window === "undefined") return;
+    if (!runtime.audioUnlocked && !allowBeforeGesture) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     try {
@@ -480,13 +532,45 @@
       const gain = _audioCtx.createGain();
       osc.type = type;
       osc.frequency.setValueAtTime(freq, now);
-      gain.gain.setValueAtTime(gainVal, now);
-      gain.gain.exponentialRampToValueAtTime(0.0005, now + dur);
+      gain.gain.setValueAtTime(Math.max(0.001, gainVal), now);
+      gain.gain.exponentialRampToValueAtTime(0.0004, now + dur);
       osc.connect(gain);
       gain.connect(_audioCtx.destination);
       osc.start(now);
       osc.stop(now + dur + 0.02);
     } catch (e) {}
+  }
+
+  function updateProceduralBgm(dt) {
+    if (state.muted || !runtime.audioUnlocked || runtime.gameOver) return;
+    runtime.bgmTimer -= dt;
+    if (runtime.bgmTimer > 0) return;
+
+    if (runtime.waveActive) {
+      // Gentle yet tense minor fantasy pulse during monster waves
+      const waveMelody = [220.0, 261.63, 329.63, 293.66, 261.63, 349.23, 329.63, 246.94];
+      const waveBass = [110.0, 146.83, 130.81, 164.81];
+      const note = waveMelody[runtime.bgmStep % waveMelody.length];
+      playTone(note, 0.34, "triangle", 0.015);
+      if (runtime.bgmStep % 2 === 0) {
+        const bass = waveBass[Math.floor(runtime.bgmStep / 2) % waveBass.length];
+        playTone(bass, 0.55, "sine", 0.014);
+      }
+      runtime.bgmStep++;
+      runtime.bgmTimer = 0.38;
+    } else {
+      // Soothing pentatonic harp / celesta fairytale ambience during peacetime
+      const peaceMelody = [261.63, 329.63, 392.0, 523.25, 440.0, 392.0, 329.63, 293.66];
+      const peaceBass = [130.81, 174.61, 196.0, 164.81];
+      const note = peaceMelody[runtime.bgmStep % peaceMelody.length];
+      playTone(note, 0.85, "sine", 0.014);
+      if (runtime.bgmStep % 4 === 0) {
+        const root = peaceBass[Math.floor(runtime.bgmStep / 4) % peaceBass.length];
+        playTone(root, 1.35, "sine", 0.011);
+      }
+      runtime.bgmStep++;
+      runtime.bgmTimer = 0.68;
+    }
   }
 
   function playHarvestChime(pitchIdx = 0) {
@@ -525,8 +609,27 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Economy, Tech & Skill Helpers
+  // Economy, 3-Tier Dimensional Energy & Skill Helpers
   // ---------------------------------------------------------------------------
+  const ENERGY_META = {
+    1: { key: "dim1", icon: "🔮", name: "1차 차원 에너지", color: "#c084fc" },
+    2: { key: "dim2", icon: "💠", name: "2차 차원 에너지", color: "#38bdf8" },
+    3: { key: "dim3", icon: "🌟", name: "3차 차원 에너지", color: "#facc15" },
+  };
+
+  function getEnergyAmount(tier) {
+    if (tier === 1) return state.dim1 || 0;
+    if (tier === 2) return state.dim2 || 0;
+    if (tier === 3) return state.dim3 || 0;
+    return 0;
+  }
+
+  function addEnergyAmount(tier, amt) {
+    if (tier === 1) state.dim1 = Math.max(0, (state.dim1 || 0) + amt);
+    else if (tier === 2) state.dim2 = Math.max(0, (state.dim2 || 0) + amt);
+    else if (tier === 3) state.dim3 = Math.max(0, (state.dim3 || 0) + amt);
+  }
+
   function getUpgradeLevel(id) {
     switch (id) {
       case "tool": return state.toolLv;
@@ -539,6 +642,7 @@
       case "truck": return state.truckLv;
       case "farm2": return state.farm2Unlocked ? 1 : 0;
       case "farm3": return state.farm3Unlocked ? 1 : 0;
+      case "alchemy_lab": return state.alchemyLabLv || 0;
       case "turret_flame": return state.turretFlameLv;
       case "turret_frost": return state.turretFrostLv;
       case "turret_thunder": return state.turretThunderLv;
@@ -552,13 +656,68 @@
     }
   }
 
-  function getUpgradeCost(id) {
+  function getUpgradeCostSpec(id) {
     const def = UPGRADE_DEFS[id];
-    if (!def) return 999999;
+    if (!def) return { mode: "cash", cash: 999999, energyTier: 0, energy: 0, text: "999999" };
     const lv = getUpgradeLevel(id);
-    if (lv >= def.maxLv) return 0;
+    if (lv >= def.maxLv) return { mode: "max", cash: 0, energyTier: 0, energy: 0, text: "MAX" };
+
+    // 1. Buildings & Production Facilities use Cash (💵)
+    if (["m1", "m2", "m3", "fairy", "truck", "farm2", "farm3"].includes(id)) {
+      const cash = Math.round(def.baseCost * Math.pow(def.mult, lv));
+      return { mode: "cash", cash, energyTier: 0, energy: 0, text: `💵 ${cash}` };
+    }
+
+    // 2. 3-Stage Alchemy Research Lab: Lv.1 = Cash only; Lv.2 = Cash+🔮1차; Lv.3 = Cash+💠2차
+    if (id === "alchemy_lab") {
+      if (lv === 0) return { mode: "cash", cash: 40, energyTier: 0, energy: 0, text: "💵 40" };
+      if (lv === 1) return { mode: "hybrid", cash: 160, energyTier: 1, energy: 30, text: "💵160 + 🔮30" };
+      return { mode: "hybrid", cash: 420, energyTier: 2, energy: 45, text: "💵420 + 💠45" };
+    }
+
+    // 3. Gate 3-Stage Reinforcement (🔮 1차 -> 💠 2차 -> 🌟 3차)
+    if (id === "shrine_aegis") {
+      const tier = lv + 1;
+      const energy = lv === 0 ? 25 : lv === 1 ? 35 : 45;
+      return { mode: "energy", cash: 0, energyTier: tier, energy, text: `${ENERGY_META[tier].icon} ${energy}` };
+    }
+
+    // 4. Tech R&D (Equipment, Turrets) & Elemental Skills (★1~★5) -> Higher Tier Energy as star/level rises!
+    let tier = 1;
+    if (id === "s5") {
+      tier = 3;
+    } else if (id === "s4") {
+      tier = lv < 5 ? 2 : 3;
+    } else if (id === "s3" || id === "turret_thunder") {
+      tier = lv < 2 ? 1 : lv < 6 ? 2 : 3;
+    } else {
+      tier = lv < 3 ? 1 : lv < 6 ? 2 : 3;
+    }
     const effLv = id === "s1" ? Math.max(0, lv - 1) : lv;
-    return Math.round(def.baseCost * Math.pow(def.mult, effLv));
+    const rawEnergy = Math.round(def.baseCost * Math.pow(1.22, effLv));
+    const tierScaled = tier === 1 ? rawEnergy : tier === 2 ? Math.round(rawEnergy * 0.72) : Math.round(rawEnergy * 0.52);
+    const energy = Math.max(12, tierScaled);
+    return { mode: "energy", cash: 0, energyTier: tier, energy, text: `${ENERGY_META[tier].icon} ${energy}` };
+  }
+
+  function getUpgradeCost(id) {
+    const spec = getUpgradeCostSpec(id);
+    if (spec.mode === "cash" || spec.mode === "hybrid") return spec.cash;
+    return spec.energy;
+  }
+
+  function canAffordUpgrade(id) {
+    if (isUpgradeMax(id)) return false;
+    const spec = getUpgradeCostSpec(id);
+    if (spec.mode === "cash") return state.gems >= spec.cash;
+    if (spec.mode === "energy") return getEnergyAmount(spec.energyTier) >= spec.energy;
+    return state.gems >= spec.cash && getEnergyAmount(spec.energyTier) >= spec.energy;
+  }
+
+  function deductUpgradeCost(id) {
+    const spec = getUpgradeCostSpec(id);
+    if (spec.cash > 0) state.gems -= spec.cash;
+    if (spec.energy > 0 && spec.energyTier > 0) addEnergyAmount(spec.energyTier, -spec.energy);
   }
 
   function isUpgradeMax(id) {
@@ -584,7 +743,7 @@
         if (window.Entities && sceneObjs.hero) {
           window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 2)));
         }
-        showToast(`⛏️ 채집 곡괭이 Lv.${state.toolLv} 달성!`);
+        showToast(`⛏️ 채집 곡괭이 Lv.${state.toolLv} 기술 개발 완료!`);
         break;
       case "bag":
         state.bagLv++;
@@ -625,6 +784,17 @@
           state.m3Lv === 1
             ? "👑 3호기 황실 합체소 & VIP 무역 마차 개통! (💵 300)"
             : `👑 3호기 합체소 Lv.${state.m3Lv} 가속!`
+        );
+        break;
+      case "alchemy_lab":
+        state.alchemyLabLv = Math.min(3, (state.alchemyLabLv || 0) + 1);
+        refreshFacilityVisibility();
+        showToast(
+          state.alchemyLabLv === 1
+            ? "🔮 1단계 연금술 연구소 완공! 광석을 넣으면 🔮 1차 차원 에너지가 생산됩니다!"
+            : state.alchemyLabLv === 2
+            ? "💠 2단계 차원 연구소 증축! 이제 💠 2차 차원 에너지도 동시 연성됩니다!"
+            : "🌟 3단계 초월 연구소 완성! 최고 등급 🌟 3차 차원 에너지가 생산됩니다!"
         );
         break;
       case "fairy":
@@ -675,7 +845,6 @@
         showToast(`🏰 ${tierNames[state.shrineAegisLv]} 증축 완료! (최대 HP ${nextMax})`);
         break;
       }
-        break;
       case "s1":
       case "s2":
       case "s3":
@@ -700,10 +869,8 @@
   }
 
   function purchaseUpgradeDirect(id) {
-    if (isUpgradeMax(id)) return false;
-    const cost = getUpgradeCost(id);
-    if (state.gems < cost) return false;
-    state.gems -= cost;
+    if (!canAffordUpgrade(id)) return false;
+    deductUpgradeCost(id);
     applyUpgradeLevel(id);
     return true;
   }
@@ -909,14 +1076,14 @@
     });
   }
 
-  function spawnMeteorStrike(tx, tz, damage) {
+  function spawnMeteorStrike(tx, tz, damage, aoeRadius = 4.2) {
     const Engine = window.Engine;
     if (!Engine || !Engine.vfxGroup) {
-      applyAoEDamage(tx, tz, 3.6, damage, 4.0);
+      applyAoEDamage(tx, tz, aoeRadius, damage, 4.2);
       return;
     }
     const mat = new THREE.MeshBasicMaterial({ color: 0xff5a2c });
-    const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.62, 0), mat);
+    const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.76, 0), mat);
     mesh.position.set(tx - 2.5, 12.0, tz - 1.5);
     Engine.vfxGroup.add(mesh);
     runtime.fxMeshes.push({
@@ -928,8 +1095,9 @@
       tx,
       tz,
       damage,
+      aoeRadius,
       t: 0,
-      dur: 0.38,
+      dur: 0.20, // 2x faster meteor drop!
     });
   }
 
@@ -994,8 +1162,9 @@
         fx.mesh.rotation.x += dt * 9;
         fx.mesh.rotation.y += dt * 7;
         if (u >= 1) {
-          applyAoEDamage(fx.tx, fx.tz, 3.6, fx.damage, 4.0);
-          spawnShockwaveRing(fx.tx, 0.08, fx.tz, 0xff5a2c, 3.8, 0.45);
+          const rad = fx.aoeRadius || 4.2;
+          applyAoEDamage(fx.tx, fx.tz, rad, fx.damage, 4.2);
+          spawnShockwaveRing(fx.tx, 0.08, fx.tz, 0xff5a2c, rad, 0.42);
           spawnBurstVfx(fx.tx, 0.8, fx.tz, 0xff9234, 12);
           if (Engine && typeof Engine.addShake === "function") Engine.addShake(0.32);
         }
@@ -1142,6 +1311,12 @@
     if (runtime.wagon && runtime.wagon.entity && runtime.wagon.entity.root) {
       runtime.wagon.entity.root.visible = state.m3Lv > 0;
     }
+    if (sceneObjs.alchemyLab && window.Entities && typeof window.Entities.updateAlchemyLabTier === "function") {
+      window.Entities.updateAlchemyLabTier(sceneObjs.alchemyLab, state.alchemyLabLv || 0);
+    }
+    if (runtime.alchemyLabInPallet && runtime.alchemyLabInPallet.root) {
+      runtime.alchemyLabInPallet.root.visible = (state.alchemyLabLv || 0) > 0;
+    }
   }
 
   function refreshDefenseTurretsVisibility() {
@@ -1168,13 +1343,31 @@
       { kind: "forge", x: -12.5, z: 13.0, badge: "⚒️ 장비 강화 대장간", accent: "#ffd24c" },
       { kind: "guild", x: 11.5, z: 13.0, badge: "🧚 자동화·채집 길드", accent: "#4ce6d8" },
       { kind: "defense_lab", x: 13.5, z: 0.0, badge: "🛡️ 디펜스 기술 연구소", accent: "#38bdf8" },
+      { kind: "alchemy_lab", x: ALCHEMY_LAB_POS.x, z: ALCHEMY_LAB_POS.z, badge: "🔮 연금술 연구소", accent: "#c084fc" },
     ];
 
     for (const s of specs) {
       const ent = Entities.createCategoryBuilding(s.kind, s.x, s.z, s.badge, s.accent);
       Engine.stationGroup.add(ent.root);
       runtime.buildings.push({ kind: s.kind, x: s.x, z: s.z, ent });
+      if (s.kind === "alchemy_lab") {
+        sceneObjs.alchemyLab = ent;
+        runtime.alchemyLabBuilding = ent;
+      }
     }
+
+    if (typeof Entities.createWoodenPalletZone === "function") {
+      runtime.alchemyLabInPallet = Entities.createWoodenPalletZone({
+        x: ALCHEMY_LAB_IN_POS.x,
+        z: ALCHEMY_LAB_IN_POS.z,
+        w: 2.3,
+        d: 1.9,
+        accentColor: "#c084fc",
+        badgeText: "◀ 서쪽 · 🔮 광석→에너지 변환",
+      });
+      Engine.stationGroup.add(runtime.alchemyLabInPallet.root);
+    }
+    refreshFacilityVisibility();
   }
 
   function buildDefenseTurrets() {
@@ -1399,10 +1592,13 @@
       { id: "turret_frost", x: UPGRADE_DEFS.turret_frost.padPos.x, z: UPGRADE_DEFS.turret_frost.padPos.z },
       { id: "turret_thunder", x: UPGRADE_DEFS.turret_thunder.padPos.x, z: UPGRADE_DEFS.turret_thunder.padPos.z },
       { id: "shrine_aegis", x: UPGRADE_DEFS.shrine_aegis.padPos.x, z: UPGRADE_DEFS.shrine_aegis.padPos.z },
+      // Central Alchemy Research Lab (-5.5, -2.5) South Upgrade Pad
+      { id: "alchemy_lab", x: ALCHEMY_LAB_PAD_POS.x, z: ALCHEMY_LAB_PAD_POS.z },
     ];
 
     for (const p of padCoords) {
       const def = UPGRADE_DEFS[p.id];
+      const spec = getUpgradeCostSpec(p.id);
       const pad = Entities.createStepPad({
         id: p.id,
         x: p.x,
@@ -1412,7 +1608,7 @@
         dirLabel: def.dirLabel || "",
         icon: def.icon,
         title: def.title,
-        price: `💵 ${getUpgradeCost(p.id)}`,
+        price: spec.text,
         levelText: `Lv.${getUpgradeLevel(p.id)}`,
         accentHex: def.accent,
         paidRatio: 0,
@@ -1508,103 +1704,108 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Combat: 10-Wave Cute Monster Trio, ★1~★5 Elemental Skills & Turrets
+  // Combat: 5-Tier Fantasy Horde (60 Monsters/Wave: 10 per 10s), 2x Speed & AoE Skills
   // ---------------------------------------------------------------------------
-  function spawnWaveTrio(waveNum) {
+  const WAVE_THEME_INFO = [
+    { tier: 1, title: "숲속 야생 동물 무리", names: ["숲속 멧돼지", "숲속 회색 늑대", "숲속 불곰"] },
+    { tier: 1, title: "성난 숲속 맹수 군단", names: ["사나운 멧돼지", "야생 이리", "큰불곰 우두머리"] },
+    { tier: 2, title: "달빛 묘지 꼬마 좀비떼", names: ["꼬마 좀비", "늪지 포자 좀비", "철갑 무덤 좀비"] },
+    { tier: 2, title: "고대 유적 좀비 군단", names: ["역병 좀비", "원혼 좀비 술사", "왕실 근위 좀비"] },
+    { tier: 3, title: "붉은 달 뱀파이어 습격대", names: ["박쥐 뱀파이어", "혈액 마법 흡혈귀", "귀족 뱀파이어"] },
+    { tier: 3, title: "흡혈귀 백작의 밤군단", names: ["그림자 흡혈귀", "블러드 캐스터", "드라큘라 백작"] },
+    { tier: 4, title: "은빛 송곳니 늑대인간 무리", names: ["늑대인간 척후병", "포효 늑대주술사", "은빛 워울프"] },
+    { tier: 4, title: "보름달 광전사 늑대인간", names: ["광폭 늑대인간", "야성 워울프", "알파 늑대군주"] },
+    { tier: 5, title: "심연의 붉은 악마 선봉대", names: ["화염 임프 악마", "지옥불 악마 술사", "심연 데몬 가드"] },
+    { tier: 5, title: "마왕군 대악마 총공세", names: ["멸망의 악마병", "지옥 마도 악마", "심연 군주 대악마"] },
+  ];
+
+  function spawnMonsterBatch(waveNum, count = WAVE_BATCH_SIZE) {
     const Engine = window.Engine;
     const Entities = window.Entities;
-    if (!Engine || !Entities || !Entities.createCuteMonster) return;
+    if (!Engine || !Entities || !Entities.createCuteMonster) return 0;
 
     const w = Math.max(1, Math.min(10, waveNum));
-    const hpMult = Math.pow(1.52, w - 1);
-    const defs = [
-      {
-        species: "slime",
-        name: "말랑 젤리 슬라임",
-        sx: 34.5,
-        sz: -1.8,
-        targetOffsetZ: -1.8,
-        hp: Math.round(110 * hpMult),
-        atk: 14 + (w - 1) * 5,
-        speed: 4.1 + w * 0.12,
-        range: 1.65,
-        atkCd: 1.05,
-        reward: 26 + w * 18,
-      },
-      {
-        species: "shroom",
-        name: "통통 버섯 정령",
-        sx: 35.8,
-        sz: 1.8,
-        targetOffsetZ: 1.8,
-        hp: Math.round(135 * hpMult),
-        atk: 16 + (w - 1) * 5,
-        speed: 3.15 + w * 0.08,
-        range: 5.2,
-        atkCd: 1.65,
-        reward: 32 + w * 22,
-      },
-      {
-        species: "golem",
-        name: "태엽 별골렘",
-        sx: 36.8,
-        sz: 0.0,
-        targetOffsetZ: 0.0,
-        hp: Math.round(230 * hpMult),
-        atk: 22 + (w - 1) * 6,
-        speed: 2.65 + w * 0.06,
-        range: 1.95,
-        atkCd: 1.55,
-        reward: 50 + w * 30,
-      },
-    ];
+    const themeInfo = WAVE_THEME_INFO[w - 1] || WAVE_THEME_INFO[0];
+    const hpMult = Math.pow(1.38, w - 1);
+    const eTier = Math.min(3, Math.ceil(w / 4));
+    const roleCycle = ["slime", "slime", "shroom", "golem", "slime", "shroom", "slime", "golem", "shroom", "golem"];
 
-    for (const d of defs) {
-      const ent = Entities.createCuteMonster(d.species, w);
-      ent.root.position.set(d.sx, 0, d.sz);
+    for (let i = 0; i < count; i++) {
+      const species = roleCycle[i % roleCycle.length];
+      const isRanged = species === "shroom";
+      const isBruiser = species === "golem";
+      const laneZ = ((i % 5) - 2) * 1.45 + (Math.random() - 0.5) * 0.45;
+      const sx = 33.8 + Math.floor(i / 5) * 2.1 + Math.random() * 1.2;
+
+      const baseHp = isBruiser ? 52 : isRanged ? 32 : 26;
+      const baseAtk = (isBruiser ? 5 : isRanged ? 4 : 3) + Math.floor(w * 1.1);
+      const spd = (isBruiser ? 2.75 : isRanged ? 3.25 : 4.25) + w * 0.08;
+      const name = themeInfo.names[isBruiser ? 2 : isRanged ? 1 : 0];
+
+      const ent = Entities.createCuteMonster(species, w);
+      ent.root.position.set(sx, 0, laneZ);
       Engine.unitGroup.add(ent.root);
       runtime.monsters.push({
-        species: d.species,
-        name: d.name,
-        x: d.sx,
-        z: d.sz,
-        targetOffsetZ: d.targetOffsetZ,
+        species,
+        name,
+        themeTier: themeInfo.tier,
+        x: sx,
+        z: laneZ,
+        targetOffsetZ: Math.max(-3.2, Math.min(3.2, laneZ)),
         vx: 0,
         vz: 0,
-        hp: d.hp,
-        maxHp: d.hp,
-        atk: d.atk,
-        speed: d.speed,
-        range: d.range,
-        atkCd: d.atkCd,
-        atkTimer: 0.6,
+        hp: Math.round(baseHp * hpMult),
+        maxHp: Math.round(baseHp * hpMult),
+        atk: baseAtk,
+        speed: spd,
+        range: isRanged ? 5.2 : isBruiser ? 1.95 : 1.65,
+        atkCd: isRanged ? 1.65 : isBruiser ? 1.45 : 1.05,
+        atkTimer: 0.4 + Math.random() * 0.4,
         slowTimer: 0,
         stunTimer: 0,
-        reward: d.reward,
+        reward: 4 + w * 2,
+        energyTier: eTier,
+        energyReward: 2,
         entity: ent,
       });
     }
+    return count;
+  }
 
+  function spawnWaveHorde(waveNum) {
+    const w = Math.max(1, Math.min(10, waveNum));
+    const themeInfo = WAVE_THEME_INFO[w - 1] || WAVE_THEME_INFO[0];
     runtime.waveActive = true;
-    runtime.waveSpawnCount = 3;
+    runtime.waveCurrentNum = w;
+    runtime.waveTotalToSpawn = WAVE_TOTAL_MONSTERS;
+    runtime.waveSpawnCount = 0;
+    runtime.waveBatchTimer = WAVE_BATCH_INTERVAL;
     runtime.waveTimer = WAVE_INTERVAL;
     runtime.combatGraceTimer = 0.8;
-    showToast(`🌊 WAVE ${w} / 10 침공! 동쪽 성문을 향해 몬스터 삼총사가 몰려옵니다!`);
+
+    const spawned = spawnMonsterBatch(w, WAVE_BATCH_SIZE);
+    runtime.waveSpawnCount += spawned;
+
+    showToast(`🌊 WAVE ${w}/10 [${themeInfo.title}]! 60초 동안 10초마다 10마리씩 총 60마리가 몰려옵니다!`);
     playTone(440, 0.14, "triangle", 0.07);
     playTone(587.33, 0.20, "triangle", 0.07, 0.1);
     syncHUD(true);
   }
 
+  function spawnWaveTrio(waveNum) {
+    spawnWaveHorde(waveNum);
+  }
+
   function startWaveNow() {
     if (runtime.gameOver) return;
-    if (runtime.waveActive && runtime.monsters.length > 0) {
+    if (runtime.waveActive && (runtime.monsters.length > 0 || runtime.waveSpawnCount < runtime.waveTotalToSpawn)) {
       showToast("⚔️ 현재 웨이브 전투가 진행 중입니다!");
       return;
     }
     if (state.allWavesCleared) {
       state.wave = 10;
     }
-    spawnWaveTrio(state.wave);
+    spawnWaveHorde(state.wave);
   }
 
   function damageMonster(m, rawDmg, knockDirX = 0, knockDirZ = 0, knockPower = 0) {
@@ -1718,59 +1919,65 @@
     );
 
     if (skillId === "s1") {
-      // ★1 Fireball Volley (manual press casts up to 7.5m forward outside gate even during peacetime)
-      const bolts = 1 + Math.floor(lv / 4);
-      const dmg = 38 * (1 + 0.35 * (lv - 1));
+      // ★1 Fireball Volley: 2x faster projectiles (28.0m/s) + Lv.4+ wider AoE splash
+      const bolts = 1 + Math.floor(lv / 3);
+      const dmg = 34 * (1 + 0.35 * (lv - 1));
+      const aoeRad = 1.8 + lv * 0.22;
       const dirX = Math.sin(player.rotY);
       const dirZ = Math.cos(player.rotY);
       for (let i = 0; i < bolts; i++) {
         const tgt = inRangeMonsters.length > 0 ? inRangeMonsters[i % inRangeMonsters.length] : null;
-        spawnProjectile(player.x + (i - 0.5) * 0.3, 1.15, player.z, tgt, 0xff622e, dmg, 13.5, {
+        spawnProjectile(player.x + (i - 0.5) * 0.3, 1.15, player.z, tgt, 0xff622e, dmg, 28.0, {
           tx: tgt ? tgt.x : player.x + dirX * 7.5 + (i - 0.5) * 0.4,
           tz: tgt ? tgt.z : player.z + dirZ * 7.5,
-          radius: 0.28,
-          aoeRadius: 1.8,
-          maxLife: 0.62,
+          radius: 0.30,
+          aoeRadius: aoeRad,
+          maxLife: 0.34,
         });
       }
-      spawnShockwaveRing(player.x, 0.12, player.z, 0xff7849, 1.8, 0.32);
+      spawnShockwaveRing(player.x, 0.12, player.z, 0xff7849, 2.0, 0.24);
     } else if (skillId === "s2") {
-      // ★2 Frost Blizzard
-      const dmg = 62 * (1 + 0.38 * (lv - 1));
+      // ★2 Frost Blizzard: wide AoE scales with level (3.8m -> 6.6m)
+      const dmg = 58 * (1 + 0.38 * (lv - 1));
+      const aoeRad = 3.8 + lv * 0.28;
       const tx = target.x;
       const tz = target.z;
-      applyAoEDamage(tx, tz, 3.6, dmg, 1.5, 3.5, 0);
-      spawnShockwaveRing(tx, 0.14, tz, 0x38bdf8, 3.6, 0.65);
+      applyAoEDamage(tx, tz, aoeRad, dmg, 1.8, 3.8, 0);
+      spawnShockwaveRing(tx, 0.14, tz, 0x38bdf8, aoeRad, 0.55);
+      spawnShockwaveRing(tx, 0.18, tz, 0xe0f2fe, aoeRad * 0.65, 0.38);
       spawnBurstVfx(tx, 1.4, tz, 0x93e2ff, 14);
     } else if (skillId === "s3") {
-      // ★3 Chain Thunderstorm (only hits targets inside 8m hero range)
-      const maxTargets = Math.min(inRangeMonsters.length, 3 + Math.floor(lv / 2));
-      const dmg = 88 * (1 + 0.40 * (lv - 1));
+      // ★3 Chain Thunderstorm: multi-target lightning + AoE shockwave per hit (2.4m -> 4.2m)
+      const maxTargets = Math.min(inRangeMonsters.length, 4 + lv);
+      const dmg = 78 * (1 + 0.40 * (lv - 1));
+      const shockRad = 2.4 + lv * 0.18;
       for (let i = 0; i < maxTargets; i++) {
         const m = inRangeMonsters[i];
-        spawnLightningPillar(m.x, m.z, 0xfef08a, 0.38);
-        spawnShockwaveRing(m.x, 0.10, m.z, 0x60a5fa, 2.2, 0.35);
-        damageMonster(m, dmg, 0, 0, 0);
-        m.stunTimer = Math.max(m.stunTimer, 0.7);
+        spawnLightningPillar(m.x, m.z, 0xfef08a, 0.32);
+        spawnShockwaveRing(m.x, 0.10, m.z, 0x60a5fa, shockRad, 0.32);
+        applyAoEDamage(m.x, m.z, shockRad, dmg, 0.8, 0, 0.7);
       }
     } else if (skillId === "s4") {
-      // ★4 Meteor Storm
-      const count = 3 + Math.floor(lv / 3);
-      const dmg = 145 * (1 + 0.42 * (lv - 1));
+      // ★4 Meteor Storm: 2x faster meteors + huge AoE blasts (3.8m -> 6.2m)
+      const count = 3 + Math.floor(lv / 2);
+      const dmg = 135 * (1 + 0.42 * (lv - 1));
+      const meteorRad = 3.8 + lv * 0.24;
       for (let i = 0; i < count; i++) {
         const m = inRangeMonsters.length > 0 ? inRangeMonsters[i % inRangeMonsters.length] : target;
-        const ox = (Math.random() - 0.5) * 1.8;
-        const oz = (Math.random() - 0.5) * 1.8;
-        spawnMeteorStrike(m.x + ox, m.z + oz, dmg);
+        const ox = (Math.random() - 0.5) * 2.2;
+        const oz = (Math.random() - 0.5) * 2.2;
+        spawnMeteorStrike(m.x + ox, m.z + oz, dmg, meteorRad);
       }
     } else if (skillId === "s5") {
-      // ★5 Aether Supernova + 30% Village Gate Repair
-      const dmg = 240 * (1 + 0.45 * (lv - 1));
-      applyAoEDamage(player.x, player.z, 7.5, dmg, 5.0, 2.0, 0.8);
-      applyAoEDamage(GATE_POS.x + 1.5, GATE_POS.z, 6.5, dmg, 5.0, 2.0, 0.8);
-      spawnShockwaveRing(player.x, 0.16, player.z, 0xe879f9, 7.2, 0.65);
-      spawnShockwaveRing(GATE_POS.x, 0.24, GATE_POS.z, 0x38bdf8, 6.5, 0.55);
-      spawnBurstVfx(player.x, 1.2, player.z, 0xfef08a, 16);
+      // ★5 Aether Supernova: massive 9.5m full-battlefield multi-wave AoE + 30% Gate Repair
+      const dmg = 230 * (1 + 0.45 * (lv - 1));
+      const novaRad = 9.0 + lv * 0.25;
+      applyAoEDamage(player.x, player.z, novaRad, dmg, 5.5, 2.5, 0.9);
+      applyAoEDamage(GATE_POS.x + 4.0, GATE_POS.z, novaRad, dmg * 0.85, 5.5, 2.5, 0.9);
+      spawnShockwaveRing(player.x, 0.16, player.z, 0xe879f9, novaRad, 0.60);
+      spawnShockwaveRing(GATE_POS.x + 3.0, 0.24, GATE_POS.z, 0x38bdf8, novaRad * 0.85, 0.52);
+      spawnShockwaveRing(GATE_POS.x + 3.0, 0.30, GATE_POS.z, 0xfacc15, novaRad * 0.55, 0.40);
+      spawnBurstVfx(player.x, 1.2, player.z, 0xfef08a, 18);
       const maxHp = getGateMaxHp();
       const healAmt = Math.round(maxHp * 0.3);
       state.gateHp = Math.min(maxHp, (state.gateHp || 0) + healAmt);
@@ -1842,8 +2049,8 @@
     if (sceneObjs.villageGate && sceneObjs.villageGate.hpFillPivot) {
       sceneObjs.villageGate.hpFillPivot.scale.x = 1;
     }
-    player.x = -4.0;
-    player.z = 2.0;
+    player.x = HERO_SPAWN.x;
+    player.z = HERO_SPAWN.z;
 
     if (typeof document !== "undefined") {
       const modal = document.getElementById("gameover-modal");
@@ -1903,36 +2110,45 @@
 
       if (target && t.cooldown <= 0) {
         if (id === "turret_flame") {
-          t.cooldown = Math.max(0.7, 1.85 - t.lv * 0.08);
-          spawnProjectile(t.x, 1.35, t.z, target, 0xff5a28, 32 + t.lv * 18, 12.5, { radius: 0.30, aoeRadius: 2.2, maxLife: 0.72 });
+          t.cooldown = Math.max(0.55, 1.45 - t.lv * 0.08);
+          spawnProjectile(t.x, 1.35, t.z, target, 0xff5a28, 30 + t.lv * 16, 26.0, { radius: 0.32, aoeRadius: 2.6 + t.lv * 0.14, maxLife: 0.40 });
         } else if (id === "turret_frost") {
-          t.cooldown = Math.max(0.65, 1.55 - t.lv * 0.07);
-          spawnProjectile(t.x, 1.45, t.z, target, 0x38bdf8, 24 + t.lv * 14, 13.0, { radius: 0.26, slowSec: 2.5, maxLife: 0.72 });
+          t.cooldown = Math.max(0.55, 1.25 - t.lv * 0.06);
+          spawnProjectile(t.x, 1.45, t.z, target, 0x38bdf8, 22 + t.lv * 14, 26.5, { radius: 0.28, aoeRadius: 2.2, slowSec: 2.8, maxLife: 0.40 });
         } else if (id === "turret_thunder") {
-          t.cooldown = Math.max(0.9, 2.2 - t.lv * 0.09);
+          t.cooldown = Math.max(0.85, 2.0 - t.lv * 0.09);
           const inRange = runtime.monsters.filter((m) => m.hp > 0 && Math.hypot(m.x - t.x, m.z - t.z) <= TURRET_ATTACK_RANGE);
-          const count = Math.min(inRange.length, 2 + Math.floor(t.lv / 3));
+          const count = Math.min(inRange.length, 4 + Math.floor(t.lv / 2));
           for (let ci = 0; ci < count; ci++) {
             const m = inRange[ci];
-            spawnLightningPillar(m.x, m.z, 0xc084fc, 0.30);
-            damageMonster(m, 42 + t.lv * 22);
+            spawnLightningPillar(m.x, m.z, 0xc084fc, 0.28);
+            applyAoEDamage(m.x, m.z, 2.0, 38 + t.lv * 20, 0, 0, 0.35);
           }
         } else if (id === "shrine_aegis") {
           const closeDist = Math.hypot(target.x - GATE_POS.x, target.z - GATE_POS.z);
           if (closeDist < 6.5) {
-            t.cooldown = 4.2;
-            applyAoEDamage(GATE_POS.x + 1.0, GATE_POS.z, 6.5, 24 + t.lv * 16, 6.0, 1.5, 0);
+            t.cooldown = 4.0;
+            applyAoEDamage(GATE_POS.x + 1.0, GATE_POS.z, 6.5, 28 + t.lv * 18, 6.0, 1.8, 0);
             spawnShockwaveRing(GATE_POS.x + 1.0, 0.14, GATE_POS.z, 0x4ade80, 6.0, 0.45);
           }
         }
       }
     }
 
-    // 3. Wave Timer Countdown (5 min before Wave 1, 3 min between later waves)
+    // 3. Wave Timer & 60-Second Horde Batch Spawner (10 monsters every 10s, total 60)
     if (!runtime.waveActive && !state.allWavesCleared) {
       runtime.waveTimer -= dt;
       if (runtime.waveTimer <= 0) {
-        spawnWaveTrio(state.wave);
+        spawnWaveHorde(state.wave);
+      }
+    } else if (runtime.waveActive && runtime.waveSpawnCount < runtime.waveTotalToSpawn) {
+      runtime.waveBatchTimer -= dt;
+      if (runtime.waveBatchTimer <= 0) {
+        runtime.waveBatchTimer += WAVE_BATCH_INTERVAL;
+        const left = runtime.waveTotalToSpawn - runtime.waveSpawnCount;
+        const batch = Math.min(WAVE_BATCH_SIZE, left);
+        runtime.waveSpawnCount += spawnMonsterBatch(runtime.waveCurrentNum || state.wave, batch);
+        showToast(`⚠️ 추가 몬스터 ${batch}마리 출현! (${runtime.waveSpawnCount}/${runtime.waveTotalToSpawn})`);
       }
     }
 
@@ -1944,11 +2160,15 @@
         if (Engine && Engine.unitGroup && m.entity && m.entity.root) {
           Engine.unitGroup.remove(m.entity.root);
         }
-        spawnBurstVfx(m.x, 0.8, m.z, 0x4ade80, 10);
+        spawnBurstVfx(m.x, 0.8, m.z, 0x4ade80, 6);
         state.gems += m.reward;
         state.totalEarnedGems += m.reward;
-        spawnFloatingText(m.x, 1.8, m.z, `+💵 ${m.reward}`, "#4ade80");
-        addXp(18);
+        const eTier = m.energyTier || 1;
+        const eAmt = m.energyReward || 2;
+        addEnergyAmount(eTier, eAmt);
+        const eIcon = ENERGY_META[eTier] ? ENERGY_META[eTier].icon : "🔮";
+        spawnFloatingText(m.x, 1.8, m.z, `+💵${m.reward} +${eIcon}${eAmt}`, "#7effa2");
+        addXp(4);
         playGemChime(4);
         runtime.monsters.splice(i, 1);
         continue;
@@ -2039,7 +2259,7 @@
     }
 
     // 6. Wave Clear Progression (1 ~ 10)
-    if (runtime.waveActive && runtime.monsters.length === 0) {
+    if (runtime.waveActive && runtime.waveSpawnCount >= runtime.waveTotalToSpawn && runtime.monsters.length === 0) {
       runtime.waveActive = false;
       const clearedW = state.wave;
       const bonus = 80 * clearedW;
@@ -2306,6 +2526,50 @@
       zStep: 0.74,
       maxDraw: 36,
     });
+
+    // Alchemy Research Lab (Lv.1~3): blue_ore -> Dimensional Energy (dim1 / dim2 / dim3)
+    const labPallet = sceneObjs.alchemyLabInPallet || runtime.alchemyLabInPallet;
+    if (!Array.isArray(runtime.alchemyLabQueue)) runtime.alchemyLabQueue = [];
+    if (!Array.isArray(runtime.alchemyLabInVisuals)) runtime.alchemyLabInVisuals = [];
+    let labPulse = 0;
+    if (state.alchemyLabLv >= 1) {
+      if (Math.hypot(player.x - ALCHEMY_LAB_IN_POS.x, player.z - ALCHEMY_LAB_IN_POS.z) < 2.45) {
+        labPulse = 1;
+        if (player.transferCooldown <= 0 && runtime.alchemyLabQueue.length < 18) {
+          transferTypedFromBagToQueue("blue_ore", ALCHEMY_LAB_IN_POS.x, ALCHEMY_LAB_IN_POS.z, runtime.alchemyLabQueue, 18);
+        }
+      }
+      if (runtime.alchemyLabQueue.length > 0) {
+        const cycleSec = Math.max(0.85, 1.45 - (state.alchemyLabLv - 1) * 0.25);
+        runtime.alchemyLabProgress = (runtime.alchemyLabProgress || 0) + dt;
+        while (runtime.alchemyLabProgress >= cycleSec && runtime.alchemyLabQueue.length > 0) {
+          runtime.alchemyLabProgress -= cycleSec;
+          runtime.alchemyLabQueue.pop();
+          const dim1Gain = state.alchemyLabLv >= 3 ? 28 : state.alchemyLabLv === 2 ? 22 : 18;
+          const dim2Gain = state.alchemyLabLv >= 3 ? 20 : state.alchemyLabLv === 2 ? 15 : 0;
+          const dim3Gain = state.alchemyLabLv >= 3 ? 14 : 0;
+          addEnergyAmount(1, dim1Gain);
+          if (dim2Gain > 0) addEnergyAmount(2, dim2Gain);
+          if (dim3Gain > 0) addEnergyAmount(3, dim3Gain);
+          playTone(940, 0.09, "triangle", 0.045);
+          if (dim2Gain > 0 || dim3Gain > 0) playTone(1240, 0.08, "sine", 0.035);
+        }
+      } else {
+        runtime.alchemyLabProgress = 0;
+      }
+    }
+    if (labPallet) {
+      window.Entities.updateWoodenPalletZone(labPallet, labPulse, runtime.time);
+      if (labPallet.stackAnchor) {
+        syncCrateStackVisuals(labPallet.stackAnchor, runtime.alchemyLabQueue, runtime.alchemyLabInVisuals, {
+          cols: 2,
+          rows: 2,
+          xStep: 1.04,
+          zStep: 0.74,
+          maxDraw: 18,
+        });
+      }
+    }
   }
 
   function advanceCustomerQueue(custList, dt, homeX, homeZ0, zStep, faceAngle, exitOffsetX, exitZ) {
@@ -2574,7 +2838,12 @@
           }
         } else {
           deliverType = "blue_ore";
-          if (m3 && m3.lv > 0 && m3.inQueue.length < 18 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
+          if (!Array.isArray(runtime.alchemyLabQueue)) runtime.alchemyLabQueue = [];
+          if (state.alchemyLabLv >= 1 && runtime.alchemyLabQueue.length < 6) {
+            destPos = ALCHEMY_LAB_IN_POS;
+            destQueue = runtime.alchemyLabQueue;
+            maxQ = 18;
+          } else if (m3 && m3.lv > 0 && m3.inQueue.length < 18 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
             destPos = m3.cfg.inPos;
             destQueue = m3.inQueue;
             maxQ = 24;
@@ -2700,40 +2969,86 @@
     for (const sp of runtime.stepPads) {
       const def = UPGRADE_DEFS[sp.id];
       const isMax = isUpgradeMax(sp.id);
-      const cost = getUpgradeCost(sp.id);
+      const spec = getUpgradeCostSpec(sp.id);
       const lv = getUpgradeLevel(sp.id);
-      const paid = state.padPaid[sp.id] || 0;
-      const remaining = Math.max(0, cost - paid);
 
       const dx = Math.abs(player.x - sp.x);
       const dz = Math.abs(player.z - sp.z);
       const isStepped = dx < sp.w * 0.48 && dz < sp.d * 0.48;
+      if (!isStepped) sp._justUpgraded = false;
 
-      if (isStepped && !isMax && state.gems > 0 && remaining > 0) {
-        const drainRate = Math.max(cost * 1.45, 72);
-        const take = Math.min(remaining, state.gems, Math.max(1, Math.ceil(drainRate * dt)));
-        if (take > 0) {
-          state.gems -= take;
-          state.padPaid[sp.id] = paid + take;
-          if (Math.floor(runtime.time * 16) !== Math.floor((runtime.time - dt) * 16)) playTone(720, 0.04, "sine", 0.03);
-          if (state.padPaid[sp.id] >= cost) applyUpgradeLevel(sp.id);
+      let priceText = "MAX";
+      let ratio = 1;
+      let canAfford = false;
+
+      if (!isMax) {
+        if (spec.mode === "cash") {
+          const cost = spec.cash;
+          const paid = state.padPaid[sp.id] || 0;
+          const remaining = Math.max(0, cost - paid);
+          if (isStepped && state.gems > 0 && remaining > 0) {
+            const drainRate = Math.max(cost * 1.45, 72);
+            const take = Math.min(remaining, state.gems, Math.max(1, Math.ceil(drainRate * dt)));
+            if (take > 0) {
+              state.gems -= take;
+              state.padPaid[sp.id] = paid + take;
+              if (Math.floor(runtime.time * 16) !== Math.floor((runtime.time - dt) * 16)) playTone(720, 0.04, "sine", 0.03);
+              if (state.padPaid[sp.id] >= cost) {
+                applyUpgradeLevel(sp.id);
+                sp._justUpgraded = true;
+              }
+            }
+          }
+          const newRemaining = Math.max(0, cost - (state.padPaid[sp.id] || 0));
+          ratio = cost > 0 ? (state.padPaid[sp.id] || 0) / cost : 0;
+          priceText = `💵 ${newRemaining}`;
+          canAfford = state.gems >= newRemaining;
+        } else if (spec.mode === "energy") {
+          const cost = spec.energy;
+          const paid = state.padPaid[sp.id] || 0;
+          const remaining = Math.max(0, cost - paid);
+          const avail = getEnergyAmount(spec.energyTier);
+          if (isStepped && avail > 0 && remaining > 0) {
+            const drainRate = Math.max(cost * 1.45, 36);
+            const take = Math.min(remaining, avail, Math.max(1, Math.ceil(drainRate * dt)));
+            if (take > 0) {
+              addEnergyAmount(spec.energyTier, -take);
+              state.padPaid[sp.id] = paid + take;
+              if (Math.floor(runtime.time * 16) !== Math.floor((runtime.time - dt) * 16)) playTone(860, 0.04, "triangle", 0.03);
+              if (state.padPaid[sp.id] >= cost) {
+                applyUpgradeLevel(sp.id);
+                sp._justUpgraded = true;
+              }
+            }
+          }
+          const newRemaining = Math.max(0, cost - (state.padPaid[sp.id] || 0));
+          const icon = (ENERGY_META[spec.energyTier] && ENERGY_META[spec.energyTier].icon) || "🔮";
+          ratio = cost > 0 ? (state.padPaid[sp.id] || 0) / cost : 0;
+          priceText = `${icon} ${newRemaining}`;
+          canAfford = getEnergyAmount(spec.energyTier) >= newRemaining;
+        } else {
+          priceText = spec.text;
+          ratio = 0;
+          canAfford = canAffordUpgrade(sp.id);
+          if (isStepped && canAfford && !sp._justUpgraded) {
+            deductUpgradeCost(sp.id);
+            applyUpgradeLevel(sp.id);
+            sp._justUpgraded = true;
+          }
         }
       }
-
-      const newRemaining = Math.max(0, cost - (state.padPaid[sp.id] || 0));
-      const ratio = isMax ? 1 : cost > 0 ? (state.padPaid[sp.id] || 0) / cost : 0;
 
       window.Entities.updateStepPadTexture(sp.pad, {
         dirLabel: def.dirLabel || "",
         icon: def.icon,
         title: def.title,
-        price: isMax ? "MAX" : `💵 ${newRemaining}`,
+        price: isMax ? "MAX" : priceText,
         levelText: isMax ? "MAX" : `Lv.${lv}`,
         accentHex: def.accent,
         paidRatio: ratio,
         isMax,
         unlocked: true,
-        canAfford: !isMax && state.gems >= newRemaining,
+        canAfford: !isMax && canAfford,
         isStepped,
       });
     }
@@ -2783,6 +3098,12 @@
       stepLabel = "💵 돈 받기";
       guideText = "💵 '돈 받는 곳' 발판으로 가서 지폐 다발을 흡수하세요!";
       colorHex = 0x2ecc71;
+    } else if (state.alchemyLabLv === 0 && state.gems >= getUpgradeCost("alchemy_lab") && !hasOre) {
+      tx = ALCHEMY_LAB_PAD_POS.x;
+      tz = ALCHEMY_LAB_PAD_POS.z;
+      stepLabel = "연구소 건설";
+      guideText = "⚗️ 중앙 왼쪽 [연금술 연구소]를 지어 광석을 차원 에너지로 변환하세요!";
+      colorHex = 0x8b5cf6;
     } else if (state.m1Lv === 0 && state.gems >= getUpgradeCost("m1") && !hasOre) {
       tx = MACHINE_CONFIGS[0].padPos.x;
       tz = MACHINE_CONFIGS[0].padPos.z;
@@ -2795,11 +3116,11 @@
       stepLabel = "2호기 해금";
       guideText = "🌿 북쪽 공방 [2호기 가마솥]을 지어 남부 자원 계곡 '무지개 약초 숲' & 💵 80 포션을 여세요!";
       colorHex = 0x52ff9b;
-    } else if (state.turretFlameLv === 0 && state.gems >= getUpgradeCost("turret_flame")) {
+    } else if (state.turretFlameLv === 0 && canAffordUpgrade("turret_flame")) {
       tx = UPGRADE_DEFS.turret_flame.padPos.x;
       tz = UPGRADE_DEFS.turret_flame.padPos.z;
       stepLabel = "🛡️ 디펜스 기술 개발";
-      guideText = "🔥 동쪽 디펜스 연구소 북쪽 발판에서 [화염 연금 포탑]을 건설하세요!";
+      guideText = "🔥 동쪽 디펜스 연구소 북쪽 발판에서 차원 에너지로 [화염 연금 포탑] 기술을 개발하세요!";
       colorHex = 0xff6b4a;
     } else if (state.m3Lv === 0 && state.gems >= getUpgradeCost("m3")) {
       tx = MACHINE_CONFIGS[2].padPos.x;
@@ -2823,6 +3144,12 @@
         stepLabel = "2호기 약초 투입";
         guideText = "⚗️ 2호기 가마솥 [약초 넣는 곳]에 넣으면 💵 80 포션이 자동 판매됩니다!";
         colorHex = 0x52ff9b;
+      } else if (hasOre && state.alchemyLabLv >= 1 && (state.dim1 || 0) < 40 && (runtime.alchemyLabQueue || []).length < 8) {
+        tx = ALCHEMY_LAB_IN_POS.x;
+        tz = ALCHEMY_LAB_IN_POS.z;
+        stepLabel = "차원 에너지 연성";
+        guideText = "⚗️ [연금술 연구소] 서쪽 투입구에 광석을 넣어 기술 개발용 차원 에너지를 만드세요!";
+        colorHex = 0x8b5cf6;
       } else if (hasOre && m3 && m3.lv > 0 && m3.inQueue.length < 18 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
         tx = m3.cfg.inPos.x;
         tz = m3.cfg.inPos.z;
@@ -2985,7 +3312,11 @@
     setText("ui-hp", `${Math.ceil(gateHp)} / ${maxHp}`);
     setWidth("ui-hp-fill", (gateHp / maxHp) * 100);
     setText("ui-gems", state.gems.toLocaleString());
+    setText("ui-dim1", (state.dim1 || 0).toLocaleString());
+    setText("ui-dim2", (state.dim2 || 0).toLocaleString());
+    setText("ui-dim3", (state.dim3 || 0).toLocaleString());
     setText("ui-shop-cash", `💵 ${state.gems.toLocaleString()}`);
+    setText("ui-shop-dim", `🔮 ${(state.dim1 || 0).toLocaleString()} · 💠 ${(state.dim2 || 0).toLocaleString()} · 🌟 ${(state.dim3 || 0).toLocaleString()}`);
 
     // Top-Center Wave HUD
     const waveHud = document.getElementById("wave-hud");
@@ -2996,7 +3327,7 @@
       setText("ui-wave-monsters", "공방 평화 달성");
     } else if (runtime.waveActive) {
       setText("ui-wave-timer", "⚔️ 성문 교전 중!");
-      setText("ui-wave-monsters", `남은 몬스터 ${runtime.monsters.length} / ${runtime.waveSpawnCount}`);
+      setText("ui-wave-monsters", `남은 적 ${runtime.monsters.length} · 출현 ${runtime.waveSpawnCount}/${runtime.waveTotalToSpawn || WAVE_TOTAL_MONSTERS}`);
     } else {
       const prefix = state.wave === 1 ? "첫 웨이브" : "다음 습격";
       setText("ui-wave-timer", `${prefix} ${formatMMSS(runtime.waveTimer)}`);
@@ -3067,8 +3398,8 @@
     for (const def of items) {
       const lv = getUpgradeLevel(def.id);
       const isMax = isUpgradeMax(def.id);
-      const cost = getUpgradeCost(def.id);
-      const afford = !isMax && state.gems >= cost;
+      const spec = getUpgradeCostSpec(def.id);
+      const afford = !isMax && canAffordUpgrade(def.id);
       const pct = Math.min(100, (lv / def.maxLv) * 100);
 
       const card = document.createElement("div");
@@ -3090,7 +3421,7 @@
             <div class="shop-item-prog-fill" style="width:${pct}%"></div>
           </div>
           <button class="shop-buy-btn ${afford ? "afford" : "locked"}" data-upgrade-id="${def.id}" ${isMax || !afford ? "disabled" : ""}>
-            ${isMax ? "MAX" : lv === 0 && (def.tab === "skills" || def.tab === "defense") ? `해금 💵 ${cost}` : `💵 ${cost}`}
+            ${isMax ? "MAX" : lv === 0 && (def.tab === "skills" || def.tab === "defense") ? `해금 ${spec.text}` : spec.text}
           </button>
         </div>
       `;
@@ -3142,14 +3473,23 @@
       } catch (e) {}
     }
     const Engine = window.Engine;
-    player.x = -4.0;
-    player.z = 2.0;
+    player.x = HERO_SPAWN.x;
+    player.z = HERO_SPAWN.z;
     player.vx = 0;
     player.vz = 0;
     player.bagItems.length = 0;
     runtime.sellPalletQueue.length = 0;
+    if (Array.isArray(runtime.alchemyLabQueue)) runtime.alchemyLabQueue.length = 0;
+    runtime.alchemyLabProgress = 0;
+    const labPallet = sceneObjs.alchemyLabInPallet || runtime.alchemyLabInPallet;
+    if (labPallet && labPallet.stackAnchor && Array.isArray(runtime.alchemyLabInVisuals)) {
+      syncCrateStackVisuals(labPallet.stackAnchor, runtime.alchemyLabQueue, runtime.alchemyLabInVisuals);
+    }
     runtime.waveTimer = FIRST_WAVE_DELAY;
     runtime.waveActive = false;
+    runtime.waveSpawnCount = 0;
+    runtime.waveTotalToSpawn = WAVE_TOTAL_MONSTERS;
+    runtime.waveBatchTimer = 0;
     runtime.gameOver = false;
     runtime.skillCooldowns = { s1: 0, s2: 0, s3: 0, s4: 0, s5: 0 };
     if (sceneObjs.villageGate && sceneObjs.villageGate.hpFillPivot) {
@@ -3199,6 +3539,8 @@
     if (typeof document !== "undefined") {
       const gm = document.getElementById("gameover-modal");
       if (gm) gm.classList.remove("open");
+      const om = document.getElementById("opening-modal");
+      if (om) om.classList.add("open");
     }
 
     refreshFarmZoneVisibility();
@@ -3228,6 +3570,13 @@
     _domBound = true;
 
     window.addEventListener("keydown", (e) => {
+      unlockAudio();
+      const om = document.getElementById("opening-modal");
+      if (om && om.classList.contains("open") && (e.code === "Enter" || e.code === "Space")) {
+        om.classList.remove("open");
+        e.preventDefault();
+        return;
+      }
       input.keys.add(e.code);
       if (e.code === "Digit1") castSkill("s1");
       else if (e.code === "Digit2") castSkill("s2");
@@ -3235,6 +3584,7 @@
       else if (e.code === "Digit4") castSkill("s4");
       else if (e.code === "Digit5") castSkill("s5");
     });
+    window.addEventListener("pointerdown", () => unlockAudio(), { passive: true });
     window.addEventListener("keyup", (e) => {
       input.keys.delete(e.code);
     });
@@ -3287,6 +3637,12 @@
       const el = document.getElementById(id);
       if (el) el.addEventListener("click", fn);
     };
+    clickBind("btn-start-mission", () => {
+      unlockAudio();
+      const om = document.getElementById("opening-modal");
+      if (om) om.classList.remove("open");
+      showToast("🎯 광석을 캐서 연구소와 기술을 개발하고, 동쪽 성문을 수호하세요!");
+    });
     clickBind("btn-open-shop", () => openShop());
     clickBind("btn-close-shop", () => closeShop());
     clickBind("btn-wave-now", () => startWaveNow());
@@ -3297,8 +3653,8 @@
     clickBind("btn-retry-wave", () => retryCurrentWave());
     clickBind("btn-gameover-reset", () => resetGame());
     clickBind("btn-home", () => {
-      player.x = -4.0;
-      player.z = 2.0;
+      player.x = HERO_SPAWN.x;
+      player.z = HERO_SPAWN.z;
       player.vx = 0;
       player.vz = 0;
       showToast("🏡 중앙 광장으로 귀환했습니다!");
@@ -3353,6 +3709,7 @@
     updateStepPads(stepDt);
     updateCombatAndDefense(stepDt);
     updateVFX(stepDt);
+    updateProceduralBgm(stepDt);
     for (const b of runtime.buildings) {
       if (window.Entities && typeof window.Entities.animateCategoryBuilding === "function") {
         window.Entities.animateCategoryBuilding(b.ent, stepDt);
@@ -3446,10 +3803,16 @@
     DEFENSE_IDS,
     GATE_POS,
     SOUTH_GATE_POS,
+    ALCHEMY_LAB_POS,
+    ALCHEMY_LAB_IN_POS,
     HERO_ATTACK_RANGE,
     TURRET_ATTACK_RANGE,
     FIRST_WAVE_DELAY,
     WAVE_INTERVAL,
+    WAVE_TOTAL_MONSTERS,
+    WAVE_BATCH_SIZE,
+    getUpgradeCostSpec,
+    canAffordUpgrade,
     init,
     step,
     startWaveNow,
