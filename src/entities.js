@@ -56,8 +56,8 @@
     return chibi().animateFairy(fairy, dt);
   }
 
-  function createCustomer(variantIdx) {
-    return chibi().createAnimalCustomer(variantIdx);
+  function createCustomer(variantIdx, roleType = "villager") {
+    return chibi().createAnimalCustomer(variantIdx, roleType);
   }
 
   function animateCustomer(cust, walking, dt) {
@@ -84,6 +84,14 @@
     return chibi().animateHarvesterTruck(truck, speed, dt);
   }
 
+  function createRoyalTradeWagon() {
+    return chibi().createRoyalTradeWagon();
+  }
+
+  function animateRoyalTradeWagon(wagon, speed, dt) {
+    return chibi().animateRoyalTradeWagon(wagon, speed, dt);
+  }
+
   // ---------------------------------------------------------------------------
   // GLB Props & Environment Stations (Sales Stall, Gem Pedestal, Resource Nodes)
   // ---------------------------------------------------------------------------
@@ -98,7 +106,7 @@
     let built = false;
     if (L && L.hasRole && L.hasRole("sales_stall")) {
       const inst = L.createInstance("sales_stall", {
-        targetHeight: 3.1,
+        targetHeight: 2.15,
         castShadow: true,
         receiveShadow: true,
       });
@@ -134,9 +142,10 @@
     const visualRoot = new THREE.Group();
     root.add(visualRoot);
 
-    // Wide sturdy 3x3 collection platform base
-    const baseMat = chibi().makeToonMat(0x524c78);
-    const rimMat = chibi().makeToonMat(0x52efff, { emissive: 0x1fc4ff, emissiveIntensity: 0.35 });
+    // Wide sturdy 3x3 Cash Collection Platform Base (초록 지폐 수금대)
+    const baseMat = chibi().makeToonMat(0x28593c);
+    const rimMat = chibi().makeToonMat(0x2ecc71, { emissive: 0x16a34a, emissiveIntensity: 0.34 });
+    const goldMat = chibi().makeToonMat(0xf7cb4d);
     chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.55, 0.24, 2.25), baseMat, {
       pos: [0, 0.12, 0],
       castShadow: true,
@@ -149,26 +158,56 @@
     );
     innerPad.position.set(0, 0.245, 0);
     visualRoot.add(innerPad);
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.38, 0.06, 0.16), goldMat, {
+      pos: [0, 0.26, 1.04],
+      castShadow: false,
+      outline: false,
+    });
 
-    const L = loader();
-    if (L && L.hasRole && L.hasRole("gem_pedestal")) {
-      const inst = L.createInstance("gem_pedestal", {
-        targetHeight: 0.72,
-        castShadow: true,
-        receiveShadow: true,
-      });
-      if (inst && inst.root) {
-        inst.root.position.set(0, 0.22, -1.25);
-        visualRoot.add(inst.root);
-      }
-    }
-
-    // 3x3 Tall Mana Gem Skyscraper Anchor
+    // 3x3 Tall Cash Bundle Skyscraper Anchor
     const stackAnchor = new THREE.Group();
     stackAnchor.position.set(0, 0.27, 0);
     root.add(stackAnchor);
 
     return { root, visualRoot, stackAnchor };
+  }
+
+  function createShowcaseCounter({ x = -7.6, z = -11.4, kind = "jewel", accentColor = 0xc56bff } = {}) {
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+
+    const visualRoot = new THREE.Group();
+    root.add(visualRoot);
+
+    const baseColor = kind === "jewel" ? 0x5c367a : 0x2f685a;
+    const topColor = kind === "jewel" ? 0xe7c6ff : 0xc7ffea;
+    const matBase = chibi().makeToonMat(baseColor);
+    const matTop = chibi().makeToonMat(topColor);
+    const matAccent = chibi().makeToonMat(accentColor, { emissive: accentColor, emissiveIntensity: 0.25 });
+
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.55, 0.88, 1.85), matBase, {
+      pos: [0, 0.44, 0],
+      castShadow: true,
+      receiveShadow: true,
+      outlineScale: 1.035,
+    });
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.68, 0.14, 1.98), matTop, {
+      pos: [0, 0.95, 0],
+      castShadow: true,
+      receiveShadow: true,
+      outlineScale: 1.03,
+    });
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.36, 0.16, 0.12), matAccent, {
+      pos: [0, 0.72, 0.94],
+      castShadow: false,
+      outline: false,
+    });
+
+    const stockAnchor = new THREE.Group();
+    stockAnchor.position.set(0, 1.05, 0);
+    root.add(stockAnchor);
+
+    return { root, visualRoot, stockAnchor };
   }
 
   function createResourceNode(kind, x, z) {
@@ -178,18 +217,18 @@
     const visualRoot = new THREE.Group();
     root.add(visualRoot);
 
-    const isCrystal = kind === "crystal";
-    const role = isCrystal ? "rock_crystal" : "berry_bush";
+    const isOre = kind === "blue_ore" || kind === "crystal";
+    const role = isOre ? "rock_crystal" : "berry_bush";
     const L = loader();
 
     let built = false;
     if (L && L.hasRole && L.hasRole(role)) {
       const inst = L.createInstance(role, {
-        targetHeight: isCrystal ? 1.55 : 1.42,
-        tint: isCrystal ? 0x56ecff : 0xff739c,
-        tintStrength: isCrystal ? 0.28 : 0.22,
-        emissiveTint: isCrystal ? 0x1bbfff : 0xe03274,
-        emissiveIntensity: isCrystal ? 0.25 : 0.12,
+        targetHeight: isOre ? 1.55 : 1.42,
+        tint: isOre ? 0x3b9eff : 0x52eb7d,
+        tintStrength: isOre ? 0.32 : 0.24,
+        emissiveTint: isOre ? 0x1470ff : 0x26c45a,
+        emissiveIntensity: isOre ? 0.26 : 0.14,
         castShadow: true,
         receiveShadow: true,
       });
@@ -201,32 +240,47 @@
     }
 
     if (!built) {
-      if (isCrystal) {
-        const mat = chibi().makeToonMat(0x52e8ff, { emissive: 0x1cb2ff, emissiveIntensity: 0.35 });
-        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.55, 0), mat, {
-          pos: [0, 0.72, 0],
+      if (isOre) {
+        const rockMat = chibi().makeToonMat(0x525a75);
+        const mat = chibi().makeToonMat(0x3a9cff, { emissive: 0x1668d9, emissiveIntensity: 0.35 });
+        chibi().addOutlinedMesh(visualRoot, new THREE.DodecahedronGeometry(0.62, 0), rockMat, {
+          pos: [0, 0.42, 0],
+          scale: [1.15, 0.78, 1.1],
+        });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.46, 0), mat, {
+          pos: [0, 0.86, 0],
           scale: [0.95, 1.45, 0.95],
         });
-        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.35, 0), mat, {
-          pos: [0.36, 0.44, 0.22],
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.30, 0), mat, {
+          pos: [0.36, 0.54, 0.22],
           rot: [0.3, 0.4, -0.35],
           scale: [0.9, 1.35, 0.9],
         });
       } else {
-        const bushMat = chibi().makeToonMat(0x42b549);
-        const berryMat = chibi().makeToonMat(0xff528e, { emissive: 0xd12662, emissiveIntensity: 0.22 });
-        chibi().addOutlinedMesh(visualRoot, new THREE.DodecahedronGeometry(0.62, 1), bushMat, { pos: [0, 0.56, 0] });
-        [[-0.35, 0.76, 0.36], [0.36, 0.72, 0.32], [0, 0.96, 0.18], [-0.22, 0.55, -0.35]].forEach(([bx, by, bz]) => {
-          chibi().addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.16, 8, 8), berryMat, { pos: [bx, by, bz] });
+        // 무지개 약초 (Vibrant emerald stem patch + glowing rainbow blossoms)
+        const bushMat = chibi().makeToonMat(0x3bc254);
+        const herbPalette = [0xff62b8, 0xffd245, 0x58e0ff, 0xb875ff];
+        chibi().addOutlinedMesh(visualRoot, new THREE.DodecahedronGeometry(0.58, 1), bushMat, {
+          pos: [0, 0.48, 0],
+          scale: [1.12, 0.84, 1.12],
+        });
+        [[-0.32, 0.78, 0.30], [0.34, 0.76, 0.26], [0, 0.98, 0.08], [-0.18, 0.62, -0.32]].forEach(([bx, by, bz], idx) => {
+          const c = herbPalette[idx % herbPalette.length];
+          chibi().addOutlinedMesh(
+            visualRoot,
+            new THREE.DodecahedronGeometry(0.17, 0),
+            chibi().makeToonMat(c, { emissive: c, emissiveIntensity: 0.28 }),
+            { pos: [bx, by, bz] }
+          );
         });
       }
     }
 
     // Subtle ground highlight ring
     const ringMat = new THREE.MeshBasicMaterial({
-      color: isCrystal ? 0x52e8ff : 0xff709e,
+      color: isOre ? 0x3b9eff : 0x52eb7d,
       transparent: true,
-      opacity: 0.32,
+      opacity: 0.34,
       depthWrite: false,
     });
     const ringMesh = new THREE.Mesh(new THREE.RingGeometry(0.66, 0.80, 18), ringMat);
@@ -623,7 +677,10 @@
     animateProductionMachine,
     createHarvesterCart,
     animateHarvesterTruck,
+    createRoyalTradeWagon,
+    animateRoyalTradeWagon,
     createSalesStall,
+    createShowcaseCounter,
     createGemPedestal,
     createResourceNode,
     createWoodenPalletZone,

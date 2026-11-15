@@ -670,7 +670,7 @@
     { name: "cat", hood: 0x6ac2ac, earInner: 0xffc6d4, tunic: 0x8e67c9, kind: "cat" },
   ];
 
-  function createAnimalCustomer(variantIdx = 0) {
+  function createAnimalCustomer(variantIdx = 0, roleType = "villager") {
     const v = CUSTOMER_VARIANTS[variantIdx % CUSTOMER_VARIANTS.length];
     const root = new THREE.Group();
     root.add(makeShadowCircle(0.56, 0.22));
@@ -678,9 +678,10 @@
     const bodyPivot = new THREE.Group();
     root.add(bodyPivot);
 
-    const matHood = makeToonMat(v.hood);
+    const tunicHex = roleType === "vip" ? 0x6b2256 : roleType === "wizard" ? 0x3b48a8 : v.tunic;
+    const matHood = makeToonMat(roleType === "vip" ? 0xf6c959 : roleType === "wizard" ? 0x5c6fe0 : v.hood);
     const matInner = makeToonMat(v.earInner);
-    const matTunic = makeToonMat(v.tunic);
+    const matTunic = makeToonMat(tunicHex);
     const matSkin = makeToonMat(0xffd7bc);
     const matBoot = makeToonMat(0x523426);
 
@@ -786,6 +787,39 @@
     });
     bodyPivot.add(head);
 
+    if (roleType === "vip") {
+      // Golden Noble Crown + Scarlet Silk Collar for 1호기 Rich VIP Customers
+      const matCrown = makeToonMat(0xffd84d, { emissive: 0xd99b00, emissiveIntensity: 0.22 });
+      addOutlinedMesh(
+        head,
+        cachedGeo("vip_crown_band", () => new THREE.CylinderGeometry(0.24, 0.22, 0.14, 8)),
+        matCrown,
+        { pos: [0, 0.44, 0], outlineScale: 1.06 }
+      );
+      addOutlinedMesh(
+        head,
+        cachedGeo("vip_crown_gem", () => new THREE.OctahedronGeometry(0.08, 0)),
+        makeToonMat(0xff4277, { emissive: 0xff1e56, emissiveIntensity: 0.3 }),
+        { pos: [0, 0.50, 0.20], outline: false }
+      );
+    } else if (roleType === "wizard") {
+      // Miniature Azure Starlight Wizard Hat for 2호기 Wizard Customers
+      const matWizHat = makeToonMat(0x4a38a8);
+      const matWizBrim = makeToonMat(0xffcf52);
+      addOutlinedMesh(
+        head,
+        cachedGeo("cust_wiz_brim", () => new THREE.CylinderGeometry(0.46, 0.48, 0.05, 16)),
+        matWizBrim,
+        { pos: [0, 0.36, 0], outlineScale: 1.05 }
+      );
+      addOutlinedMesh(
+        head,
+        cachedGeo("cust_wiz_cone", () => new THREE.ConeGeometry(0.30, 0.56, 14)),
+        matWizHat,
+        { pos: [0, 0.64, -0.02], rot: [-0.08, 0, 0.04], outlineScale: 1.05 }
+      );
+    }
+
     return {
       root,
       bodyPivot,
@@ -825,30 +859,42 @@
   const CRATE_H = 0.20;
   const CRATE_D = 0.62;
 
-  function createResourceCrate(type = "starlight_crystal") {
+  function createResourceCrate(type = "blue_ore") {
     const g = new THREE.Group();
     g.userData.itemType = type;
 
-    if (type === "mana_gem") {
-      // Compact currency gem/gold-trimmed brick (stacks in 3x3 skyscraper pedestal)
+    if (type === "mana_gem" || type === "cash_bundle") {
+      // Crisp 100% Green Cash Bill Bundle (초록 지폐 다발)
       addOutlinedMesh(
         g,
-        cachedGeo("gem_brick_body", () => new THREE.BoxGeometry(0.44, 0.13, 0.32)),
-        makeToonMat(0x2fd8ff, { emissive: 0x16a3ff, emissiveIntensity: 0.32 }),
+        cachedGeo("cash_bundle_body", () => new THREE.BoxGeometry(0.48, 0.13, 0.28)),
+        makeToonMat(0x2ecc71, { emissive: 0x1e9e53, emissiveIntensity: 0.26 }),
         { pos: [0, 0.065, 0], castShadow: false, receiveShadow: false, outlineScale: 1.07 }
       );
       addOutlinedMesh(
         g,
-        cachedGeo("gem_brick_band", () => new THREE.BoxGeometry(0.14, 0.145, 0.34)),
-        makeToonMat(0xffe15a, { emissive: 0xffb824, emissiveIntensity: 0.25 }),
+        cachedGeo("cash_bundle_top", () => new THREE.BoxGeometry(0.42, 0.025, 0.22)),
+        makeToonMat(0x7af5a8, { emissive: 0x3ad97b, emissiveIntensity: 0.2 }),
+        { pos: [0, 0.132, 0], castShadow: false, receiveShadow: false, outline: false }
+      );
+      addOutlinedMesh(
+        g,
+        cachedGeo("cash_bundle_band", () => new THREE.BoxGeometry(0.12, 0.145, 0.30)),
+        makeToonMat(0xfff1a8, { emissive: 0xf7d046, emissiveIntensity: 0.2 }),
         { pos: [0, 0.068, 0], castShadow: false, receiveShadow: false, outline: false }
       );
       return g;
     }
 
+    const isElixir = type === "royal_elixir" || type === "elixir_5x";
+    const isCutGem = type === "cut_gem" || type === "cut_gem_3x";
+    const isOre = type === "blue_ore" || type === "starlight_crystal";
+    const isHerb = type === "rainbow_herb" || type === "rainbow_berry";
+    const isPotion = type === "magic_potion" || type === "potion_2x";
+
     // Wide wooden crate base + raised edge trim (0.95 x 0.20 x 0.62)
-    const matWoodBase = makeToonMat(type === "elixir_5x" ? 0xc28a49 : type === "cut_gem_3x" ? 0x996b47 : 0xb87e48);
-    const matWoodTrim = makeToonMat(type === "elixir_5x" ? 0xf5ca52 : 0x7b4c28);
+    const matWoodBase = makeToonMat(isElixir ? 0xc28a49 : isCutGem ? 0x624a78 : isOre ? 0x6a5547 : 0xb87e48);
+    const matWoodTrim = makeToonMat(isElixir ? 0xf5ca52 : isOre ? 0x4b3c33 : 0x7b4c28);
 
     addOutlinedMesh(
       g,
@@ -883,39 +929,43 @@
     );
 
     // Packed 3D cargo inside the crate by itemType
-    if (type === "starlight_crystal") {
-      const matCrys = makeToonMat(0x52e8ff, { emissive: 0x24bfff, emissiveIntensity: 0.3 });
-      const matCrysHi = makeToonMat(0xb8f9ff, { emissive: 0x62f2ff, emissiveIntensity: 0.35 });
-      const shardGeo = cachedGeo("crate_crystal_shard", () => new THREE.OctahedronGeometry(0.115, 0));
+    if (isOre) {
+      // Cobalt/Sapphire Blue Raw Ore Chunks (푸른 원석)
+      const matOre1 = makeToonMat(0x2c8dff, { emissive: 0x1565d8, emissiveIntensity: 0.28 });
+      const matOre2 = makeToonMat(0x74d2ff, { emissive: 0x35a7ff, emissiveIntensity: 0.34 });
+      const shardGeo = cachedGeo("crate_ore_chunk", () => new THREE.DodecahedronGeometry(0.115, 0));
       for (let i = 0; i < 6; i++) {
         const col = i % 3;
         const row = (i / 3) | 0;
-        const m = new THREE.Mesh(shardGeo, i % 2 === 0 ? matCrys : matCrysHi);
+        const m = new THREE.Mesh(shardGeo, i % 2 === 0 ? matOre1 : matOre2);
         m.position.set(-0.27 + col * 0.27, 0.135, -0.12 + row * 0.24);
-        m.scale.set(1.05, 0.72, 1.05);
+        m.scale.set(1.08, 0.78, 1.05);
         m.rotation.set(0.2 * (row - 0.5), col * 0.6, 0.18 * (col - 1));
         g.add(m);
       }
-    } else if (type === "rainbow_berry") {
-      const matB1 = makeToonMat(0xff5e94, { emissive: 0xd62467, emissiveIntensity: 0.18 });
-      const matB2 = makeToonMat(0xff9f45, { emissive: 0xd96b16, emissiveIntensity: 0.18 });
-      const matLeaf = makeToonMat(0x52c44d);
-      const berryGeo = cachedGeo("crate_berry", () => new THREE.SphereGeometry(0.095, 8, 8));
-      const leafGeo = cachedGeo("crate_leaf", () => new THREE.BoxGeometry(0.09, 0.03, 0.06));
+    } else if (isHerb) {
+      // Vibrant Rainbow Herbs & Mystical Blossoms (무지개 약초)
+      const herbColors = [0x3be36d, 0xff62b8, 0xffcc42, 0x56d8ff, 0xa86bff, 0x62f284];
+      const stemGeo = cachedGeo("crate_herb_stem", () => new THREE.CylinderGeometry(0.04, 0.055, 0.14, 6));
+      const bloomGeo = cachedGeo("crate_herb_bloom", () => new THREE.DodecahedronGeometry(0.075, 0));
+      const matStem = makeToonMat(0x36b554);
       for (let i = 0; i < 6; i++) {
         const col = i % 3;
         const row = (i / 3) | 0;
         const x = -0.26 + col * 0.26;
         const z = -0.11 + row * 0.22;
-        const b = new THREE.Mesh(berryGeo, i % 2 === 0 ? matB1 : matB2);
-        b.position.set(x, 0.13, z);
-        g.add(b);
-        const lf = new THREE.Mesh(leafGeo, matLeaf);
-        lf.position.set(x + 0.03, 0.19, z);
-        lf.rotation.y = i * 0.8;
-        g.add(lf);
+        const st = new THREE.Mesh(stemGeo, matStem);
+        st.position.set(x, 0.13, z);
+        st.rotation.z = (col - 1) * 0.22;
+        g.add(st);
+        const bl = new THREE.Mesh(
+          bloomGeo,
+          makeToonMat(herbColors[i % herbColors.length], { emissive: herbColors[i % herbColors.length], emissiveIntensity: 0.25 })
+        );
+        bl.position.set(x, 0.20, z);
+        g.add(bl);
       }
-    } else if (type === "potion_2x") {
+    } else if (isPotion) {
       const matBottle = makeToonMat(0x3be898, { emissive: 0x16b56d, emissiveIntensity: 0.28 });
       const matCork = makeToonMat(0xffd252);
       const potGeo = cachedGeo("crate_potion_body", () => new THREE.CylinderGeometry(0.075, 0.095, 0.12, 8));
@@ -929,9 +979,9 @@
         cork.position.set(x, 0.195, 0);
         g.add(cork);
       }
-    } else if (type === "cut_gem_3x") {
+    } else if (isCutGem) {
       const matGem1 = makeToonMat(0xc56bff, { emissive: 0x9b36ff, emissiveIntensity: 0.35 });
-      const matGem2 = makeToonMat(0xff7ee6, { emissive: 0xd93abf, emissiveIntensity: 0.35 });
+      const matGem2 = makeToonMat(0x52f2ff, { emissive: 0x1ac7ff, emissiveIntensity: 0.35 });
       const gemGeo = cachedGeo("crate_cut_gem", () => new THREE.ConeGeometry(0.11, 0.13, 6));
       for (let i = 0; i < 4; i++) {
         const x = -0.29 + i * 0.195;
@@ -940,7 +990,7 @@
         g.add(m);
       }
     } else {
-      // elixir_5x: golden-rainbow elixir ampoules
+      // royal_elixir / elixir_5x: golden-rainbow elixir ampoules
       const colors = [0xff5eb8, 0xffd245, 0x52efff, 0xb875ff];
       const ampGeo = cachedGeo("crate_elixir_amp", () => new THREE.CylinderGeometry(0.07, 0.085, 0.135, 8));
       const capGeo = cachedGeo("crate_elixir_cap", () => new THREE.OctahedronGeometry(0.05, 0));
@@ -1305,6 +1355,95 @@
     }
   }
 
+  // ===========================================================================
+  // 7. 3호기 VIP Royal Trade Wagon (황실 무역 마차)
+  // ===========================================================================
+  function createRoyalTradeWagon() {
+    const root = new THREE.Group();
+    root.add(makeShadowCircle(2.0, 0.26));
+
+    const bodyPivot = new THREE.Group();
+    root.add(bodyPivot);
+
+    const matGold = makeToonMat(0xf4c43a, { emissive: 0xb88212, emissiveIntensity: 0.18 });
+    const matBurgundy = makeToonMat(0x8c234b);
+    const matCream = makeToonMat(0xfff4d6);
+    const matWood = makeToonMat(0x784a28);
+    const matTire = makeToonMat(0x2d243b);
+
+    // Ornate golden-trimmed carriage chassis
+    addOutlinedMesh(
+      bodyPivot,
+      cachedGeo("wagon_bed", () => new THREE.BoxGeometry(2.6, 0.28, 1.55)),
+      matWood,
+      { pos: [0, 0.56, 0], outlineScale: 1.04 }
+    );
+    addOutlinedMesh(
+      bodyPivot,
+      cachedGeo("wagon_canopy_arch", () => new THREE.BoxGeometry(1.75, 1.02, 1.46)),
+      matBurgundy,
+      { pos: [-0.28, 1.20, 0], outlineScale: 1.04 }
+    );
+    addOutlinedMesh(
+      bodyPivot,
+      cachedGeo("wagon_gold_roof", () => new THREE.CylinderGeometry(0.76, 0.80, 1.82, 12, 1, false, 0, Math.PI)),
+      matGold,
+      { pos: [-0.28, 1.70, 0], rot: [0, 0, Math.PI * 0.5], outlineScale: 1.04 }
+    );
+    // Front driver box & lanterns
+    addOutlinedMesh(
+      bodyPivot,
+      cachedGeo("wagon_front_cab", () => new THREE.BoxGeometry(0.76, 0.72, 1.32)),
+      matCream,
+      { pos: [0.95, 1.02, 0], outlineScale: 1.04 }
+    );
+    addOutlinedMesh(
+      bodyPivot,
+      cachedGeo("wagon_crown_crest", () => new THREE.OctahedronGeometry(0.24, 0)),
+      makeToonMat(0xffea61, { emissive: 0xffc41a, emissiveIntensity: 0.4 }),
+      { pos: [-0.28, 2.55, 0], outlineScale: 1.06 }
+    );
+
+    const cargoMount = new THREE.Group();
+    cargoMount.position.set(-0.28, 0.74, 0);
+    bodyPivot.add(cargoMount);
+
+    const wheels = [];
+    const wheelGeo = cachedGeo("wagon_wheel", () => new THREE.CylinderGeometry(0.36, 0.36, 0.18, 12));
+    const hubGeo = cachedGeo("wagon_hub", () => new THREE.CylinderGeometry(0.14, 0.14, 0.22, 8));
+    [
+      [-0.86, 0.36, -0.84],
+      [-0.86, 0.36, 0.84],
+      [0.86, 0.36, -0.84],
+      [0.86, 0.36, 0.84],
+    ].forEach(([wx, wy, wz]) => {
+      const wg = new THREE.Group();
+      wg.position.set(wx, wy, wz);
+      const wMesh = new THREE.Mesh(wheelGeo, matTire);
+      wMesh.rotation.x = Math.PI * 0.5;
+      wg.add(wMesh);
+      const hMesh = new THREE.Mesh(hubGeo, matGold);
+      hMesh.rotation.x = Math.PI * 0.5;
+      wg.add(hMesh);
+      root.add(wg);
+      wheels.push(wg);
+    });
+
+    return { root, bodyPivot, cargoMount, wheels, _phase: 0 };
+  }
+
+  function animateRoyalTradeWagon(wagon, speed, dt) {
+    if (!wagon) return;
+    const d = dt || 0.016;
+    wagon._phase = (wagon._phase || 0) + d * Math.max(0.5, speed || 0);
+    for (const w of wagon.wheels || []) {
+      w.rotation.z -= (speed || 0) * d * 2.2;
+    }
+    if (wagon.bodyPivot) {
+      wagon.bodyPivot.position.y = Math.abs(Math.sin(wagon._phase * 6.0)) * ((speed || 0) > 0.2 ? 0.036 : 0.008);
+    }
+  }
+
   window.ChibiCharacters = {
     CRATE_W,
     CRATE_H,
@@ -1323,5 +1462,7 @@
     animateProductionMachine,
     createHarvesterTruck,
     animateHarvesterTruck,
+    createRoyalTradeWagon,
+    animateRoyalTradeWagon,
   };
 })();

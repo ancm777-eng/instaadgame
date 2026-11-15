@@ -1,28 +1,28 @@
 // =============================================================================
-// src/gameplay.js - Pure 3-Stage Fairy Alchemy Tycoon Simulation, Pallets,
-// 3-Machine Production Line, 84 Dense Farm Nodes, 3x3 Gem Skyscraper & Shop
+// src/gameplay.js - 100% Green Cash Economy, Differentiated 1호기·2호기·3호기
+// Production Facilities, VIP Trade Wagon, Smart Worker Division & Over-Head HUD
 // =============================================================================
 
 (function () {
   "use strict";
 
-  const SAVE_KEY = "fairy_alchemy_tycoon_v4";
+  const SAVE_KEY = "fairy_alchemy_tycoon_v5";
 
   const ITEM_META = {
-    starlight_crystal: { label: "별빛 수정", val: 10 },
-    rainbow_berry: { label: "무지개 열매", val: 10 },
-    potion_2x: { label: "황금 포션(2x)", val: 20 },
-    cut_gem_3x: { label: "가공 보석(3x)", val: 30 },
-    elixir_5x: { label: "무지개 엘릭서(5x)", val: 50 },
+    blue_ore: { label: "푸른 광석", short: "광석", icon: "⛏️", val: 10 },
+    rainbow_herb: { label: "무지개 약초", short: "약초", icon: "🌿", val: 10 },
+    cut_gem: { label: "세공 보석", short: "세공보석", icon: "💠", val: 35 },
+    magic_potion: { label: "마법 포션", short: "포션", icon: "🧪", val: 80 },
+    royal_elixir: { label: "황실 엘릭서", short: "엘릭서", icon: "👑", val: 300 },
   };
 
   const UPGRADE_DEFS = {
     tool: {
       id: "tool",
       tab: "wizard",
-      icon: "🪄",
-      title: "수확 속도",
-      desc: "크리스탈·열매 채집 속도와 수확 배율을 높입니다.",
+      icon: "⛏️",
+      title: "채집 곡괭이",
+      desc: "광석·약초 채집 속도와 수확량을 높입니다.",
       accent: "#52efff",
       baseCost: 30,
       mult: 1.85,
@@ -32,8 +32,8 @@
       id: "bag",
       tab: "wizard",
       icon: "🎒",
-      title: "지게 적재",
-      desc: "등 뒤 나무 지게에 쌓이는 상자 최대 수를 늘립니다.",
+      title: "배낭 적재",
+      desc: "등 뒤 나무 지게에 쌓이는 자원 최대 수를 늘립니다.",
       accent: "#ffd24c",
       baseCost: 35,
       mult: 1.8,
@@ -44,7 +44,7 @@
       tab: "wizard",
       icon: "👢",
       title: "신속 부츠",
-      desc: "꼬마 연금술사의 이동 속도를 크게 높입니다.",
+      desc: "연금술사의 이동 속도를 크게 높입니다.",
       accent: "#7effa2",
       baseCost: 40,
       mult: 1.8,
@@ -53,10 +53,10 @@
     m1: {
       id: "m1",
       tab: "automation",
-      icon: "⚗️",
-      title: "1호기 가마솥",
-      desc: "원석/열매 상자를 2배 가치 황금 포션으로 연성합니다.",
-      accent: "#52ff9b",
+      icon: "⚙️",
+      title: "1호기 세공기",
+      desc: "푸른 광석 전용! 세공 보석(💵 35)을 깎아 쇼케이스에 자동 진열합니다.",
+      accent: "#d67aff",
       baseCost: 50,
       mult: 1.9,
       maxLv: 6,
@@ -64,22 +64,22 @@
     m2: {
       id: "m2",
       tab: "automation",
-      icon: "💎",
-      title: "2호기 커팅기",
-      desc: "크리스탈을 3배 가치 빛나는 보석으로 세공합니다.",
-      accent: "#d67aff",
-      baseCost: 180,
+      icon: "⚗️",
+      title: "2호기 가마솥",
+      desc: "남동쪽 '무지개 약초 숲' 해금! 약초 전용 마법 포션(💵 80)을 자동 판매합니다.",
+      accent: "#52ff9b",
+      baseCost: 140,
       mult: 1.9,
       maxLv: 6,
     },
     m3: {
       id: "m3",
       tab: "automation",
-      icon: "🌈",
-      title: "3호기 증류기",
-      desc: "마력 자원을 5배 가치 무지개 엘릭서로 증류합니다.",
-      accent: "#ff78d2",
-      baseCost: 480,
+      icon: "👑",
+      title: "3호기 합체소",
+      desc: "광석+약초 조합! 황실 엘릭서 상자를 VIP 무역 마차에 실어 💵 300 잭팟 판매!",
+      accent: "#ff8c42",
+      baseCost: 380,
       mult: 1.9,
       maxLv: 6,
     },
@@ -88,7 +88,7 @@
       tab: "automation",
       icon: "🧚",
       title: "요정 일꾼",
-      desc: "자동으로 채집하고 설비·판매대에 납품하는 요정(최대 15).",
+      desc: "광석팀·약초팀으로 똑똑하게 분업하는 자동 일꾼(최대 15).",
       accent: "#ff88c2",
       baseCost: 60,
       mult: 1.55,
@@ -99,7 +99,7 @@
       tab: "automation",
       icon: "🚜",
       title: "수확 트럭",
-      desc: "농장을 휩쓸며 대량으로 상자를 수확하는 메가 트럭.",
+      desc: "광산·약초 숲을 휩쓸어 설비에 자동 분배하는 메가 트럭.",
       accent: "#4ce6d8",
       baseCost: 220,
       mult: 1.95,
@@ -108,10 +108,10 @@
     farm2: {
       id: "farm2",
       tab: "automation",
-      icon: "🌿",
-      title: "북동 농장",
-      desc: "24개 고밀도 별빛 수정·열매 농장을 북동 게이트에 해금.",
-      accent: "#6bff9e",
+      icon: "⛏️",
+      title: "북동 광산 확장",
+      desc: "18개 추가 푸른 광석 광맥을 북동 게이트에 해금합니다.",
+      accent: "#59b2ff",
       baseCost: 160,
       mult: 1,
       maxLv: 1,
@@ -119,61 +119,89 @@
     farm3: {
       id: "farm3",
       tab: "automation",
-      icon: "🌺",
-      title: "북서 농장",
-      desc: "24개 최고밀도 마법 농장을 북서 게이트에 해금.",
-      accent: "#c985ff",
-      baseCost: 360,
+      icon: "🌿",
+      title: "북서 약초 확장",
+      desc: "18개 추가 무지개 약초 정원을 북서 게이트에 해금합니다.",
+      accent: "#6bff9e",
+      baseCost: 340,
       mult: 1,
       maxLv: 1,
     },
   };
 
+  // Strict Differentiated Layout for 1호기, 2호기, 3호기
   const MACHINE_CONFIGS = [
     {
       id: "m1",
       padId: "m1",
-      kind: "cauldron",
-      x: -10.5,
-      z: -12.8,
-      inPos: { x: -13.6, z: -11.4 },
-      outPos: { x: -7.4, z: -11.4 },
-      padPos: { x: -10.5, z: -7.4 },
-      outputType: "potion_2x",
-      baseCraftTime: 1.55,
-      accent: "#52ff9b",
+      kind: "cutter",
+      title: "1호기 세공기",
+      x: -11.0,
+      z: -11.8,
+      inPos: { x: -14.2, z: -11.4 },
+      outPos: { x: -7.6, z: -11.4 }, // Connected Jewel Showcase
+      cashPos: { x: -7.6, z: -8.5 },
+      padPos: { x: -11.0, z: -7.4 },
+      inputType: "blue_ore",
+      inBadge: "광석 IN",
+      showcaseKind: "jewel",
+      customerRole: "vip",
+      custQueueX: -5.3,
+      custQueueZ0: -11.4,
+      outputType: "cut_gem",
+      salePrice: 35,
+      baseCraftTime: 1.5,
+      accent: "#d67aff",
     },
     {
       id: "m2",
       padId: "m2",
-      kind: "cutter",
+      kind: "cauldron",
+      title: "2호기 가마솥",
       x: 0.0,
-      z: -12.8,
-      inPos: { x: -3.1, z: -11.4 },
-      outPos: { x: 3.1, z: -11.4 },
+      z: -11.8,
+      inPos: { x: -3.2, z: -11.4 },
+      outPos: { x: 3.2, z: -11.4 }, // Connected Potion Stand
+      cashPos: { x: 3.2, z: -8.5 },
       padPos: { x: 0.0, z: -7.4 },
-      outputType: "cut_gem_3x",
-      baseCraftTime: 1.85,
-      accent: "#d67aff",
+      inputType: "rainbow_herb",
+      inBadge: "약초 IN",
+      showcaseKind: "potion",
+      customerRole: "wizard",
+      custQueueX: 5.4,
+      custQueueZ0: -11.4,
+      outputType: "magic_potion",
+      salePrice: 80,
+      baseCraftTime: 1.75,
+      accent: "#52ff9b",
     },
     {
       id: "m3",
       padId: "m3",
       kind: "distillery",
-      x: 10.5,
-      z: -12.8,
-      inPos: { x: 7.4, z: -11.4 },
-      outPos: { x: 13.6, z: -11.4 },
-      padPos: { x: 10.5, z: -7.4 },
-      outputType: "elixir_5x",
-      baseCraftTime: 2.15,
-      accent: "#ff78d2",
+      title: "3호기 합체소",
+      x: 11.0,
+      z: -11.8,
+      inPos: { x: 7.6, z: -12.3 }, // Ore IN
+      inPosB: { x: 7.6, z: -9.9 }, // Herb IN
+      outPos: { x: 14.2, z: -11.4 }, // Royal Trade Wagon Loading Dock
+      cashPos: { x: 14.2, z: -8.5 },
+      padPos: { x: 11.0, z: -7.4 },
+      inputType: "blue_ore",
+      inputTypeB: "rainbow_herb",
+      inBadge: "광석 IN",
+      inBadgeB: "약초 IN",
+      outputType: "royal_elixir",
+      salePrice: 300,
+      baseCraftTime: 2.0,
+      accent: "#ff8c42",
     },
   ];
 
-  const STALL_POS = { x: -14.2, z: 2.2 };
-  const SELL_PALLET_POS = { x: -9.8, z: 2.4 };
-  const GEM_PEDESTAL_POS = { x: -9.8, z: -2.2 };
+  // Starter Station (West Market Plaza)
+  const STALL_POS = { x: -15.2, z: 5.2 };
+  const SELL_PALLET_POS = { x: -10.2, z: 5.2 };
+  const GEM_PEDESTAL_POS = { x: -10.2, z: 1.6 }; // Starter Cash Pedestal
 
   // ---------------------------------------------------------------------------
   // State & Runtime Containers
@@ -182,7 +210,7 @@
 
   function createDefaultState() {
     return {
-      gems: 20,
+      gems: 20, // 100% Green Cash (💵)
       totalEarnedGems: 0,
       xp: 0,
       xpMax: 100,
@@ -195,6 +223,7 @@
       m3Lv: 0,
       fairyCount: 0,
       truckLv: 0,
+      herbGroveUnlocked: false, // Unlocked automatically when 2호기 Lv >= 1
       farm2Unlocked: false,
       farm3Unlocked: false,
       muted: false,
@@ -234,13 +263,15 @@
     stepPads: [],
     sellPalletQueue: [],
     sellPalletVisuals: [],
-    pedestalGems: [], // array of brick value/visual items
-    pedestalVisuals: [],
+    pedestals: [], // [0]=Starter, [1]=m1, [2]=m2, [3]=m3 cash pedestals
+    pedestalGems: [], // Legacy alias reference kept synced with Starter pedestal cash array
     flyingBricks: [],
     particles: [],
+    popups: [], // 2D projected floating popups (+1 광석, +💵 10, etc.)
     fairies: [],
-    customers: [],
+    customers: [], // Starter villagers
     truck: null,
+    wagon: null, // 3호기 VIP Royal Trade Wagon
     heroBackVisuals: [],
     sellCooldown: 0,
     gemVacuumCooldown: 0,
@@ -347,7 +378,7 @@
         if (window.Entities && sceneObjs.hero) {
           window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 2)));
         }
-        showToast(`🪄 수확 속도 Lv.${state.toolLv} 달성!`);
+        showToast(`⛏️ 채집 곡괭이 Lv.${state.toolLv} 달성!`);
         break;
       case "bag":
         state.bagLv++;
@@ -360,22 +391,40 @@
       case "m1":
         state.m1Lv++;
         if (runtime.machines[0]) runtime.machines[0].lv = state.m1Lv;
-        showToast(state.m1Lv === 1 ? "⚗️ 1호기 황금 가마솥(2x) 가동 시작!" : `⚗️ 1호기 Lv.${state.m1Lv} 가속!`);
+        refreshFacilityVisibility();
+        showToast(
+          state.m1Lv === 1
+            ? "⚙️ 1호기 크리스탈 세공기 가동! 광석을 넣으면 보석 쇼케이스에 자동 진열됩니다!"
+            : `⚙️ 1호기 세공기 Lv.${state.m1Lv} 가속!`
+        );
         break;
       case "m2":
         state.m2Lv++;
+        state.herbGroveUnlocked = true;
         if (runtime.machines[1]) runtime.machines[1].lv = state.m2Lv;
-        showToast(state.m2Lv === 1 ? "💎 2호기 크리스탈 커팅기(3x) 가동!" : `💎 2호기 Lv.${state.m2Lv} 가속!`);
+        refreshFarmZoneVisibility();
+        refreshFacilityVisibility();
+        showToast(
+          state.m2Lv === 1
+            ? "⚗️ 2호기 포션 가마솥 가동 & 남동쪽 '무지개 약초 숲' 해금!"
+            : `⚗️ 2호기 가마솥 Lv.${state.m2Lv} 가속!`
+        );
         break;
       case "m3":
         state.m3Lv++;
         if (runtime.machines[2]) runtime.machines[2].lv = state.m3Lv;
-        showToast(state.m3Lv === 1 ? "🌈 3호기 무지개 증류기(5x) 가동!" : `🌈 3호기 Lv.${state.m3Lv} 가속!`);
+        refreshFacilityVisibility();
+        ensureWagonSpawned();
+        showToast(
+          state.m3Lv === 1
+            ? "👑 3호기 황실 연금 합체소 & VIP 무역 마차 개통! (광석+약초=💵 300)"
+            : `👑 3호기 합체소 Lv.${state.m3Lv} 가속!`
+        );
         break;
       case "fairy":
         state.fairyCount++;
         syncFairiesCount();
-        showToast(`🧚 요정 일꾼 ${state.fairyCount}호 합류!`);
+        showToast(`🧚 요정 일꾼 ${state.fairyCount}호 합류! (광석·약초 스마트 분업)`);
         break;
       case "truck":
         state.truckLv++;
@@ -385,12 +434,13 @@
       case "farm2":
         state.farm2Unlocked = true;
         refreshFarmZoneVisibility();
-        showToast("🌿 북동 게이트 24노드 농장 해금!");
+        showToast("⛏️ 북동 게이트 추가 광석 광맥 18노드 해금!");
         break;
       case "farm3":
         state.farm3Unlocked = true;
+        state.herbGroveUnlocked = true;
         refreshFarmZoneVisibility();
-        showToast("🌺 북서 게이트 24노드 농장 해금!");
+        showToast("🌿 북서 게이트 추가 무지개 약초 정원 18노드 해금!");
         break;
       default:
         break;
@@ -398,7 +448,7 @@
     state.padPaid[id] = 0;
     addXp(25);
     playBuildPop();
-    spawnBurstVfx(player.x, 1.0, player.z, 0x62ffaa, 12);
+    spawnBurstVfx(player.x, 1.0, player.z, 0x4eff9e, 12);
     saveGame();
     if (runtime.shopOpen) renderShop();
   }
@@ -434,7 +484,7 @@
       state.xp -= state.xpMax;
       state.level++;
       state.xpMax = Math.round(state.xpMax * 1.35);
-      showToast(`✨ 연금술사 Lv.${state.level} 달성!`);
+      showToast(`✨ 연금술사 Lv.${state.level} 레벨업!`);
     }
   }
 
@@ -450,65 +500,72 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Pooled 3D Wide Crate Stacking (Backpacks, Pallets, 3x3 Gem Skyscraper)
+  // Crate Stacking, Cash Pedestals & World Popups
   // ---------------------------------------------------------------------------
   function syncCrateStackVisuals(anchor, itemList, poolList, opts = {}) {
     if (!anchor || !window.Entities) return;
     const cols = opts.cols || 1;
-    const xStep = opts.xStep || 1.02;
-    const zStep = opts.zStep || 0.72;
+    const rows = opts.rows || 1;
+    const maxDraw = opts.maxDraw || 32;
     const yStep = opts.yStep || 0.21;
-    const maxDraw = opts.maxDraw || 40;
-    const drawCount = Math.min(itemList.length, maxDraw);
+    const xStep = opts.xStep || 1.0;
+    const zStep = opts.zStep || 0.7;
 
-    while (poolList.length < drawCount) {
-      const idx = poolList.length;
-      const type = itemList[idx];
-      const mesh = window.Entities.createItemBlock(type);
+    const visibleCount = Math.min(itemList.length, maxDraw);
+    while (poolList.length < visibleCount) {
+      const t = itemList[poolList.length] || "blue_ore";
+      const mesh = window.Entities.createItemBlock(t);
       anchor.add(mesh);
-      poolList.push({ mesh, type });
+      poolList.push(mesh);
     }
-    while (poolList.length > drawCount) {
-      const popped = poolList.pop();
-      anchor.remove(popped.mesh);
+    while (poolList.length > visibleCount) {
+      const m = poolList.pop();
+      anchor.remove(m);
     }
 
-    for (let i = 0; i < drawCount; i++) {
-      const entry = poolList[i];
-      const desiredType = itemList[i];
-      if (entry.type !== desiredType) {
-        anchor.remove(entry.mesh);
-        entry.mesh = window.Entities.createItemBlock(desiredType);
-        entry.type = desiredType;
-        anchor.add(entry.mesh);
+    for (let i = 0; i < visibleCount; i++) {
+      const wantType = itemList[i];
+      if (poolList[i].userData.itemType !== wantType) {
+        anchor.remove(poolList[i]);
+        const fresh = window.Entities.createItemBlock(wantType);
+        anchor.add(fresh);
+        poolList[i] = fresh;
       }
-      if (cols <= 1) {
-        // Neat Hero Backpack Column (stacks up cleanly, 2nd column after 18)
-        const col = Math.floor(i / 18);
-        const layer = i % 18;
-        entry.mesh.position.set(col * 0.98, layer * yStep, 0);
+
+      if (cols === 1 && rows === 1) {
+        poolList[i].position.set(0, i * yStep, 0);
       } else {
-        const slot = i % (cols * (opts.rows || 2));
-        const layer = Math.floor(i / (cols * (opts.rows || 2)));
-        const cx = slot % cols;
-        const cz = Math.floor(slot / cols);
-        entry.mesh.position.set(
-          (cx - (cols - 1) * 0.5) * xStep,
-          layer * yStep,
-          (cz - ((opts.rows || 2) - 1) * 0.5) * zStep
-        );
+        const perLayer = cols * rows;
+        const slot = i % perLayer;
+        const layer = Math.floor(i / perLayer);
+        const cx = (slot % cols) - (cols - 1) * 0.5;
+        const cz = Math.floor(slot / cols) - (rows - 1) * 0.5;
+        poolList[i].position.set(cx * xStep, layer * yStep, cz * zStep);
       }
     }
   }
 
-  function syncGemPedestalVisuals() {
-    const anchor = sceneObjs.gemPedestal && sceneObjs.gemPedestal.stackAnchor;
-    if (!anchor || !window.Entities) return;
-    const total = Math.min(runtime.pedestalGems.length, 108);
-    const pool = runtime.pedestalVisuals;
+  function addCashToPedestal(pedestalIdx, totalAmount) {
+    const ped = runtime.pedestals[pedestalIdx];
+    if (!ped) return;
+    // Break revenue into clean 💵 10 green cash bundles (+ remainder bill bundle, e.g., 35 -> [10,10,10,5])
+    let rem = Math.max(1, Math.round(totalAmount));
+    while (rem > 0) {
+      const chunk = rem >= 10 ? 10 : rem;
+      ped.cashValues.push(chunk);
+      rem -= chunk;
+    }
+    syncCashPedestalVisuals(ped);
+  }
+
+  function syncCashPedestalVisuals(ped) {
+    if (!ped || !ped.entity || !ped.entity.stackAnchor || !window.Entities) return;
+    const anchor = ped.entity.stackAnchor;
+    const total = Math.min(ped.cashValues.length, 117);
+    const pool = ped.visuals;
 
     while (pool.length < total) {
-      const m = window.Entities.createItemBlock("mana_gem");
+      const m = window.Entities.createItemBlock("cash_bundle");
       anchor.add(m);
       pool.push(m);
     }
@@ -517,7 +574,7 @@
       anchor.remove(m);
     }
 
-    // Strict 3x3 Skyscraper grid
+    // Strict 3x3 Cash Skyscraper Grid
     for (let i = 0; i < total; i++) {
       const slot = i % 9;
       const layer = Math.floor(i / 9);
@@ -531,9 +588,28 @@
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // VFX: Particles & Curved Magnet Arcs
-  // ---------------------------------------------------------------------------
+  function spawnFloatingText(wx, wy, wz, text, color = "#fff6a8") {
+    if (typeof document === "undefined" || !window.Engine || !window.Engine.worldToScreen) return;
+    const layer = document.getElementById("fx-overlay");
+    if (!layer) return;
+
+    const el = document.createElement("div");
+    el.className = "float-popup";
+    el.style.color = color;
+    el.textContent = text;
+    layer.appendChild(el);
+
+    runtime.popups.push({
+      el,
+      wx,
+      wy,
+      wz,
+      offsetY: 0,
+      life: 0,
+      maxLife: 0.85,
+    });
+  }
+
   function spawnBurstVfx(x, y, z, color = 0x5effb8, count = 8) {
     const Engine = window.Engine;
     if (!Engine || !Engine.vfxGroup) return;
@@ -590,9 +666,9 @@
         runtime.particles.splice(i, 1);
         continue;
       }
-      p.vy -= 9.5 * dt;
+      p.vy -= 14.0 * dt;
       p.mesh.position.x += p.vx * dt;
-      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.y = Math.max(0.05, p.mesh.position.y + p.vy * dt);
       p.mesh.position.z += p.vz * dt;
       const s = 1 - p.life / p.maxLife;
       p.mesh.scale.set(s, s, s);
@@ -600,31 +676,45 @@
 
     for (let i = runtime.flyingBricks.length - 1; i >= 0; i--) {
       const f = runtime.flyingBricks[i];
-      f.t += dt / f.dur;
-      if (f.t >= 1) {
+      f.t += dt;
+      const u = Math.min(1, f.t / f.dur);
+      const tx = f.trackPlayer ? player.x : f.tx;
+      const tz = f.trackPlayer ? player.z : f.tz;
+      const ty = f.trackPlayer ? 1.15 : f.ty;
+      const px = f.sx + (tx - f.sx) * u;
+      const pz = f.sz + (tz - f.sz) * u;
+      const arc = Math.sin(u * Math.PI) * 1.45;
+      const py = f.sy + (ty - f.sy) * u + arc;
+      f.mesh.position.set(px, py, pz);
+      f.mesh.rotation.y += dt * 7;
+      if (u >= 1) {
         if (Engine && Engine.vfxGroup) Engine.vfxGroup.remove(f.mesh);
-        const cb = f.onArrive;
         runtime.flyingBricks.splice(i, 1);
-        if (cb) cb();
+        if (f.onArrive) f.onArrive();
+      }
+    }
+
+    // 2D World-Projected Floating Popups
+    for (let i = runtime.popups.length - 1; i >= 0; i--) {
+      const pop = runtime.popups[i];
+      pop.life += dt;
+      if (pop.life >= pop.maxLife) {
+        if (pop.el && pop.el.parentNode) pop.el.parentNode.removeChild(pop.el);
+        runtime.popups.splice(i, 1);
         continue;
       }
-      const p = f.t;
-      const arc = Math.sin(p * Math.PI) * 1.45;
-      // Track player dynamically if target is gem vacuum
-      const tx = f.trackPlayer ? player.x : f.tx;
-      const ty = f.trackPlayer ? 1.15 : f.ty;
-      const tz = f.trackPlayer ? player.z : f.tz;
-      f.mesh.position.set(
-        f.sx + (tx - f.sx) * p,
-        f.sy + (ty - f.sy) * p + arc,
-        f.sz + (tz - f.sz) * p
-      );
-      f.mesh.rotation.y += dt * 9;
+      const pRatio = pop.life / pop.maxLife;
+      pop.offsetY -= 46 * dt;
+      if (Engine && Engine.worldToScreen) {
+        const sp = Engine.worldToScreen(new THREE.Vector3(pop.wx, pop.wy, pop.wz));
+        pop.el.style.transform = `translate(${Math.round(sp.x)}px, ${Math.round(sp.y + pop.offsetY)}px) translate(-50%, -50%)`;
+        pop.el.style.opacity = String(pRatio < 0.7 ? 1 : 1 - (pRatio - 0.7) / 0.3);
+      }
     }
   }
 
   // ---------------------------------------------------------------------------
-  // World Population: 84 Dense Farm Nodes, 3 North Machines, Market & Pads
+  // World Construction (84 Distinct Ore/Herb Nodes, 3 Differentiated Facilities, 4 Cash Pedestals)
   // ---------------------------------------------------------------------------
   function buildDenseFarmNodes() {
     const Engine = window.Engine;
@@ -632,36 +722,51 @@
     if (!Engine || !Entities) return;
 
     const specs = [];
-    // Zone 1: East Gate Dense Farm (6 x 6 = 36 nodes, 2.0m spacing, unlocked)
-    for (let r = 0; r < 6; r++) {
+    // Zone 1: East Gate Blue Ore Mine (6 cols x 4 rows = 24 ore nodes, z in [-9.8..-3.2], unlocked)
+    for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 6; c++) {
         specs.push({
           zone: 1,
-          kind: (r + c) % 2 === 0 ? "crystal" : "berry",
-          x: 23.0 + c * 2.0,
-          z: -5.0 + r * 2.0,
+          kind: "blue_ore",
+          itemType: "blue_ore",
+          x: 22.8 + c * 2.0,
+          z: -9.5 + r * 2.1,
         });
       }
     }
-    // Zone 2: North-East Dense Farm (6 x 4 = 24 nodes, 2.0m spacing)
+    // Zone 2: South-East Rainbow Herb Grove (6 cols x 4 rows = 24 herb nodes, z in [3.2..9.8], unlocked by 2호기!)
     for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 6; c++) {
         specs.push({
           zone: 2,
-          kind: (r + c) % 2 === 0 ? "crystal" : "berry",
-          x: 5.0 + c * 2.0,
-          z: -27.5 + r * 2.0,
+          kind: "rainbow_herb",
+          itemType: "rainbow_herb",
+          x: 22.8 + c * 2.0,
+          z: 3.1 + r * 2.1,
         });
       }
     }
-    // Zone 3: North-West Dense Farm (6 x 4 = 24 nodes, 2.0m spacing)
-    for (let r = 0; r < 4; r++) {
+    // Zone 3: North-East Ore Annex (6 cols x 3 rows = 18 ore nodes, unlocked by farm2 pad)
+    for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 6; c++) {
         specs.push({
           zone: 3,
-          kind: (r + c) % 2 === 0 ? "berry" : "crystal",
+          kind: "blue_ore",
+          itemType: "blue_ore",
+          x: 5.0 + c * 2.0,
+          z: -27.2 + r * 2.2,
+        });
+      }
+    }
+    // Zone 4: North-West Herb Annex (6 cols x 3 rows = 18 herb nodes, unlocked by farm3 pad)
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 6; c++) {
+        specs.push({
+          zone: 4,
+          kind: "rainbow_herb",
+          itemType: "rainbow_herb",
           x: -15.0 + c * 2.0,
-          z: -27.5 + r * 2.0,
+          z: -27.2 + r * 2.2,
         });
       }
     }
@@ -674,7 +779,7 @@
         id: `node_${i}`,
         zone: s.zone,
         kind: s.kind,
-        itemType: s.kind === "crystal" ? "starlight_crystal" : "rainbow_berry",
+        itemType: s.itemType,
         x: s.x,
         z: s.z,
         hp: 2,
@@ -689,16 +794,18 @@
 
   function isZoneUnlocked(zone) {
     if (zone === 1) return true;
-    if (zone === 2) return !!state.farm2Unlocked;
-    if (zone === 3) return !!state.farm3Unlocked;
+    if (zone === 2) return !!state.herbGroveUnlocked || state.m2Lv > 0;
+    if (zone === 3) return !!state.farm2Unlocked;
+    if (zone === 4) return !!state.farm3Unlocked;
     return false;
   }
 
   function refreshFarmZoneVisibility() {
     for (const node of runtime.farmNodes) {
-      const active = isZoneUnlocked(node.zone) && node.respawnTimer <= 0;
+      const unlocked = isZoneUnlocked(node.zone);
+      const active = unlocked && node.respawnTimer <= 0;
       if (node.entity && node.entity.root) {
-        node.entity.root.visible = isZoneUnlocked(node.zone);
+        node.entity.root.visible = unlocked;
         if (!active && node.entity.visualRoot) {
           node.entity.visualRoot.scale.set(0.01, 0.01, 0.01);
         } else if (active && node.entity.visualRoot) {
@@ -708,12 +815,46 @@
     }
   }
 
+  function refreshFacilityVisibility() {
+    for (let i = 0; i < runtime.machines.length; i++) {
+      const m = runtime.machines[i];
+      const built = m.lv > 0;
+      if (m.entity && m.entity.root) {
+        m.entity.root.visible = built;
+      }
+      if (m.showcase && m.showcase.root) {
+        m.showcase.root.visible = built;
+      }
+      if (m.cashPedestal && m.cashPedestal.entity && m.cashPedestal.entity.root) {
+        m.cashPedestal.entity.root.visible = built;
+      }
+      if (m.inPallet && m.inPallet.root) {
+        m.inPallet.root.visible = built;
+      }
+      if (m.inPalletB && m.inPalletB.root) {
+        m.inPalletB.root.visible = built;
+      }
+      if (m.dockPallet && m.dockPallet.root) {
+        m.dockPallet.root.visible = built;
+      }
+      for (const c of m.customers || []) {
+        if (c.entity && c.entity.root) {
+          c.entity.root.visible = built;
+        }
+      }
+    }
+    if (runtime.wagon && runtime.wagon.entity && runtime.wagon.entity.root) {
+      runtime.wagon.entity.root.visible = state.m3Lv > 0;
+    }
+  }
+
   function buildProductionMachines() {
     const Engine = window.Engine;
     const Entities = window.Entities;
     if (!Engine || !Entities) return;
 
-    for (const cfg of MACHINE_CONFIGS) {
+    for (let i = 0; i < MACHINE_CONFIGS.length; i++) {
+      const cfg = MACHINE_CONFIGS[i];
       const ent = Entities.createProductionMachine(cfg.kind);
       ent.root.position.set(cfg.x, 0, cfg.z);
       Engine.stationGroup.add(ent.root);
@@ -721,36 +862,104 @@
       const inPallet = Entities.createWoodenPalletZone({
         x: cfg.inPos.x,
         z: cfg.inPos.z,
-        w: 2.35,
-        d: 1.95,
+        w: 2.25,
+        d: 1.85,
         accentColor: "#5ef0ff",
-        badgeText: "IN",
+        badgeText: cfg.inBadge,
       });
       Engine.stationGroup.add(inPallet.root);
 
-      const outPallet = Entities.createWoodenPalletZone({
-        x: cfg.outPos.x,
-        z: cfg.outPos.z,
-        w: 2.35,
-        d: 1.95,
-        accentColor: "#ffd85e",
-        badgeText: "OUT",
-      });
-      Engine.stationGroup.add(outPallet.root);
+      let inPalletB = null;
+      if (cfg.inPosB) {
+        inPalletB = Entities.createWoodenPalletZone({
+          x: cfg.inPosB.x,
+          z: cfg.inPosB.z,
+          w: 2.25,
+          d: 1.85,
+          accentColor: "#6bff9e",
+          badgeText: cfg.inBadgeB,
+        });
+        Engine.stationGroup.add(inPalletB.root);
+      }
+
+      let showcase = null;
+      let dockPallet = null;
+      const facilityCustomers = [];
+
+      if (cfg.showcaseKind) {
+        // 1호기 Jewel Showcase & 2호기 Potion Stand (auto-stocked from conveyor!)
+        showcase = Entities.createShowcaseCounter({
+          x: cfg.outPos.x,
+          z: cfg.outPos.z,
+          kind: cfg.showcaseKind,
+          accentColor: cfg.id === "m1" ? 0xc56bff : 0x3be898,
+        });
+        Engine.stationGroup.add(showcase.root);
+
+        for (let ci = 0; ci < 3; ci++) {
+          const cz = cfg.custQueueZ0 + ci * 1.35;
+          const custEnt = Entities.createCustomer(ci + (cfg.id === "m2" ? 2 : 0), cfg.customerRole);
+          custEnt.root.position.set(cfg.custQueueX, 0, cz);
+          custEnt.root.rotation.y = -Math.PI * 0.5;
+          Engine.unitGroup.add(custEnt.root);
+          facilityCustomers.push({
+            slot: ci,
+            x: cfg.custQueueX,
+            z: cz,
+            targetX: cfg.custQueueX,
+            targetZ: cz,
+            homeX: cfg.custQueueX,
+            leaving: false,
+            entity: custEnt,
+          });
+        }
+      } else {
+        // 3호기 Royal Loading Dock Pallet for VIP Trade Wagon
+        dockPallet = Entities.createWoodenPalletZone({
+          x: cfg.outPos.x,
+          z: cfg.outPos.z,
+          w: 2.35,
+          d: 1.95,
+          accentColor: "#ffd85e",
+          badgeText: "VIP 적재",
+        });
+        Engine.stationGroup.add(dockPallet.root);
+      }
+
+      // Dedicated Green Cash Pedestal per facility (indices 1, 2, 3)
+      const pedEnt = Entities.createGemPedestal(cfg.cashPos.x, cfg.cashPos.z);
+      Engine.stationGroup.add(pedEnt.root);
+      const pedObj = {
+        id: cfg.id,
+        x: cfg.cashPos.x,
+        z: cfg.cashPos.z,
+        cashValues: [],
+        visuals: [],
+        entity: pedEnt,
+      };
+      runtime.pedestals.push(pedObj);
 
       runtime.machines.push({
         cfg,
         lv: getUpgradeLevel(cfg.id),
         entity: ent,
         inPallet,
-        outPallet,
+        inPalletB,
+        showcase,
+        dockPallet,
+        cashPedestal: pedObj,
+        customers: facilityCustomers,
         inQueue: [],
         inVisuals: [],
+        inQueueB: [],
+        inVisualsB: [],
         outQueue: [],
         outVisuals: [],
         craftProgress: 0,
+        saleCooldown: 0,
       });
     }
+    refreshFacilityVisibility();
   }
 
   function buildMarketAndQueue() {
@@ -764,28 +973,39 @@
     sceneObjs.sellPallet = Entities.createWoodenPalletZone({
       x: SELL_PALLET_POS.x,
       z: SELL_PALLET_POS.z,
-      w: 2.75,
-      d: 2.25,
-      accentColor: "#58ff9c",
-      badgeText: "SELL",
+      w: 2.65,
+      d: 2.15,
+      accentColor: "#58b8ff",
+      badgeText: "광석 판매",
     });
     Engine.stationGroup.add(sceneObjs.sellPallet.root);
 
     sceneObjs.gemPedestal = Entities.createGemPedestal(GEM_PEDESTAL_POS.x, GEM_PEDESTAL_POS.z);
     Engine.stationGroup.add(sceneObjs.gemPedestal.root);
 
-    // 5 cute Animal-Hood Villager Customers lined up at West Market Plaza
+    // Index 0 = Starter Cash Pedestal (unshift so index 0 is always Starter, 1..3 are m1..m3)
+    const starterPed = {
+      id: "starter",
+      x: GEM_PEDESTAL_POS.x,
+      z: GEM_PEDESTAL_POS.z,
+      cashValues: runtime.pedestalGems,
+      visuals: [],
+      entity: sceneObjs.gemPedestal,
+    };
+    runtime.pedestals.unshift(starterPed);
+
+    // 5 cute Villager Customers at Starter Raw Ore Stall
     for (let i = 0; i < 5; i++) {
-      const custEnt = Entities.createCustomer(i);
-      const slotZ = 5.0 + i * 1.9;
-      custEnt.root.position.set(STALL_POS.x + 0.4, 0, slotZ);
+      const custEnt = Entities.createCustomer(i, "villager");
+      const slotZ = STALL_POS.z + 2.3 + i * 1.65;
+      custEnt.root.position.set(STALL_POS.x + 0.3, 0, slotZ);
       custEnt.root.rotation.y = Math.PI;
       Engine.unitGroup.add(custEnt.root);
       runtime.customers.push({
         slot: i,
-        x: STALL_POS.x + 0.4,
+        x: STALL_POS.x + 0.3,
         z: slotZ,
-        targetX: STALL_POS.x + 0.4,
+        targetX: STALL_POS.x + 0.3,
         targetZ: slotZ,
         leaving: false,
         entity: custEnt,
@@ -807,8 +1027,8 @@
       { id: "m1", x: MACHINE_CONFIGS[0].padPos.x, z: MACHINE_CONFIGS[0].padPos.z },
       { id: "m2", x: MACHINE_CONFIGS[1].padPos.x, z: MACHINE_CONFIGS[1].padPos.z },
       { id: "m3", x: MACHINE_CONFIGS[2].padPos.x, z: MACHINE_CONFIGS[2].padPos.z },
-      { id: "farm2", x: 8.0, z: -14.2 },
-      { id: "farm3", x: -8.0, z: -14.2 },
+      { id: "farm2", x: 6.6, z: -15.2 },
+      { id: "farm3", x: -6.6, z: -15.2 },
     ];
 
     for (const p of padCoords) {
@@ -821,7 +1041,7 @@
         d: 2.55,
         icon: def.icon,
         title: def.title,
-        price: `💎 ${getUpgradeCost(p.id)}`,
+        price: `💵 ${getUpgradeCost(p.id)}`,
         levelText: `Lv.${getUpgradeLevel(p.id)}`,
         accentHex: def.accent,
         paidRatio: 0,
@@ -853,6 +1073,7 @@
       Engine.unitGroup.add(ent.root);
       runtime.fairies.push({
         idx,
+        role: idx % 2 === 0 ? "ore" : "herb",
         x: sx,
         z: sz,
         bag: [],
@@ -899,11 +1120,35 @@
     }
   }
 
+  function ensureWagonSpawned() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities || typeof Entities.createRoyalTradeWagon !== "function") return;
+
+    if (!runtime.wagon) {
+      const ent = Entities.createRoyalTradeWagon();
+      ent.root.position.set(29.0, 0, -14.2);
+      ent.root.rotation.y = Math.PI;
+      Engine.unitGroup.add(ent.root);
+      runtime.wagon = {
+        x: 29.0,
+        z: -14.2,
+        rotY: Math.PI,
+        state: "waiting_east", // waiting_east -> arriving -> loading -> departing
+        timer: 2.5,
+        cargoCount: 0,
+        cargoVisuals: [],
+        entity: ent,
+      };
+    }
+    runtime.wagon.entity.root.visible = state.m3Lv > 0;
+  }
+
   // ---------------------------------------------------------------------------
   // Simulation Steps
   // ---------------------------------------------------------------------------
   function resolveWorldBoundsAndCollisions(obj, radius = 0.65) {
-    const inEastGate = obj.x > 17.5 && Math.abs(obj.z) < 4.0;
+    const inEastGate = obj.x > 17.5 && Math.abs(obj.z) < 4.5;
     const inEastFarm = obj.x >= 18.6;
     const inNeGate = state.farm2Unlocked && obj.z < -15.5 && obj.x >= 5.2 && obj.x <= 10.8;
     const inNeFarm = state.farm2Unlocked && obj.z <= -17.0 && obj.x >= 2.2 && obj.x <= 18.2;
@@ -915,10 +1160,11 @@
       obj.z = Math.max(inNeGate || inNwGate ? -29.8 : -16.2, Math.min(16.2, obj.z));
     } else if (inEastFarm) {
       obj.x = Math.max(18.0, Math.min(35.2, obj.x));
-      if (obj.x < 19.6) {
-        obj.z = Math.max(-3.8, Math.min(3.8, obj.z));
+      const herbOk = isZoneUnlocked(2);
+      if (obj.x < 19.8) {
+        obj.z = Math.max(-4.2, Math.min(4.2, obj.z));
       } else {
-        obj.z = Math.max(-13.0, Math.min(13.0, obj.z));
+        obj.z = Math.max(-11.8, Math.min(herbOk ? 11.8 : 0.2, obj.z));
       }
     } else if (inNeFarm) {
       obj.z = Math.max(-29.8, Math.min(-16.0, obj.z));
@@ -936,12 +1182,16 @@
       }
     }
 
-    // Solid obstacle pushouts (Sales Stall & 3 North Machine Cores)
+    // Solid obstacle pushouts (Starter Stall & Built North Machine Cores/Showcases)
     const boxes = [
       { cx: STALL_POS.x, cz: STALL_POS.z, hw: 1.75 + radius, hd: 1.05 + radius },
     ];
-    for (const cfg of MACHINE_CONFIGS) {
-      boxes.push({ cx: cfg.x, cz: cfg.z, hw: 1.35 + radius, hd: 1.15 + radius });
+    for (const m of runtime.machines) {
+      if (m.lv <= 0) continue;
+      boxes.push({ cx: m.cfg.x, cz: m.cfg.z, hw: 1.35 + radius, hd: 1.15 + radius });
+      if (m.cfg.showcaseKind) {
+        boxes.push({ cx: m.cfg.outPos.x, cz: m.cfg.outPos.z, hw: 1.3 + radius, hd: 0.95 + radius });
+      }
     }
     for (const b of boxes) {
       const dx = obj.x - b.cx;
@@ -959,80 +1209,78 @@
   }
 
   function updatePlayerMovement(dt) {
-    let moveX = 0;
-    let moveZ = 0;
-    if (input.keys.has("KeyW") || input.keys.has("ArrowUp")) moveZ -= 1;
-    if (input.keys.has("KeyS") || input.keys.has("ArrowDown")) moveZ += 1;
-    if (input.keys.has("KeyA") || input.keys.has("ArrowLeft")) moveX -= 1;
-    if (input.keys.has("KeyD") || input.keys.has("ArrowRight")) moveX += 1;
+    let ix = input.joyActive ? input.joyX : 0;
+    let iz = input.joyActive ? input.joyY : 0;
 
-    if (input.joyActive) {
-      moveX += input.joyX;
-      moveZ += input.joyY;
+    if (input.keys.has("KeyW") || input.keys.has("ArrowUp")) iz -= 1;
+    if (input.keys.has("KeyS") || input.keys.has("ArrowDown")) iz += 1;
+    if (input.keys.has("KeyA") || input.keys.has("ArrowLeft")) ix -= 1;
+    if (input.keys.has("KeyD") || input.keys.has("ArrowRight")) ix += 1;
+
+    const len = Math.hypot(ix, iz);
+    if (len > 1) {
+      ix /= len;
+      iz /= len;
     }
 
-    const len = Math.hypot(moveX, moveZ);
     const maxSpd = getHeroMoveSpeed();
-    if (len > 0.08) {
-      const nx = moveX / Math.max(1, len);
-      const nz = moveZ / Math.max(1, len);
-      player.vx = nx * maxSpd;
-      player.vz = nz * maxSpd;
-    } else {
-      const damp = Math.exp(-14 * dt);
-      player.vx *= damp;
-      player.vz *= damp;
-      if (Math.hypot(player.vx, player.vz) < 0.05) {
-        player.vx = 0;
-        player.vz = 0;
-      }
-    }
+    const targetVx = ix * maxSpd;
+    const targetVz = iz * maxSpd;
+    const smooth = 1 - Math.exp(-16 * dt);
+    player.vx += (targetVx - player.vx) * smooth;
+    player.vz += (targetVz - player.vz) * smooth;
 
     player.x += player.vx * dt;
     player.z += player.vz * dt;
-    resolveWorldBoundsAndCollisions(player, 0.58);
+    resolveWorldBoundsAndCollisions(player, 0.65);
 
-    const speed = Math.hypot(player.vx, player.vz);
-    if (speed > 0.35) {
-      player.walkPhase += dt * (4.8 + speed * 0.85);
+    const speedNow = Math.hypot(player.vx, player.vz);
+    if (speedNow > 0.35) {
       const desiredRot = Math.atan2(player.vx, player.vz);
       let diff = desiredRot - player.rotY;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      player.rotY += diff * Math.min(1, dt * 14);
+      player.rotY += diff * (1 - Math.exp(-14 * dt));
     }
 
-    if (player.swingTimer > 0) player.swingTimer = Math.max(0, player.swingTimer - dt);
+    if (player.swingTimer > 0) {
+      player.swingTimer = Math.max(0, player.swingTimer - dt);
+    }
 
-    const hero = sceneObjs.hero;
-    if (hero && hero.root) {
-      hero.root.position.set(player.x, 0, player.z);
-      hero.root.rotation.y = player.rotY;
-      window.Entities.animatePlayerHero(hero, {
-        speed,
-        walkPhase: player.walkPhase,
-        swingTimer: player.swingTimer,
-        swingDuration: player.swingDuration,
-        time: runtime.time,
-      }, dt);
-
-      // Gentle stack sway on hero backpack crates
-      if (hero.backStackAnchor) {
-        hero.backStackAnchor.rotation.z = Math.sin(player.walkPhase) * 0.035 * Math.min(1, speed / 7);
-        hero.backStackAnchor.rotation.x = -0.05 * Math.min(1, speed / 7);
-      }
+    if (sceneObjs.hero && window.Entities) {
+      sceneObjs.hero.root.position.set(player.x, 0, player.z);
+      sceneObjs.hero.root.rotation.y = player.rotY;
+      window.Entities.animatePlayerHero(sceneObjs.hero, {
+        vx: player.vx,
+        vz: player.vz,
+        moveSpeed: maxSpd,
+        swingProgress: player.swingTimer > 0 ? 1 - player.swingTimer / player.swingDuration : 0,
+        bagCount: player.bagItems.length,
+        dt,
+      });
     }
   }
 
-  function harvestNode(node, amount, toBag, xOrig, zOrig) {
+  function harvestNode(node, amount, toBag, xOrig, zOrig, showPopup = false) {
     node.hp -= 1;
     node.hitAnim = 0.22;
-    spawnBurstVfx(node.x, 0.8, node.z, node.kind === "crystal" ? 0x52efff : 0xff709e, 5);
+    const isOre = node.itemType === "blue_ore";
+    spawnBurstVfx(node.x, 0.8, node.z, isOre ? 0x3b9eff : 0x52eb7d, 5);
     if (node.hp <= 0) {
       node.respawnTimer = 4.2;
       if (node.entity && node.entity.visualRoot) {
         node.entity.visualRoot.scale.set(0.01, 0.01, 0.01);
       }
+    }
+    if (showPopup && amount > 0) {
+      const meta = ITEM_META[node.itemType] || { icon: "📦", short: "자원" };
+      spawnFloatingText(
+        node.x,
+        1.75,
+        node.z,
+        `+${amount} ${meta.icon} ${meta.short}`,
+        isOre ? "#7be3ff" : "#80ff9e"
+      );
     }
     for (let i = 0; i < amount; i++) {
       spawnFlyingItem(node.itemType, node.x, 0.85, node.z, xOrig, 1.3, zOrig, () => {
@@ -1042,7 +1290,6 @@
   }
 
   function updateNodesAndHeroHarvest(dt) {
-    // Respawn & hit wobble animation across all 84 nodes
     for (const node of runtime.farmNodes) {
       if (!isZoneUnlocked(node.zone)) continue;
       if (node.respawnTimer > 0) {
@@ -1063,7 +1310,6 @@
       }
     }
 
-    // Player auto-swing harvest
     if (player.harvestCooldown > 0) player.harvestCooldown -= dt;
     const bagCap = getHeroBagCap();
     if (player.harvestCooldown <= 0 && player.bagItems.length < bagCap) {
@@ -1082,104 +1328,120 @@
         player.harvestCooldown = getHeroHarvestInterval();
         const space = bagCap - player.bagItems.length;
         const yieldCount = Math.min(space, getHeroHarvestYield());
-        harvestNode(best, yieldCount, player.bagItems, player.x, player.z);
+        harvestNode(best, yieldCount, player.bagItems, player.x, player.z, true);
         playHarvestChime(player.bagItems.length);
         addXp(3);
       }
     }
   }
 
+  function transferTypedFromBagToQueue(wantedType, toX, toZ, targetQueue, maxQueueLen) {
+    if (targetQueue.length >= maxQueueLen) return false;
+    const idx = player.bagItems.indexOf(wantedType);
+    if (idx === -1) return false;
+    const item = player.bagItems.splice(idx, 1)[0];
+    player.transferCooldown = 0.05;
+    spawnFlyingItem(item, player.x, 1.3, player.z, toX, 0.35, toZ, () => {
+      targetQueue.push(item);
+    });
+    playTone(460, 0.05, "sine", 0.04);
+    return true;
+  }
+
   function updatePalletsAndHeroTransfers(dt) {
     if (player.transferCooldown > 0) player.transferCooldown -= dt;
 
-    // 1. Machine Input & Output Wooden Pallet Transfers
+    // 1. Differentiated Production Machines (m1 Ore, m2 Herb, m3 Ore+Herb)
     for (const m of runtime.machines) {
+      if (m.lv <= 0) continue;
       let inPulse = 0;
-      let outPulse = 0;
+      let inBPulse = 0;
 
-      // Drop raw crates from Hero back -> Unlocked Machine IN pallet
-      if (m.lv > 0 && Math.hypot(player.x - m.cfg.inPos.x, player.z - m.cfg.inPos.z) < 2.25) {
+      // Primary Input Pallet
+      if (Math.hypot(player.x - m.cfg.inPos.x, player.z - m.cfg.inPos.z) < 2.25) {
         inPulse = 1;
-        if (player.transferCooldown <= 0 && m.inQueue.length < 24) {
-          const rawIdx = player.bagItems.findIndex(
-            (t) => t === "starlight_crystal" || t === "rainbow_berry"
-          );
-          if (rawIdx !== -1) {
-            const item = player.bagItems.splice(rawIdx, 1)[0];
-            player.transferCooldown = 0.055;
-            spawnFlyingItem(item, player.x, 1.3, player.z, m.cfg.inPos.x, 0.35, m.cfg.inPos.z, () => {
-              m.inQueue.push(item);
-            });
-            playTone(440, 0.05, "sine", 0.04);
-          }
+        if (player.transferCooldown <= 0) {
+          transferTypedFromBagToQueue(m.cfg.inputType, m.cfg.inPos.x, m.cfg.inPos.z, m.inQueue, 24);
         }
       }
 
-      // Pick up crafted crates from Machine OUT pallet -> Hero back
-      const bagCap = getHeroBagCap();
-      if (Math.hypot(player.x - m.cfg.outPos.x, player.z - m.cfg.outPos.z) < 2.25) {
-        outPulse = 1;
-        if (player.transferCooldown <= 0 && m.outQueue.length > 0 && player.bagItems.length < bagCap) {
-          const crafted = m.outQueue.pop();
-          player.transferCooldown = 0.045;
-          spawnFlyingItem(crafted, m.cfg.outPos.x, 0.45, m.cfg.outPos.z, player.x, 1.35, player.z, () => {
-            player.bagItems.push(crafted);
-          });
-          playTone(660, 0.06, "triangle", 0.045);
+      // Secondary Input Pallet (3호기 약초 IN)
+      if (m.inPalletB && m.cfg.inPosB && Math.hypot(player.x - m.cfg.inPosB.x, player.z - m.cfg.inPosB.z) < 2.25) {
+        inBPulse = 1;
+        if (player.transferCooldown <= 0) {
+          transferTypedFromBagToQueue(m.cfg.inputTypeB, m.cfg.inPosB.x, m.cfg.inPosB.z, m.inQueueB, 24);
         }
       }
 
       window.Entities.updateWoodenPalletZone(m.inPallet, inPulse, runtime.time);
-      window.Entities.updateWoodenPalletZone(m.outPallet, outPulse, runtime.time);
+      if (m.inPalletB) {
+        window.Entities.updateWoodenPalletZone(m.inPalletB, inBPulse, runtime.time);
+      }
+      if (m.dockPallet) {
+        window.Entities.updateWoodenPalletZone(m.dockPallet, m.outQueue.length > 0 ? 1 : 0, runtime.time);
+      }
 
-      // Process conveyor & production
-      const isProcessing = m.lv > 0 && m.inQueue.length > 0 && m.outQueue.length < 28;
+      // Processing -> Automatic Conveyor to Showcase / VIP Dock (Zero player carry needed!)
+      const hasInputs = m.cfg.inPosB ? m.inQueue.length > 0 && m.inQueueB.length > 0 : m.inQueue.length > 0;
+      const isProcessing = hasInputs && m.outQueue.length < 24;
       if (isProcessing) {
         const speedMult = 1 + (m.lv - 1) * 0.28;
         m.craftProgress += (dt * speedMult) / m.cfg.baseCraftTime;
         if (m.craftProgress >= 1) {
           m.craftProgress -= 1;
           m.inQueue.shift();
+          if (m.cfg.inPosB) m.inQueueB.shift();
+          // Conveyor delivers directly to Showcase or Loading Dock
           m.outQueue.push(m.cfg.outputType);
-          spawnBurstVfx(m.cfg.outPos.x, 0.55, m.cfg.outPos.z, 0xffe066, 4);
+          spawnBurstVfx(m.cfg.outPos.x, 1.15, m.cfg.outPos.z, 0xffe066, 4);
         }
-      } else if (m.inQueue.length === 0) {
+      } else if (!hasInputs) {
         m.craftProgress = 0;
       }
 
       window.Entities.animateProductionMachine(m.entity, isProcessing, dt);
+
       syncCrateStackVisuals(m.inPallet.stackAnchor, m.inQueue, m.inVisuals, {
         cols: 2,
         rows: 2,
-        xStep: 1.02,
-        zStep: 0.72,
+        xStep: 1.0,
+        zStep: 0.68,
         maxDraw: 24,
       });
-      syncCrateStackVisuals(m.outPallet.stackAnchor, m.outQueue, m.outVisuals, {
-        cols: 2,
-        rows: 2,
-        xStep: 1.02,
-        zStep: 0.72,
-        maxDraw: 28,
-      });
+      if (m.inPalletB) {
+        syncCrateStackVisuals(m.inPalletB.stackAnchor, m.inQueueB, m.inVisualsB, {
+          cols: 2,
+          rows: 2,
+          xStep: 1.0,
+          zStep: 0.68,
+          maxDraw: 24,
+        });
+      }
+      if (m.showcase && m.showcase.stockAnchor) {
+        syncCrateStackVisuals(m.showcase.stockAnchor, m.outQueue, m.outVisuals, {
+          cols: 2,
+          rows: 1,
+          xStep: 1.02,
+          zStep: 0.72,
+          maxDraw: 16,
+        });
+      } else if (m.dockPallet && m.dockPallet.stackAnchor) {
+        syncCrateStackVisuals(m.dockPallet.stackAnchor, m.outQueue, m.outVisuals, {
+          cols: 2,
+          rows: 2,
+          xStep: 1.02,
+          zStep: 0.72,
+          maxDraw: 20,
+        });
+      }
     }
 
-    // 2. Sales Stall SELL Wooden Pallet Drop-Off
+    // 2. Starter Raw Ore Stall SELL Pallet (accepts blue_ore ONLY -> 💵 10 per crate)
     let sellPulse = 0;
     if (Math.hypot(player.x - SELL_PALLET_POS.x, player.z - SELL_PALLET_POS.z) < 2.45) {
       sellPulse = 1;
-      if (player.transferCooldown <= 0 && player.bagItems.length > 0 && runtime.sellPalletQueue.length < 36) {
-        // Prefer selling crafted crates first, otherwise raw harvested crates
-        let idx = player.bagItems.findIndex(
-          (t) => t === "elixir_5x" || t === "cut_gem_3x" || t === "potion_2x"
-        );
-        if (idx === -1) idx = player.bagItems.length - 1;
-        const item = player.bagItems.splice(idx, 1)[0];
-        player.transferCooldown = 0.045;
-        spawnFlyingItem(item, player.x, 1.3, player.z, SELL_PALLET_POS.x, 0.35, SELL_PALLET_POS.z, () => {
-          runtime.sellPalletQueue.push(item);
-        });
-        playTone(540, 0.05, "triangle", 0.04);
+      if (player.transferCooldown <= 0 && runtime.sellPalletQueue.length < 36) {
+        transferTypedFromBagToQueue("blue_ore", SELL_PALLET_POS.x, SELL_PALLET_POS.z, runtime.sellPalletQueue, 36);
       }
     }
     window.Entities.updateWoodenPalletZone(sceneObjs.sellPallet, sellPulse, runtime.time);
@@ -1192,30 +1454,8 @@
     });
   }
 
-  function updateCustomersAndGemTower(dt) {
-    if (runtime.sellCooldown > 0) runtime.sellCooldown -= dt;
-
-    if (runtime.sellCooldown <= 0 && runtime.sellPalletQueue.length > 0) {
-      runtime.sellCooldown = 0.55;
-      const item = runtime.sellPalletQueue.pop();
-      const meta = ITEM_META[item] || { val: 10 };
-      const bricksToSpawn = Math.max(1, Math.round(meta.val / 10));
-      for (let i = 0; i < bricksToSpawn; i++) {
-        runtime.pedestalGems.push(10);
-      }
-      syncGemPedestalVisuals();
-      spawnBurstVfx(STALL_POS.x + 0.5, 1.4, STALL_POS.z + 1.5, 0x52efff, 4);
-
-      // Lead customer walks a cheerful cycle & rotates queue
-      const lead = runtime.customers.find((c) => c.slot === 0 && !c.leaving);
-      if (lead) {
-        lead.leaving = true;
-        lead.targetX = STALL_POS.x - 2.6;
-        lead.targetZ = STALL_POS.z + 12.5;
-      }
-    }
-
-    for (const c of runtime.customers) {
+  function advanceCustomerQueue(custList, dt, homeX, homeZ0, zStep, faceAngle, exitOffsetX, exitZ) {
+    for (const c of custList) {
       const dx = c.targetX - c.x;
       const dz = c.targetZ - c.z;
       const dist = Math.hypot(dx, dz);
@@ -1226,48 +1466,197 @@
         c.z += (dz / dist) * Math.min(dist, spd * dt);
         c.entity.root.rotation.y = Math.atan2(dx, dz);
       } else {
-        c.entity.root.rotation.y = Math.PI;
+        c.entity.root.rotation.y = faceAngle;
         if (c.leaving) {
           c.leaving = false;
-          c.x = STALL_POS.x + 0.4;
-          c.z = STALL_POS.z + 13.5;
-          // Push to back of queue and advance everyone
-          for (const o of runtime.customers) {
+          c.x = homeX;
+          c.z = exitZ;
+          for (const o of custList) {
             if (o !== c && !o.leaving) {
               o.slot = Math.max(0, o.slot - 1);
-              o.targetX = STALL_POS.x + 0.4;
-              o.targetZ = 5.0 + o.slot * 1.9;
+              o.targetX = homeX;
+              o.targetZ = homeZ0 + o.slot * zStep;
             }
           }
-          c.slot = runtime.customers.length - 1;
-          c.targetX = STALL_POS.x + 0.4;
-          c.targetZ = 5.0 + c.slot * 1.9;
+          c.slot = custList.length - 1;
+          c.targetX = homeX;
+          c.targetZ = homeZ0 + c.slot * zStep;
         }
       }
       c.entity.root.position.set(c.x, 0, c.z);
       window.Entities.animateCustomer(c.entity, walking, dt);
     }
+  }
 
-    // 3x3 Tall Mana Gem Skyscraper Rapid Magnet Vacuum (0.025s interval)
+  function updateWagon(dt) {
+    const m3 = runtime.machines[2];
+    const w = runtime.wagon;
+    if (!m3 || m3.lv <= 0 || !w) return;
+
+    const dockStopX = 15.2;
+    const eastParkX = 29.0;
+    let spd = 0;
+
+    if (w.state === "waiting_east") {
+      w.timer -= dt;
+      if (m3.outQueue.length >= 1 || w.timer <= 0) {
+        if (m3.outQueue.length >= 1) {
+          w.state = "arriving";
+        } else {
+          w.timer = 2.0;
+        }
+      }
+    } else if (w.state === "arriving") {
+      spd = 7.2;
+      const dx = dockStopX - w.x;
+      if (Math.abs(dx) <= spd * dt + 0.1) {
+        w.x = dockStopX;
+        w.state = "loading";
+        w.timer = 0.85;
+      } else {
+        w.x += Math.sign(dx) * spd * dt;
+        w.rotY = Math.PI;
+      }
+    } else if (w.state === "loading") {
+      w.timer -= dt;
+      if (m3.outQueue.length > 0 && Math.floor((w.timer + dt) * 6) !== Math.floor(w.timer * 6)) {
+        m3.outQueue.pop();
+        w.cargoCount++;
+        // Burst 💵 300 in 30 cash bundles onto 3호기 Cash Pedestal
+        addCashToPedestal(3, m3.cfg.salePrice);
+        spawnBurstVfx(m3.cfg.cashPos.x, 1.4, m3.cfg.cashPos.z, 0x2ecc71, 10);
+        spawnFloatingText(m3.cfg.cashPos.x, 2.2, m3.cfg.cashPos.z, "+💵 300 👑", "#ffe36e");
+        playGemChime(14);
+      }
+      if (w.timer <= 0 && m3.outQueue.length === 0) {
+        w.state = "departing";
+      } else if (w.timer <= 0 && m3.outQueue.length > 0) {
+        w.timer = 0.35;
+      }
+    } else if (w.state === "departing") {
+      spd = 8.4;
+      const dx = eastParkX - w.x;
+      if (Math.abs(dx) <= spd * dt + 0.1) {
+        w.x = eastParkX;
+        w.cargoCount = 0;
+        w.state = "waiting_east";
+        w.timer = 3.5;
+      } else {
+        w.x += Math.sign(dx) * spd * dt;
+        w.rotY = 0;
+      }
+    }
+
+    w.entity.root.position.set(w.x, 0, w.z);
+    w.entity.root.rotation.y = w.rotY;
+    if (window.Entities.animateRoyalTradeWagon) {
+      window.Entities.animateRoyalTradeWagon(w.entity, spd, dt);
+    }
+    if (w.entity.cargoMount) {
+      const dummyCargo = new Array(Math.min(w.cargoCount, 6)).fill("royal_elixir");
+      syncCrateStackVisuals(w.entity.cargoMount, dummyCargo, w.cargoVisuals, {
+        cols: 1,
+        yStep: 0.21,
+        maxDraw: 6,
+      });
+    }
+  }
+
+  function updateCustomersAndCashPedestals(dt) {
+    // 1. Starter Stall Sales (Villagers buy blue_ore for 💵 10)
+    if (runtime.sellCooldown > 0) runtime.sellCooldown -= dt;
+    if (runtime.sellCooldown <= 0 && runtime.sellPalletQueue.length > 0) {
+      runtime.sellCooldown = 0.55;
+      runtime.sellPalletQueue.pop();
+      addCashToPedestal(0, 10);
+      spawnBurstVfx(STALL_POS.x + 0.5, 1.4, STALL_POS.z + 1.5, 0x2ecc71, 4);
+
+      const lead = runtime.customers.find((c) => c.slot === 0 && !c.leaving);
+      if (lead) {
+        lead.leaving = true;
+        lead.targetX = STALL_POS.x - 2.4;
+        lead.targetZ = STALL_POS.z + 11.5;
+      }
+    }
+    advanceCustomerQueue(
+      runtime.customers,
+      dt,
+      STALL_POS.x + 0.3,
+      STALL_POS.z + 2.3,
+      1.65,
+      Math.PI,
+      -2.4,
+      STALL_POS.z + 11.5
+    );
+
+    // 2. Facility 1 (VIP Showcase 💵 35) & Facility 2 (Wizard Potion Stand 💵 80) Automatic Sales
+    for (let i = 0; i < 2; i++) {
+      const m = runtime.machines[i];
+      if (!m || m.lv <= 0 || !m.showcase) continue;
+      if (m.saleCooldown > 0) m.saleCooldown -= dt;
+      if (m.saleCooldown <= 0 && m.outQueue.length > 0) {
+        m.saleCooldown = 0.65;
+        m.outQueue.pop();
+        addCashToPedestal(i + 1, m.cfg.salePrice);
+        spawnBurstVfx(m.cfg.outPos.x, 1.35, m.cfg.outPos.z, 0x2ecc71, 6);
+
+        const lead = m.customers.find((c) => c.slot === 0 && !c.leaving);
+        if (lead) {
+          lead.leaving = true;
+          lead.targetX = m.cfg.custQueueX + 1.4;
+          lead.targetZ = m.cfg.custQueueZ0 + 6.5;
+        }
+      }
+      advanceCustomerQueue(
+        m.customers,
+        dt,
+        m.cfg.custQueueX,
+        m.cfg.custQueueZ0,
+        1.35,
+        -Math.PI * 0.5,
+        1.4,
+        m.cfg.custQueueZ0 + 6.8
+      );
+    }
+
+    // 3. 3호기 VIP Royal Trade Wagon
+    updateWagon(dt);
+
+    // 4. Rapid Magnet Cash Vacuum across ALL 4 Green Cash Pedestals (0.025s interval)
     if (runtime.gemVacuumCooldown > 0) runtime.gemVacuumCooldown -= dt;
-    if (Math.hypot(player.x - GEM_PEDESTAL_POS.x, player.z - GEM_PEDESTAL_POS.z) < 2.8) {
-      if (runtime.gemVacuumCooldown <= 0 && runtime.pedestalGems.length > 0) {
+    let activePed = null;
+    for (let i = 0; i < runtime.pedestals.length; i++) {
+      const ped = runtime.pedestals[i];
+      if (i > 0 && runtime.machines[i - 1] && runtime.machines[i - 1].lv <= 0) continue;
+      if (ped.cashValues.length === 0) continue;
+      if (Math.hypot(player.x - ped.x, player.z - ped.z) < 2.8) {
+        activePed = ped;
+        break;
+      }
+    }
+
+    if (activePed) {
+      if (runtime.gemVacuumCooldown <= 0) {
         runtime.gemVacuumCooldown = 0.025;
-        const val = runtime.pedestalGems.pop();
-        syncGemPedestalVisuals();
+        const val = activePed.cashValues.pop();
+        syncCashPedestalVisuals(activePed);
         runtime.gemCombo = Math.min(20, runtime.gemCombo + 1);
         playGemChime(runtime.gemCombo);
 
+        if (runtime.gemCombo % 2 === 1 || activePed.cashValues.length === 0) {
+          spawnFloatingText(player.x, 2.2, player.z, `+💵 ${val}`, "#5effa0");
+        }
+
         const Engine = window.Engine;
         if (Engine && Engine.vfxGroup && window.Entities) {
-          const mesh = window.Entities.createItemBlock("mana_gem");
-          mesh.position.set(GEM_PEDESTAL_POS.x, 1.0, GEM_PEDESTAL_POS.z);
+          const mesh = window.Entities.createItemBlock("cash_bundle");
+          mesh.position.set(activePed.x, 1.0, activePed.z);
           Engine.vfxGroup.add(mesh);
           runtime.flyingBricks.push({
             mesh,
-            sx: GEM_PEDESTAL_POS.x,
+            sx: activePed.x,
             sy: 1.0,
-            sz: GEM_PEDESTAL_POS.z,
+            sz: activePed.z,
             tx: player.x,
             ty: 1.1,
             tz: player.z,
@@ -1293,14 +1682,32 @@
 
   function updateFairies(dt) {
     const cap = 4 + Math.floor(state.toolLv / 2);
+    const m1 = runtime.machines[0];
+    const m2 = runtime.machines[1];
+    const m3 = runtime.machines[2];
+
     for (const f of runtime.fairies) {
       if (f.workTimer > 0) f.workTimer -= dt;
+
+      // Smart role: even fairies gather blue_ore; odd fairies gather rainbow_herb once 2호기 unlocked
+      const wantHerb = f.idx % 2 === 1 && state.herbGroveUnlocked;
+      const wantedType = wantHerb ? "rainbow_herb" : "blue_ore";
 
       let tx = f.x;
       let tz = f.z;
       if (f.state === "seek_node") {
-        if (!f.targetNode || f.targetNode.respawnTimer > 0 || !isZoneUnlocked(f.targetNode.zone)) {
-          const candidates = runtime.farmNodes.filter((n) => isZoneUnlocked(n.zone) && n.respawnTimer <= 0);
+        if (
+          !f.targetNode ||
+          f.targetNode.respawnTimer > 0 ||
+          !isZoneUnlocked(f.targetNode.zone) ||
+          f.targetNode.itemType !== wantedType
+        ) {
+          let candidates = runtime.farmNodes.filter(
+            (n) => isZoneUnlocked(n.zone) && n.respawnTimer <= 0 && n.itemType === wantedType
+          );
+          if (candidates.length === 0) {
+            candidates = runtime.farmNodes.filter((n) => isZoneUnlocked(n.zone) && n.respawnTimer <= 0);
+          }
           if (candidates.length > 0) {
             f.targetNode = candidates[(f.idx * 7 + Math.floor(runtime.time * 3)) % candidates.length];
           }
@@ -1310,48 +1717,63 @@
           tz = f.targetNode.z;
           if (Math.hypot(tx - f.x, tz - f.z) < 1.25 && f.workTimer <= 0) {
             f.workTimer = 0.42;
-            harvestNode(f.targetNode, 1, f.bag, f.x, f.z);
+            harvestNode(f.targetNode, 1, f.bag, f.x, f.z, false);
             if (f.bag.length >= cap) {
-              // Pick active machine with lowest queue, or sell pallet
-              const openM = runtime.machines.filter((m) => m.lv > 0 && m.inQueue.length < 20);
-              if (openM.length > 0) {
-                f.targetMachineIdx = runtime.machines.indexOf(openM[f.idx % openM.length]);
-                f.state = "deliver_machine";
-              } else {
-                f.state = "deliver_sell";
-              }
-            }
-          }
-        }
-      } else if (f.state === "deliver_machine") {
-        const m = runtime.machines[f.targetMachineIdx];
-        if (!m || m.lv <= 0 || m.inQueue.length >= 24) {
-          f.state = "deliver_sell";
-        } else {
-          tx = m.cfg.inPos.x;
-          tz = m.cfg.inPos.z;
-          if (Math.hypot(tx - f.x, tz - f.z) < 1.35) {
-            while (f.bag.length > 0 && m.inQueue.length < 24) {
-              m.inQueue.push(f.bag.pop());
-            }
-            if (m.outQueue.length > 0 && f.bag.length < cap) {
-              while (m.outQueue.length > 0 && f.bag.length < cap) {
-                f.bag.push(m.outQueue.pop());
-              }
-              f.state = "deliver_sell";
-            } else {
-              f.state = "seek_node";
+              f.state = "deliver";
             }
           }
         }
       } else {
-        tx = SELL_PALLET_POS.x;
-        tz = SELL_PALLET_POS.z;
-        if (Math.hypot(tx - f.x, tz - f.z) < 1.45) {
-          while (f.bag.length > 0 && runtime.sellPalletQueue.length < 36) {
-            runtime.sellPalletQueue.push(f.bag.pop());
+        // Smart Routing by resource type in fairy bag!
+        const hasHerb = f.bag.includes("rainbow_herb");
+        let destPos = SELL_PALLET_POS;
+        let destQueue = runtime.sellPalletQueue;
+        let maxQ = 36;
+        let deliverType = "blue_ore";
+
+        if (hasHerb) {
+          deliverType = "rainbow_herb";
+          if (m3 && m3.lv > 0 && m3.inQueueB.length < 18 && (!m2 || m3.inQueueB.length <= m2.inQueue.length)) {
+            destPos = m3.cfg.inPosB;
+            destQueue = m3.inQueueB;
+            maxQ = 24;
+          } else if (m2 && m2.lv > 0 && m2.inQueue.length < 24) {
+            destPos = m2.cfg.inPos;
+            destQueue = m2.inQueue;
+            maxQ = 24;
+          } else if (m3 && m3.lv > 0 && m3.inQueueB.length < 24) {
+            destPos = m3.cfg.inPosB;
+            destQueue = m3.inQueueB;
+            maxQ = 24;
           }
-          f.state = "seek_node";
+        } else {
+          deliverType = "blue_ore";
+          if (m3 && m3.lv > 0 && m3.inQueue.length < 18 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
+            destPos = m3.cfg.inPos;
+            destQueue = m3.inQueue;
+            maxQ = 24;
+          } else if (m1 && m1.lv > 0 && m1.inQueue.length < 24) {
+            destPos = m1.cfg.inPos;
+            destQueue = m1.inQueue;
+            maxQ = 24;
+          }
+        }
+
+        tx = destPos.x;
+        tz = destPos.z;
+        if (Math.hypot(tx - f.x, tz - f.z) < 1.45) {
+          for (let bi = f.bag.length - 1; bi >= 0 && destQueue.length < maxQ; bi--) {
+            if (f.bag[bi] === deliverType || (!hasHerb && f.bag[bi] === "blue_ore")) {
+              destQueue.push(f.bag.splice(bi, 1)[0]);
+            }
+          }
+          // Discard leftover unmatched item into starter stall queue if full or switch
+          if (f.bag.length === 0) {
+            f.state = "seek_node";
+          } else if (!hasHerb && destPos === SELL_PALLET_POS) {
+            f.bag.length = 0;
+            f.state = "seek_node";
+          }
         }
       }
 
@@ -1359,7 +1781,7 @@
       const dz = tz - f.z;
       const dist = Math.hypot(dx, dz);
       if (dist > 0.15) {
-        const spd = 6.2 + state.speedLv * 0.4;
+        const spd = 6.4 + state.speedLv * 0.4;
         f.x += (dx / dist) * Math.min(dist, spd * dt);
         f.z += (dz / dist) * Math.min(dist, spd * dt);
         f.entity.root.rotation.y = Math.atan2(dx, dz);
@@ -1383,40 +1805,62 @@
     let tx = 28.0;
     let tz = 0;
     if (tr.state === "harvest") {
-      const waypoints = [
-        { x: 24.0, z: -4.0 },
-        { x: 32.0, z: -4.0 },
-        { x: 32.0, z: 4.0 },
-        { x: 24.0, z: 4.0 },
-      ];
+      const waypoints = state.herbGroveUnlocked
+        ? [
+            { x: 24.0, z: -6.2 },
+            { x: 32.0, z: -6.2 },
+            { x: 32.0, z: 6.2 },
+            { x: 24.0, z: 6.2 },
+          ]
+        : [
+            { x: 24.0, z: -7.5 },
+            { x: 32.0, z: -7.5 },
+            { x: 32.0, z: -4.5 },
+            { x: 24.0, z: -4.5 },
+          ];
       const wp = waypoints[tr.waypointIdx % waypoints.length];
       tx = wp.x;
       tz = wp.z;
       if (Math.hypot(tx - tr.x, tz - tr.z) < 1.2) {
         tr.waypointIdx = (tr.waypointIdx + 1) % waypoints.length;
       }
-      // Sweep nodes within 3.2m
       for (const node of runtime.farmNodes) {
         if (!isZoneUnlocked(node.zone) || node.respawnTimer > 0) continue;
         if (tr.bag.length >= maxCargo) break;
-        if (Math.hypot(node.x - tr.x, node.z - tr.z) < 3.1) {
-          harvestNode(node, 1, tr.bag, tr.x, tr.z);
+        if (Math.hypot(node.x - tr.x, node.z - tr.z) < 3.2) {
+          harvestNode(node, 1, tr.bag, tr.x, tr.z, false);
         }
       }
       if (tr.bag.length >= maxCargo) tr.state = "return";
     } else if (tr.state === "return") {
-      // Drive back through East Gate to Sell Pallet or active machine
       if (tr.x > 16.0) {
         tx = 15.0;
         tz = 0;
       } else {
-        tx = SELL_PALLET_POS.x + 2.2;
-        tz = SELL_PALLET_POS.z;
+        tx = 0.0;
+        tz = -4.5;
         if (Math.hypot(tx - tr.x, tz - tr.z) < 2.2) {
-          while (tr.bag.length > 0 && runtime.sellPalletQueue.length < 36) {
-            runtime.sellPalletQueue.push(tr.bag.pop());
+          const m1 = runtime.machines[0];
+          const m2 = runtime.machines[1];
+          const m3 = runtime.machines[2];
+          while (tr.bag.length > 0) {
+            const item = tr.bag.pop();
+            if (item === "rainbow_herb") {
+              if (m3 && m3.lv > 0 && m3.inQueueB.length < 24 && (!m2 || m3.inQueueB.length <= m2.inQueue.length)) {
+                m3.inQueueB.push(item);
+              } else if (m2 && m2.lv > 0 && m2.inQueue.length < 24) {
+                m2.inQueue.push(item);
+              }
+            } else {
+              if (m3 && m3.lv > 0 && m3.inQueue.length < 24 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
+                m3.inQueue.push(item);
+              } else if (m1 && m1.lv > 0 && m1.inQueue.length < 24) {
+                m1.inQueue.push(item);
+              } else if (runtime.sellPalletQueue.length < 36) {
+                runtime.sellPalletQueue.push(item);
+              }
+            }
           }
-          tr.bag.length = 0;
           tr.state = "exit";
         }
       }
@@ -1480,7 +1924,7 @@
       window.Entities.updateStepPadTexture(sp.pad, {
         icon: def.icon,
         title: def.title,
-        price: isMax ? "MAX" : `💎 ${newRemaining}`,
+        price: isMax ? "MAX" : `💵 ${newRemaining}`,
         levelText: isMax ? "MAX" : `Lv.${lv}`,
         accentHex: def.accent,
         paidRatio: ratio,
@@ -1492,79 +1936,139 @@
     }
   }
 
-  function updateGuideArrow(dt) {
+  function updateGuideArrow() {
     const hero = sceneObjs.hero;
     if (!hero || !hero.guideArrowGroup) return;
 
-    const hasRaw = player.bagItems.some(
-      (t) => t === "starlight_crystal" || t === "rainbow_berry"
-    );
-    const hasCrafted = player.bagItems.some(
-      (t) => t === "potion_2x" || t === "cut_gem_3x" || t === "elixir_5x"
-    );
-    const nearestOut = runtime.machines.find((m) => m.outQueue.length >= 1);
+    const bagCap = getHeroBagCap();
+    const hasOre = player.bagItems.includes("blue_ore");
+    const hasHerb = player.bagItems.includes("rainbow_herb");
+    const m1 = runtime.machines[0];
+    const m2 = runtime.machines[1];
+    const m3 = runtime.machines[2];
+
+    // Check nearest Cash Pedestal with uncollected cash stacks
+    let nearestCashPed = null;
+    let nearestCashDist = Infinity;
+    for (let i = 0; i < runtime.pedestals.length; i++) {
+      const p = runtime.pedestals[i];
+      if (i > 0 && runtime.machines[i - 1] && runtime.machines[i - 1].lv <= 0) continue;
+      if (p.cashValues.length > 0) {
+        const d = Math.hypot(p.x - player.x, p.z - player.z);
+        if (d < nearestCashDist) {
+          nearestCashDist = d;
+          nearestCashPed = p;
+        }
+      }
+    }
 
     let tx = 23.0;
-    let tz = 0;
+    let tz = -6.2;
     let stepLabel = "1단계 채집";
-    let guideText = "👉 오른쪽 동쪽 농장으로 가서 수정·열매를 수확하세요!";
+    let guideText = "👉 오른쪽 동쪽 광산으로 가서 푸른 광석을 캐세요!";
     let colorHex = 0xffe629;
 
-    if (runtime.pedestalGems.length >= 1) {
-      tx = GEM_PEDESTAL_POS.x;
-      tz = GEM_PEDESTAL_POS.z;
-      stepLabel = "수금";
-      guideText = "💎 왼쪽 마나 보석 타워로 가서 보석을 흡수하세요!";
-      colorHex = 0x42f2ff;
-    } else if (state.m1Lv === 0 && state.gems >= getUpgradeCost("m1")) {
+    if (nearestCashPed) {
+      tx = nearestCashPed.x;
+      tz = nearestCashPed.z;
+      stepLabel = "💵 수금";
+      guideText = "💵 초록 캐시 수금대로 가서 지폐 다발을 흡수하세요!";
+      colorHex = 0x2ecc71;
+    } else if (state.m1Lv === 0 && state.gems >= getUpgradeCost("m1") && !hasOre) {
       tx = MACHINE_CONFIGS[0].padPos.x;
       tz = MACHINE_CONFIGS[0].padPos.z;
-      stepLabel = "설비 해금";
-      guideText = "⚗️ 북서쪽 [1호기 가마솥] 발판을 밟아 2배 포션 설비를 여세요!";
+      stepLabel = "1호기 해금";
+      guideText = "⚙️ [1호기 세공기]를 지어 광석을 💵 35 세공 보석으로 자동 판매하세요!";
+      colorHex = 0xd67aff;
+    } else if (state.m2Lv === 0 && state.gems >= getUpgradeCost("m2") && !hasHerb) {
+      tx = MACHINE_CONFIGS[1].padPos.x;
+      tz = MACHINE_CONFIGS[1].padPos.z;
+      stepLabel = "2호기 해금";
+      guideText = "🌿 [2호기 가마솥]을 지어 남동쪽 '무지개 약초 숲' & 💵 80 포션을 여세요!";
       colorHex = 0x52ff9b;
-    } else if (state.toolLv === 0 && state.bagLv === 0 && state.gems >= getUpgradeCost("tool")) {
-      tx = -3.8;
-      tz = 7.5;
-      stepLabel = "강화";
-      guideText = "🪄 아래쪽 [수확 속도] 카드를 밟아 채집 속도를 높이세요!";
-      colorHex = 0x52ff9b;
+    } else if (state.m3Lv === 0 && state.gems >= getUpgradeCost("m3")) {
+      tx = MACHINE_CONFIGS[2].padPos.x;
+      tz = MACHINE_CONFIGS[2].padPos.z;
+      stepLabel = "3호기 해금";
+      guideText = "👑 [3호기 합체소]를 지어 VIP 무역 마차 💵 300 잭팟 판매를 여세요!";
+      colorHex = 0xff9f43;
+    } else if (
+      player.bagItems.length >= bagCap ||
+      ((hasOre || hasHerb) && player.bagItems.length >= (state.totalEarnedGems < 60 ? 3 : 5))
+    ) {
+      if (hasHerb && m3 && m3.lv > 0 && m3.inQueueB.length < 18 && (!m2 || m3.inQueueB.length <= m2.inQueue.length)) {
+        tx = m3.cfg.inPosB.x;
+        tz = m3.cfg.inPosB.z;
+        stepLabel = "3호기 약초 투입";
+        guideText = "🌿 3호기 합체소 [약초 IN] 팔레트에 무지개 약초를 넣으세요!";
+        colorHex = 0xff9f43;
+      } else if (hasHerb && m2 && m2.lv > 0) {
+        tx = m2.cfg.inPos.x;
+        tz = m2.cfg.inPos.z;
+        stepLabel = "2호기 약초 투입";
+        guideText = "⚗️ 2호기 가마솥 [약초 IN]에 약초를 넣으면 포션(💵 80)이 자동 판매됩니다!";
+        colorHex = 0x52ff9b;
+      } else if (hasOre && m3 && m3.lv > 0 && m3.inQueue.length < 18 && (!m1 || m3.inQueue.length <= m1.inQueue.length)) {
+        tx = m3.cfg.inPos.x;
+        tz = m3.cfg.inPos.z;
+        stepLabel = "3호기 광석 투입";
+        guideText = "⛏️ 3호기 합체소 [광석 IN] 팔레트에 푸른 광석을 넣으세요!";
+        colorHex = 0xff9f43;
+      } else if (hasOre && m1 && m1.lv > 0) {
+        tx = m1.cfg.inPos.x;
+        tz = m1.cfg.inPos.z;
+        stepLabel = "1호기 광석 투입";
+        guideText = "⚙️ 1호기 세공기 [광석 IN]에 넣으면 세공 보석(💵 35)이 쇼케이스에 자동 진열됩니다!";
+        colorHex = 0xd67aff;
+      } else {
+        tx = SELL_PALLET_POS.x;
+        tz = SELL_PALLET_POS.z;
+        stepLabel = "원석 판매";
+        guideText = "💵 원석 직판 가판대에 푸른 광석을 올려 💵 10에 판매하세요!";
+        colorHex = 0x58b8ff;
+      }
     } else if (state.fairyCount === 0 && state.gems >= getUpgradeCost("fairy")) {
       tx = -3.8;
       tz = 12.2;
       stepLabel = "일꾼 고용";
-      guideText = "🧚 아래쪽 [요정 일꾼] 카드를 밟아 자동 수확 요정을 고용하세요!";
+      guideText = "🧚 [요정 일꾼] 카드를 밟아 자동 광석·약초 분업을 시작하세요!";
       colorHex = 0xff88c2;
-    } else if (nearestOut && player.bagItems.length < getHeroBagCap()) {
-      tx = nearestOut.cfg.outPos.x;
-      tz = nearestOut.cfg.outPos.z;
-      stepLabel = "가공품 회수";
-      guideText = "🧪 설비 OUT 팔레트에서 완성된 고가치 상자를 챙기세요!";
-      colorHex = 0xffd85e;
-    } else if (hasCrafted || player.bagItems.length >= (state.totalEarnedGems < 80 ? 3 : 6)) {
-      const m1 = runtime.machines[0];
-      if (state.m1Lv > 0 && m1 && m1.inQueue.length < 8 && hasRaw && !hasCrafted) {
-        tx = m1.cfg.inPos.x;
-        tz = m1.cfg.inPos.z;
-        stepLabel = "원석 투입";
-        guideText = "⚗️ 1호기 가마솥 IN 팔레트에 수확 상자를 투입하세요!";
-        colorHex = 0x5ef0ff;
-      } else {
-        tx = SELL_PALLET_POS.x;
-        tz = SELL_PALLET_POS.z;
-        stepLabel = "상자 판매";
-        guideText = "💰 왼쪽 판매대 SELL 팔레트에 상자를 내려놓으세요!";
-        colorHex = 0x58ff9c;
-      }
     } else {
-      // Nearest active Zone 1 (or unlocked farm) node
+      // Nearest needed active resource node
+      const needHerbNode =
+        state.herbGroveUnlocked &&
+        m2 &&
+        m2.lv > 0 &&
+        (!m1 || m2.inQueue.length < m1.inQueue.length || (m3 && m3.lv > 0 && m3.inQueueB.length < m3.inQueue.length));
       let bestDist = Infinity;
       for (const n of runtime.farmNodes) {
         if (!isZoneUnlocked(n.zone) || n.respawnTimer > 0) continue;
+        if (needHerbNode && n.itemType !== "rainbow_herb") continue;
         const d = Math.hypot(n.x - player.x, n.z - player.z);
         if (d < bestDist) {
           bestDist = d;
           tx = n.x;
           tz = n.z;
+          if (n.itemType === "rainbow_herb") {
+            stepLabel = "약초 채집";
+            guideText = "🌿 남동쪽 무지개 약초 숲에서 약초를 채집하세요!";
+            colorHex = 0x52ff9b;
+          } else {
+            stepLabel = "광석 채집";
+            guideText = "⛏️ 동쪽 광산에서 푸른 광석을 캐세요!";
+            colorHex = 0xffe629;
+          }
+        }
+      }
+      if (bestDist === Infinity) {
+        for (const n of runtime.farmNodes) {
+          if (!isZoneUnlocked(n.zone) || n.respawnTimer > 0) continue;
+          const d = Math.hypot(n.x - player.x, n.z - player.z);
+          if (d < bestDist) {
+            bestDist = d;
+            tx = n.x;
+            tz = n.z;
+          }
         }
       }
     }
@@ -1598,19 +2102,72 @@
   }
 
   // ---------------------------------------------------------------------------
-  // HUD & Shop UI Sync
+  // HUD, Over-Head Real-Time 3D-Tracked Backpack Float (#hero-bag-float) & Shop UI
   // ---------------------------------------------------------------------------
+  function updateHeroBagOverlay() {
+    if (typeof document === "undefined") return;
+    const floatEl = document.getElementById("hero-bag-float");
+    if (!floatEl) return;
+
+    const total = player.bagItems.length;
+    if (total <= 0) {
+      floatEl.style.display = "none";
+      return;
+    }
+
+    const cap = getHeroBagCap();
+    const isMax = total >= cap;
+    let oreCount = 0;
+    let herbCount = 0;
+    for (const t of player.bagItems) {
+      if (t === "blue_ore") oreCount++;
+      else if (t === "rainbow_herb") herbCount++;
+    }
+
+    let countsStr = "";
+    if (oreCount > 0 && herbCount > 0) {
+      countsStr = `⛏️ 광석 ${oreCount} | 🌿 약초 ${herbCount}`;
+    } else if (oreCount > 0) {
+      countsStr = `⛏️ 광석 ${oreCount}`;
+    } else if (herbCount > 0) {
+      countsStr = `🌿 약초 ${herbCount}`;
+    } else {
+      countsStr = `📦 ${total}`;
+    }
+
+    const countsEl = document.getElementById("hbf-counts");
+    const capEl = document.getElementById("hbf-cap");
+    const fillEl = document.getElementById("hbf-bar-fill");
+    const maxBadge = document.getElementById("hbf-max-badge");
+    if (countsEl && countsEl.textContent !== countsStr) countsEl.textContent = countsStr;
+    const capText = `${total} / ${cap}`;
+    if (capEl && capEl.textContent !== capText) capEl.textContent = capText;
+    if (fillEl) fillEl.style.width = `${Math.min(100, (total / cap) * 100)}%`;
+    if (maxBadge) maxBadge.style.display = isMax ? "block" : "none";
+    floatEl.classList.toggle("is-max", isMax);
+
+    if (window.Engine && window.Engine.worldToScreen) {
+      const stackH = Math.min(total, 16) * 0.205;
+      const sp = window.Engine.worldToScreen(new THREE.Vector3(player.x, 2.35 + stackH, player.z));
+      const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
+      const vh = typeof window !== "undefined" ? window.innerHeight : 720;
+      const cx = Math.max(85, Math.min(vw - 85, sp.x));
+      const cy = Math.max(92, Math.min(vh - 50, sp.y));
+      floatEl.style.left = `${Math.round(cx)}px`;
+      floatEl.style.top = `${Math.round(cy)}px`;
+      floatEl.style.display = "block";
+    }
+  }
+
   function syncHUD(force = false) {
     if (typeof document === "undefined") return;
+    // Always project #hero-bag-float at display framerate for silky 3D tracking
+    updateHeroBagOverlay();
+
     if (!force && runtime.time - runtime.lastHudSync < 0.08) return;
     runtime.lastHudSync = runtime.time;
 
-    const rawCount = player.bagItems.filter(
-      (t) => t === "starlight_crystal" || t === "rainbow_berry"
-    ).length;
-    const craftedCount = player.bagItems.length - rawCount;
     const bagCap = getHeroBagCap();
-
     const setText = (id, text) => {
       const el = document.getElementById(id);
       if (el && el.textContent !== String(text)) el.textContent = String(text);
@@ -1625,8 +2182,6 @@
     setWidth("ui-bag-fill", (player.bagItems.length / bagCap) * 100);
     setWidth("ui-xp-fill", (state.xp / state.xpMax) * 100);
     setText("ui-gems", state.gems.toLocaleString());
-    setText("ui-crystals", rawCount);
-    setText("ui-potions", craftedCount);
 
     const statsEl = document.getElementById("ui-shop-stats");
     if (statsEl) {
@@ -1666,20 +2221,20 @@
       body.innerHTML = `
         <div class="shop-item">
           <div class="shop-item-info">
-            <div class="shop-item-title">🌱 1단계 · 동쪽 숲 농장 채집 & 판매</div>
-            <div class="shop-item-desc">동쪽 게이트 농장에서 별빛 수정과 열매를 등 뒤 지게에 묵직하게 쌓고 서쪽 판매대 SELL 팔레트에 납품하세요. 3×3 마나 보석 타워에서 0.025초 고속 흡입으로 수금합니다.</div>
+            <div class="shop-item-title">⛏️ 1단계 · 원석 직판 & 1호기 크리스탈 세공기 (광석)</div>
+            <div class="shop-item-desc">동쪽 광산에서 푸른 광석을 캐 원석 가판대(💵 10)로 첫 자금을 모으세요. 1호기를 지으면 광석을 넣기만 해도 회전 톱날이 세공 보석(💵 35)을 깎아 쇼케이스에 자동 진열하고 VIP가 사 갑니다!</div>
           </div>
         </div>
         <div class="shop-item">
           <div class="shop-item-info">
-            <div class="shop-item-title">⚙️ 2단계 · 북쪽 3종 연금술 가공 라인</div>
-            <div class="shop-item-desc">1호기 가마솥(2× 포션), 2호기 크리스탈 커팅기(3× 보석), 3호기 무지개 증류기(5× 엘릭서)의 IN 나무 팔레트에 상자를 넣으면 컨베이어를 거쳐 고가치 상자가 생산됩니다!</div>
+            <div class="shop-item-title">🌿 2단계 · 2호기 가마솥 & 무지개 약초 숲 (약초)</div>
+            <div class="shop-item-desc">2호기 가마솥을 지으면 남동쪽 '무지개 약초 숲'이 해금됩니다! 약초만 넣으면 마법사 손님이 사 가는 💵 80 포션 가판대로 자동 공급됩니다.</div>
           </div>
         </div>
         <div class="shop-item">
           <div class="shop-item-info">
-            <div class="shop-item-title">🧚 3단계 · 요정 15명 · 수확 트럭 · 북쪽 확장 농장</div>
-            <div class="shop-item-desc">요정 일꾼(최대 15명)과 대형 수확 트럭, 북동/북서 48노드 확장 농장을 해금해 연금술 공방 제국을 자동화하세요!</div>
+            <div class="shop-item-title">👑 3단계 · 황실 연금 합체소 & VIP 무역 마차 (💵 300 잭팟)</div>
+            <div class="shop-item-desc">광석과 약초를 동시에 투입해 황실 엘릭서 상자를 만드세요! VIP 무역 마차가 도착해 상자를 싣고 💵 300 지폐 기둥을 쏟아냅니다.</div>
           </div>
         </div>
       `;
@@ -1702,7 +2257,7 @@
           <div class="shop-item-desc">${def.desc}</div>
         </div>
         <button class="fairy-btn ${afford ? "shop-btn" : "neutral-btn"}" data-upgrade-id="${def.id}" ${isMax || !afford ? "disabled" : ""}>
-          ${isMax ? "MAX" : `💎 ${cost}`}
+          ${isMax ? "MAX" : `💵 ${cost}`}
         </button>
       `;
       const btn = row.querySelector("button");
@@ -1755,7 +2310,10 @@
     player.vz = 0;
     player.bagItems.length = 0;
     runtime.sellPalletQueue.length = 0;
-    runtime.pedestalGems.length = 0;
+    for (const p of runtime.pedestals) {
+      p.cashValues.length = 0;
+      syncCashPedestalVisuals(p);
+    }
     for (const f of runtime.flyingBricks) {
       if (window.Engine && window.Engine.vfxGroup && f.mesh) window.Engine.vfxGroup.remove(f.mesh);
     }
@@ -1764,9 +2322,14 @@
       if (window.Engine && window.Engine.vfxGroup && p.mesh) window.Engine.vfxGroup.remove(p.mesh);
     }
     runtime.particles.length = 0;
+    for (const pop of runtime.popups) {
+      if (pop.el && pop.el.parentNode) pop.el.parentNode.removeChild(pop.el);
+    }
+    runtime.popups.length = 0;
     for (const m of runtime.machines) {
       m.lv = 0;
       m.inQueue.length = 0;
+      m.inQueueB.length = 0;
       m.outQueue.length = 0;
       m.craftProgress = 0;
     }
@@ -1775,17 +2338,18 @@
       node.hp = node.maxHp;
     }
     refreshFarmZoneVisibility();
+    refreshFacilityVisibility();
     syncFairiesCount();
     ensureTruckSpawned();
+    ensureWagonSpawned();
     if (sceneObjs.hero) {
       window.Entities.updateHeroTier(sceneObjs.hero, 0);
       syncCrateStackVisuals(sceneObjs.hero.backStackAnchor, player.bagItems, runtime.heroBackVisuals);
     }
-    syncGemPedestalVisuals();
     updateStepPads(0.016);
-    updateGuideArrow(0.016);
+    updateGuideArrow();
     syncHUD(true);
-    showToast("🌱 새로운 연금술 공방이 시작되었습니다!");
+    showToast("💵 새로운 연금술 타이쿤 공방이 시작되었습니다!");
   }
 
   function setInput(dx, dz) {
@@ -1903,12 +2467,12 @@
     updatePlayerMovement(stepDt);
     updateNodesAndHeroHarvest(stepDt);
     updatePalletsAndHeroTransfers(stepDt);
-    updateCustomersAndGemTower(stepDt);
+    updateCustomersAndCashPedestals(stepDt);
     updateFairies(stepDt);
     updateHarvesterTruck(stepDt);
     updateStepPads(stepDt);
     updateVFX(stepDt);
-    updateGuideArrow(stepDt);
+    updateGuideArrow();
 
     if (sceneObjs.hero && sceneObjs.hero.backStackAnchor) {
       syncCrateStackVisuals(sceneObjs.hero.backStackAnchor, player.bagItems, runtime.heroBackVisuals);
@@ -1949,7 +2513,7 @@
       try {
         await window.AssetLoader.loadAll();
       } catch (e) {
-        // Proceed cleanly with procedural toon fallbacks if GLB load errors
+        // Proceed cleanly with procedural toon fallbacks
       }
     }
 
@@ -1964,13 +2528,14 @@
     if (window.Engine) window.Engine.unitGroup.add(sceneObjs.hero.root);
 
     buildDenseFarmNodes();
-    buildProductionMachines();
     buildMarketAndQueue();
+    buildProductionMachines();
     buildStepPads();
     syncFairiesCount();
     ensureTruckSpawned();
+    ensureWagonSpawned();
     updateStepPads(0.016);
-    updateGuideArrow(0.016);
+    updateGuideArrow();
     syncHUD(true);
 
     if (typeof window !== "undefined" && !window.__NO_AUTO_RAF__ && typeof window.requestAnimationFrame === "function") {
@@ -1993,6 +2558,7 @@
     MACHINE_CONFIGS,
     init,
     step,
+    purchaseUpgradeDirect,
     getState: () => state,
     getPlayer: () => player,
     getRuntime: () => runtime,

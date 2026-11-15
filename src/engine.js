@@ -299,32 +299,42 @@
     if (!farmMat.map) farmMat.color.setHex(0x88643f);
 
     const farmBorderMat = new THREE.MeshLambertMaterial({ color: 0x9b7042 });
-    function addFarmPlot(cx, cz, w, d) {
-      const border = new THREE.Mesh(new THREE.BoxGeometry(w + 0.9, 0.08, d + 0.9), farmBorderMat);
+    function addFarmPlot(cx, cz, w, d, soilColor = null, borderColor = null) {
+      const bMat = borderColor ? new THREE.MeshLambertMaterial({ color: borderColor }) : farmBorderMat;
+      const border = new THREE.Mesh(new THREE.BoxGeometry(w + 0.9, 0.08, d + 0.9), bMat);
       border.position.set(cx, -0.03, cz);
       border.receiveShadow = true;
       envGroup.add(border);
 
-      const soil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), farmMat);
+      const sMat = soilColor ? new THREE.MeshLambertMaterial({ color: soilColor }) : farmMat;
+      const soil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), sMat);
       soil.rotation.x = -Math.PI * 0.5;
       soil.position.set(cx, 0.015, cz);
       soil.receiveShadow = true;
       envGroup.add(soil);
     }
 
-    // East Gate Starlight/Berry Farm (x in [20.5, 35.5], z in [-13.5, 13.5])
-    addFarmPlot(28.0, 0, 15.2, 26.5);
-    // North-East Zone 2 Farm (x in [2.5, 18.0], z in [-30.0, -18.8])
-    addFarmPlot(10.2, -24.4, 15.4, 11.2);
-    // North-West Zone 3 Farm (x in [-18.0, -2.5], z in [-30.0, -18.8])
+    // East Ore Mine Quarry (x in [20.4, 35.6], z in [-11.8, -0.6])
+    addFarmPlot(28.0, -6.2, 15.2, 11.2, 0x627394, 0x434d68);
+    // South-East Rainbow Herb Grove (x in [20.4, 35.6], z in [0.6, 11.8])
+    addFarmPlot(28.0, 6.2, 15.2, 11.2, 0x63ad60, 0x3e7844);
+    // North-East Zone 3 Ore Annex (x in [2.5, 18.0], z in [-30.0, -18.8])
+    addFarmPlot(10.2, -24.4, 15.4, 11.2, 0x5c6d8e, 0x3f4962);
+    // North-West Zone 4 Rainbow Herb Garden (x in [-18.0, -2.5], z in [-30.0, -18.8])
     addFarmPlot(-10.2, -24.4, 15.4, 11.2);
 
-    // Bridge paths connecting East, NE, and NW gates out into farms
+    // Bridge paths connecting East, NE, NW gates + Royal Trade Road along z = -14.2
     const pathMat = new THREE.MeshLambertMaterial({ color: 0xd9be8c });
-    const eastPath = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.04, 6.2), pathMat);
+    const stoneRoadMat = new THREE.MeshLambertMaterial({ color: 0xaab2c8 });
+    const eastPath = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.04, 8.6), pathMat);
     eastPath.position.set(19.6, 0.005, 0);
     eastPath.receiveShadow = true;
     envGroup.add(eastPath);
+
+    const royalRoad = new THREE.Mesh(new THREE.BoxGeometry(22.0, 0.04, 2.6), stoneRoadMat);
+    royalRoad.position.set(21.8, 0.008, -14.2);
+    royalRoad.receiveShadow = true;
+    envGroup.add(royalRoad);
 
     const nePath = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.04, 3.6), pathMat);
     nePath.position.set(8.0, 0.005, -18.2);

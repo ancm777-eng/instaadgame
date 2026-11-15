@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>요정의 연금술 숲 3D · Fairy Alchemy Forest</title>
+  <title>요정의 연금술 타이쿤 3D · Fairy Alchemy Tycoon</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -13,6 +13,18 @@
 
   <!-- 3D -> 2D Projected Floating Combat & Loot Text Layer -->
   <div id="fx-overlay"></div>
+
+  <!-- Over-Head Real-Time 3D-Tracked Character Backpack HUD -->
+  <div id="hero-bag-float" class="hero-bag-float" style="display:none" aria-hidden="true">
+    <div class="hbf-top">
+      <span class="hbf-counts" id="hbf-counts">⛏️ 광석 0</span>
+      <span class="hbf-cap num" id="hbf-cap">0 / 25</span>
+    </div>
+    <div class="hbf-bar-track">
+      <div class="hbf-bar-fill" id="hbf-bar-fill"></div>
+    </div>
+    <div class="hbf-max-badge" id="hbf-max-badge" style="display:none">🎒 가방 가득 참! (MAX)</div>
+  </div>
 
   <!-- Top-Left: Game Title, Wizard Level & Backpack Gauge -->
   <header id="hud-top-left" class="hud-cluster">
@@ -39,23 +51,13 @@
     </div>
   </header>
 
-  <!-- Top-Right: Currencies & Compact Fairy-Tale Controls -->
+  <!-- Top-Right: Single Green Cash Counter & Compact Controls -->
   <aside id="hud-top-right" class="hud-cluster">
     <div class="currency-row">
-      <div class="currency-pill gem-pill" title="마나 보석">
-        <span class="cur-icon">💎</span>
-        <span class="cur-name">마나 보석</span>
+      <div class="currency-pill cash-pill" title="보유 캐시">
+        <span class="cur-icon">💵</span>
+        <span class="cur-name">캐시</span>
         <b class="cur-val num" id="ui-gems">0</b>
-      </div>
-      <div class="currency-pill crystal-pill" title="수확 상자">
-        <span class="cur-icon">🔮</span>
-        <span class="cur-name">수확 상자</span>
-        <b class="cur-val num" id="ui-crystals">0</b>
-      </div>
-      <div class="currency-pill potion-pill" title="가공 상자">
-        <span class="cur-icon">🧪</span>
-        <span class="cur-name">가공 상자</span>
-        <b class="cur-val num" id="ui-potions">0</b>
       </div>
     </div>
 
@@ -71,7 +73,7 @@
   <!-- Giant Playable-Ad Objective Guide Banner -->
   <div id="guide-banner" class="guide-banner">
     <span class="guide-step-badge" id="ui-guide-step">1단계 채집</span>
-    <span id="ui-guide-text">👉 오른쪽 동쪽 농장으로 가서 수정·열매를 수확하세요!</span>
+    <span id="ui-guide-text">👉 오른쪽 동쪽 광산으로 가서 푸른 광석을 캐세요!</span>
     <span class="guide-dist num" id="ui-guide-dist">23m</span>
   </div>
 
@@ -109,7 +111,7 @@
   <div id="reset-modal" class="modal-backdrop">
     <div class="modal-confirm glass-panel">
       <h3>🗑️ 모험 기록 초기화</h3>
-      <p>현재 모은 마나 보석, 요정 일꾼, 수확 트럭 및 강화 레벨이 모두 초기화됩니다. 처음부터 다시 시작할까요?</p>
+      <p>현재 모은 💵 캐시, 요정 일꾼, 수확 트럭, 1~3호기 시설 및 강화 레벨이 모두 초기화됩니다. 처음부터 다시 시작할까요?</p>
       <div class="confirm-actions">
         <button class="fairy-btn neutral-btn" id="btn-cancel-reset">취소</button>
         <button class="fairy-btn danger-btn" id="btn-confirm-reset">초기화하기</button>
