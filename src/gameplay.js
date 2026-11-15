@@ -281,7 +281,7 @@
     farm2: {
       id: "farm2",
       tab: "automation",
-      dirLabel: "▲ 북쪽",
+      dirLabel: "▼ 남서쪽",
       icon: "⛏️",
       title: "심층 광산 확장",
       desc: "남부 광산 심층에 추가 푸른 광석 18노드 해금.",
@@ -293,7 +293,7 @@
     farm3: {
       id: "farm3",
       tab: "automation",
-      dirLabel: "▼ 남쪽",
+      dirLabel: "▼ 남동쪽",
       icon: "🌿",
       title: "심층 약초 확장",
       desc: "남부 약초 숲 심층에 추가 무지개 약초 18노드 해금.",
@@ -365,7 +365,6 @@
       inPos: LAB_CONFIGS[3].inPos,
       padPos: LAB_CONFIGS[3].padPos,
     },
-    // Defense R&D Tech Systems (Expanded +1.3m cross pads around 13.5, 0.0)
     // Defense R&D Tech Systems (건물 위쪽 배치 금지 -> 모두 건물 아래쪽/좌우 배치)
     turret_flame: {
       id: "turret_flame",
@@ -915,7 +914,6 @@
     if (runtime.bgmTimer > 0) return;
 
     if (runtime.waveActive) {
-      // Gentle yet tense minor fantasy pulse during monster waves
       const waveMelody = [220.0, 261.63, 329.63, 293.66, 261.63, 349.23, 329.63, 246.94];
       const waveBass = [110.0, 146.83, 130.81, 164.81];
       const note = waveMelody[runtime.bgmStep % waveMelody.length];
@@ -927,7 +925,6 @@
       runtime.bgmStep++;
       runtime.bgmTimer = 0.38;
     } else {
-      // Soothing pentatonic harp / celesta fairytale ambience during peacetime
       const peaceMelody = [261.63, 329.63, 392.0, 523.25, 440.0, 392.0, 329.63, 293.66];
       const peaceBass = [130.81, 174.61, 196.0, 164.81];
       const note = peaceMelody[runtime.bgmStep % peaceMelody.length];
@@ -1071,13 +1068,11 @@
       return { mode: "locked", cash: 0, energyTier: 0, energy: 0, text: `🔒 W${unlockWave} 해금` };
     }
 
-    // 1. Buildings & Production Facilities (1~9호기, 요정, 트럭, 농장) use Cash (💵)
     if (["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "fairy", "truck", "farm2", "farm3"].includes(id)) {
       const cash = Math.round(def.baseCost * Math.pow(def.mult, lv));
       return { mode: "cash", cash, energyTier: 0, energy: 0, text: `💵 ${cash.toLocaleString()}` };
     }
 
-    // 2. 4 Alchemy Research Labs (1~4호 연구소, 총 12단계)
     if (id === "alchemy_lab") {
       if (lv === 0) return { mode: "cash", cash: 40, energyTier: 0, energy: 0, text: "💵 40" };
       if (lv === 1) return { mode: "hybrid", cash: 160, energyTier: 1, energy: 30, text: "💵160 + 🔮30" };
@@ -1090,14 +1085,12 @@
       return { mode: "hybrid", cash, energyTier: eTier, energy: eAmt, text: `💵${cash.toLocaleString()}+${ENERGY_META[eTier].icon}${eAmt}` };
     }
 
-    // 3. Gate 3-Stage Reinforcement
     if (id === "shrine_aegis") {
       const tier = lv + 1;
       const energy = lv === 0 ? 25 : lv === 1 ? 45 : 80;
       return { mode: "energy", cash: 0, energyTier: tier, energy, text: `${ENERGY_META[tier].icon} ${energy}` };
     }
 
-    // 4. Tech R&D & Elemental Skills (Lv.1~20) -> Higher Tier Energy as star/level rises
     let tier = 1;
     if (id === "s5") {
       tier = 3;
@@ -1338,28 +1331,28 @@
   }
 
   function getHeroHarvestInterval() {
-    if (state.toolLv >= 20) return 0; // Lv.20 Milestone: Zero-cooldown pass-by harvest!
+    if (state.toolLv >= 20) return 0;
     return Math.max(0.08, 0.34 - state.toolLv * 0.015);
   }
 
   function getHeroPickRadius() {
-    return state.toolLv >= 5 ? 4.0 : 2.65; // Lv.5 Milestone!
+    return state.toolLv >= 5 ? 4.0 : 2.65;
   }
 
   function getHeroMultiHit() {
-    return state.toolLv >= 10 ? 2 : 1; // Lv.10 Milestone!
+    return state.toolLv >= 10 ? 2 : 1;
   }
 
   function getCashMagnetRadius() {
-    return state.toolLv >= 10 ? 5.6 : 2.8; // Lv.10 Milestone!
+    return state.toolLv >= 10 ? 5.6 : 2.8;
   }
 
   function getHeroDoubleDropChance() {
-    return state.toolLv >= 15 ? 0.30 : 0; // Lv.15 Milestone!
+    return state.toolLv >= 15 ? 0.30 : 0;
   }
 
   function getPriceMultiplier() {
-    return state.toolLv >= 20 ? 1.5 : 1.0; // Lv.20 Milestone!
+    return state.toolLv >= 20 ? 1.5 : 1.0;
   }
 
   function getHeroHarvestYield() {
@@ -1588,7 +1581,7 @@
       damage,
       aoeRadius,
       t: 0,
-      dur: 0.20, // 2x faster meteor drop!
+      dur: 0.20,
     });
   }
 
@@ -1713,7 +1706,6 @@
     if (!Engine || !Entities) return;
 
     const specs = [];
-    // Zone 1~4: Base Southern Resource Valley
     for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 6; c++) specs.push({ zone: 1, kind: "blue_ore", itemType: "blue_ore", x: -14.6 + c * 1.85, z: 23.4 + r * 2.0 });
     }
@@ -1726,7 +1718,6 @@
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 6; c++) specs.push({ zone: 4, kind: "rainbow_herb", itemType: "rainbow_herb", x: 5.35 + c * 1.85, z: 31.6 + r * 2.0 });
     }
-    // Zones 5~10: Era 2/3/4 Exotic Elemental Groves (18 nodes each)
     const exoticZones = [
       { zone: 5, kind: "fire_mana_stone", x0: -14.6, z0: 39.2 },
       { zone: 6, kind: "spirit_dew", x0: 5.35, z0: 39.2 },
@@ -2200,16 +2191,16 @@
     if (!Engine || !Entities) return;
 
     const padCoords = [
-      // SW Forge District (+1.3m wider cross spacing around -12.5, 13.0)
+      // SW Forge District
       { id: "tool", x: -18.3, z: 13.0 },
       { id: "bag", x: -12.5, z: 18.1 },
       { id: "speed", x: -6.7, z: 13.0 },
-      // SE Guild District (건물 위쪽 z: 7.9 배치 금지 -> 모두 건물 아래쪽 z: 18.1 배치)
+      // SE Guild District (건물 위쪽 배치 금지 -> 모두 건물 아래쪽 z: 18.1 배치)
       { id: "fairy", x: 5.7, z: 13.0 },
       { id: "truck", x: 17.3, z: 13.0 },
       { id: "farm2", x: 9.4, z: 18.1 },
       { id: "farm3", x: 13.6, z: 18.1 },
-      // East Defense Bastion (+1.3m wider cross spacing around 13.5, 0.0)
+      // East Defense Bastion
       { id: "turret_flame", x: UPGRADE_DEFS.turret_flame.padPos.x, z: UPGRADE_DEFS.turret_flame.padPos.z },
       { id: "turret_frost", x: UPGRADE_DEFS.turret_frost.padPos.x, z: UPGRADE_DEFS.turret_frost.padPos.z },
       { id: "turret_thunder", x: UPGRADE_DEFS.turret_thunder.padPos.x, z: UPGRADE_DEFS.turret_thunder.padPos.z },
@@ -2474,7 +2465,7 @@
     const spawned = spawnMonsterBatch(w, WAVE_BATCH_SIZE);
     runtime.waveSpawnCount += spawned;
 
-    showToast(`🌊 WAVE ${w}/10 [${themeInfo.title}]! 60초 동안 10초마다 10마리씩 총 60마리가 몰려옵니다!`);
+    showToast(`🌊 WAVE ${w}/20 [${themeInfo.title}]! 60초 동안 10초마다 10마리씩 총 60마리가 몰려옵니다!`);
     playTone(440, 0.14, "triangle", 0.07);
     playTone(587.33, 0.20, "triangle", 0.07, 0.1);
     syncHUD(true);
@@ -2491,7 +2482,7 @@
       return;
     }
     if (state.allWavesCleared) {
-      state.wave = 10;
+      state.wave = 20;
     }
     spawnWaveHorde(state.wave);
   }
@@ -2577,7 +2568,6 @@
 
   function castSkill(skillId, silent = false) {
     if (runtime.gameOver) return false;
-    // Hero skills are ONLY allowed outside the East Monster Siege Gate (x >= 24.3)
     if (player.x < GATE_POS.x + 0.3) {
       if (!silent) showToast("🏰 동쪽 수호 성문 밖으로 나가야 원소 스킬로 공격할 수 있습니다!");
       return false;
@@ -2607,7 +2597,6 @@
     );
 
     if (skillId === "s1") {
-      // ★1 Fireball Volley: 2x faster projectiles (28.0m/s) + Lv.4+ wider AoE splash
       const bolts = 1 + Math.floor(lv / 3);
       const dmg = 34 * (1 + 0.35 * (lv - 1));
       const aoeRad = 1.8 + lv * 0.22;
@@ -2625,7 +2614,6 @@
       }
       spawnShockwaveRing(player.x, 0.12, player.z, 0xff7849, 2.0, 0.24);
     } else if (skillId === "s2") {
-      // ★2 Frost Blizzard: wide AoE scales with level (3.8m -> 6.6m)
       const dmg = 58 * (1 + 0.38 * (lv - 1));
       const aoeRad = 3.8 + lv * 0.28;
       const tx = target.x;
@@ -2635,7 +2623,6 @@
       spawnShockwaveRing(tx, 0.18, tz, 0xe0f2fe, aoeRad * 0.65, 0.38);
       spawnBurstVfx(tx, 1.4, tz, 0x93e2ff, 14);
     } else if (skillId === "s3") {
-      // ★3 Chain Thunderstorm: multi-target lightning + AoE shockwave per hit (2.4m -> 4.2m)
       const maxTargets = Math.min(inRangeMonsters.length, 4 + lv);
       const dmg = 78 * (1 + 0.40 * (lv - 1));
       const shockRad = 2.4 + lv * 0.18;
@@ -2646,7 +2633,6 @@
         applyAoEDamage(m.x, m.z, shockRad, dmg, 0.8, 0, 0.7);
       }
     } else if (skillId === "s4") {
-      // ★4 Meteor Storm: 2x faster meteors + huge AoE blasts (3.8m -> 6.2m)
       const count = 3 + Math.floor(lv / 2);
       const dmg = 135 * (1 + 0.42 * (lv - 1));
       const meteorRad = 3.8 + lv * 0.24;
@@ -2657,7 +2643,6 @@
         spawnMeteorStrike(m.x + ox, m.z + oz, dmg, meteorRad);
       }
     } else if (skillId === "s5") {
-      // ★5 Aether Supernova: massive 9.5m full-battlefield multi-wave AoE + 30% Gate Repair
       const dmg = 230 * (1 + 0.45 * (lv - 1));
       const novaRad = 9.0 + lv * 0.25;
       applyAoEDamage(player.x, player.z, novaRad, dmg, 5.5, 2.5, 0.9);
@@ -2701,79 +2686,7 @@
     applyGateDamage(amount);
   }
 
-  function triggerGameOver() {
-    runtime.gameOver = true;
-    playTone(196, 0.35, "sawtooth", 0.08);
-    if (typeof document !== "undefined") {
-      const badge = document.getElementById("gameover-badge");
-      const title = document.getElementById("gameover-title");
-      const desc = document.getElementById("gameover-desc");
-      if (badge) badge.textContent = "💥 GATE DESTROYED";
-      if (title) title.textContent = "💔 마을 출입구 성문이 무너졌습니다!";
-      if (desc) desc.textContent = `WAVE ${state.wave} 공세를 성문이 버티지 못했습니다. 동쪽 디펜스 기술 연구소에서 포탑과 ★1~★5 원소 스킬을 강화한 뒤 재도전하세요!`;
-      const modal = document.getElementById("gameover-modal");
-      if (modal) modal.classList.add("open");
-    }
-    syncHUD(true);
-  }
-
-  function retryCurrentWave() {
-    const Engine = window.Engine;
-    for (const m of runtime.monsters) {
-      if (Engine && Engine.unitGroup && m.entity && m.entity.root) {
-        Engine.unitGroup.remove(m.entity.root);
-      }
-    }
-    runtime.monsters.length = 0;
-    for (const p of runtime.projectiles) {
-      if (Engine && Engine.vfxGroup && p.mesh) Engine.vfxGroup.remove(p.mesh);
-    }
-    runtime.projectiles.length = 0;
-    runtime.waveActive = false;
-    runtime.waveTimer = 15.0; // Brief prep before retry, or player clicks 즉시 시작
-    runtime.gameOver = false;
-    state.gateHp = getGateMaxHp();
-    state.heroHp = state.gateHp;
-    if (sceneObjs.villageGate && sceneObjs.villageGate.hpFillPivot) {
-      sceneObjs.villageGate.hpFillPivot.scale.x = 1;
-    }
-    player.x = HERO_SPAWN.x;
-    player.z = HERO_SPAWN.z;
-
-    if (typeof document !== "undefined") {
-      const modal = document.getElementById("gameover-modal");
-      if (modal) modal.classList.remove("open");
-    }
-    showToast(`🔄 성문 내구도 100% 수복! WAVE ${state.wave} 재도전 준비 완료!`);
-    syncHUD(true);
-  }
-
-  function updateCombatAndDefense(dt) {
-    if (runtime.gameOver) return;
-    if (runtime.combatGraceTimer > 0) runtime.combatGraceTimer -= dt;
-
-    // 1. Skill Cooldowns & Auto-Cast
-    for (const sid of SKILL_IDS) {
-      if (runtime.skillCooldowns[sid] > 0) {
-        runtime.skillCooldowns[sid] = Math.max(0, runtime.skillCooldowns[sid] - dt);
-      }
-    }
-
-    if (state.autoSkill && runtime.monsters.length > 0 && player.x >= GATE_POS.x + 0.3) {
-      const near = getNearestMonster(player.x, player.z, HERO_ATTACK_RANGE);
-      if (near) {
-        for (let i = SKILL_IDS.length - 1; i >= 0; i--) {
-          const sid = SKILL_IDS[i];
-          if (getUpgradeLevel(sid) > 0 && runtime.skillCooldowns[sid] <= 0) {
-            castSkill(sid, true);
-            break;
-          }
-        }
-      }
-    }
-
-    // 2. Passive Village Gate Repair & Defense Turrets / Aegis Shrine
-    function updateGateAttackBanner(show, distMeters = 0) {
+  function updateGateAttackBanner(show, distMeters = 0) {
     if (typeof document === "undefined") return;
     let banner = document.getElementById("gate-attack-banner");
     if (!banner) {
@@ -2819,6 +2732,92 @@
       banner.style.display = "none";
     }
   }
+
+  function triggerGameOver() {
+    runtime.gameOver = true;
+    updateGateAttackBanner(false);
+    playTone(196, 0.35, "sawtooth", 0.08);
+    if (typeof document !== "undefined") {
+      const badge = document.getElementById("gameover-badge");
+      const title = document.getElementById("gameover-title");
+      const desc = document.getElementById("gameover-desc");
+      if (badge) badge.textContent = "💥 GATE DESTROYED";
+      if (title) title.textContent = "💔 마을 출입구 성문이 무너졌습니다!";
+      if (desc) desc.textContent = `WAVE ${state.wave} 공세를 성문이 버티지 못했습니다. 동쪽 디펜스 기술 연구소에서 포탑과 ★1~★5 원소 스킬을 강화한 뒤 재도전하세요!`;
+      const modal = document.getElementById("gameover-modal");
+      if (modal) modal.classList.add("open");
+    }
+    syncHUD(true);
+  }
+
+  function retryCurrentWave() {
+    const Engine = window.Engine;
+    for (const m of runtime.monsters) {
+      if (Engine && Engine.unitGroup && m.entity && m.entity.root) {
+        Engine.unitGroup.remove(m.entity.root);
+      }
+    }
+    runtime.monsters.length = 0;
+    for (const p of runtime.projectiles) {
+      if (Engine && Engine.vfxGroup && p.mesh) Engine.vfxGroup.remove(p.mesh);
+    }
+    runtime.projectiles.length = 0;
+    runtime.waveActive = false;
+    runtime.waveTimer = 15.0;
+    runtime.gameOver = false;
+    updateGateAttackBanner(false);
+    state.gateHp = getGateMaxHp();
+    state.heroHp = state.gateHp;
+    if (sceneObjs.villageGate && sceneObjs.villageGate.hpFillPivot) {
+      sceneObjs.villageGate.hpFillPivot.scale.x = 1;
+    }
+    player.x = HERO_SPAWN.x;
+    player.z = HERO_SPAWN.z;
+
+    if (typeof document !== "undefined") {
+      const modal = document.getElementById("gameover-modal");
+      if (modal) modal.classList.remove("open");
+    }
+    showToast(`🔄 성문 내구도 100% 수복! WAVE ${state.wave} 재도전 준비 완료!`);
+    syncHUD(true);
+  }
+
+  function updateCombatAndDefense(dt) {
+    if (runtime.gameOver) return;
+    if (runtime.combatGraceTimer > 0) runtime.combatGraceTimer -= dt;
+
+    // 1. Skill Cooldowns & Auto-Cast
+    for (const sid of SKILL_IDS) {
+      if (runtime.skillCooldowns[sid] > 0) {
+        runtime.skillCooldowns[sid] = Math.max(0, runtime.skillCooldowns[sid] - dt);
+      }
+    }
+
+    if (state.autoSkill && runtime.monsters.length > 0 && player.x >= GATE_POS.x + 0.3) {
+      const near = getNearestMonster(player.x, player.z, HERO_ATTACK_RANGE);
+      if (near) {
+        for (let i = SKILL_IDS.length - 1; i >= 0; i--) {
+          const sid = SKILL_IDS[i];
+          if (getUpgradeLevel(sid) > 0 && runtime.skillCooldowns[sid] <= 0) {
+            castSkill(sid, true);
+            break;
+          }
+        }
+      }
+    }
+
+    // 2. Passive Village Gate Repair & Defense Turrets / Aegis Shrine
+    const maxHp = getGateMaxHp();
+    const regenRate = (runtime.waveActive ? 0 : 4.0) + state.shrineAegisLv * 8.0;
+    if (state.gateHp < maxHp && regenRate > 0) {
+      state.gateHp = Math.min(maxHp, state.gateHp + regenRate * dt);
+    }
+    state.heroHp = state.gateHp;
+
+    const isUnderSiege = runtime.waveActive || runtime.monsters.length > 0;
+    const distToGate = Math.hypot(player.x - GATE_POS.x, player.z - GATE_POS.z);
+    updateGateAttackBanner(isUnderSiege && distToGate > 7.5, distToGate);
+
     if (sceneObjs.villageGate && window.Entities) {
       if (sceneObjs.villageGate.hpFillPivot) {
         sceneObjs.villageGate.hpFillPivot.scale.x = Math.max(0.01, state.gateHp / maxHp);
@@ -2906,7 +2905,6 @@
       if (m.stunTimer > 0) m.stunTimer = Math.max(0, m.stunTimer - dt);
       if (m.atkTimer > 0) m.atkTimer -= dt;
 
-      // Apply knockback velocity damping
       m.x += m.vx * dt;
       m.z += m.vz * dt;
       m.vx *= Math.exp(-8 * dt);
@@ -2940,7 +2938,6 @@
         }
       }
 
-      // Hard clamp: monsters NEVER cross inside Village Gate x < 25.2
       m.x = Math.max(GATE_POS.x + 1.2, Math.min(42.5, m.x));
       m.z = Math.max(-3.8, Math.min(3.8, m.z));
 
@@ -2949,7 +2946,7 @@
       window.Entities.animateCuteMonster(m.entity, dt, m.slowTimer > 0);
     }
 
-    // 5. Projectiles (Hero/Turret & Shroom Spore Shots)
+    // 5. Projectiles
     for (let i = runtime.projectiles.length - 1; i >= 0; i--) {
       const p = runtime.projectiles[i];
       p.life += dt;
@@ -2989,6 +2986,7 @@
     // 6. Wave Clear Progression (1 ~ 20) + 5-Wave Territory Expansion (Wave 6, 11, 16)
     if (runtime.waveActive && runtime.waveSpawnCount >= runtime.waveTotalToSpawn && runtime.monsters.length === 0) {
       runtime.waveActive = false;
+      updateGateAttackBanner(false);
       const clearedW = state.wave;
       const bonus = 100 * clearedW;
       state.gems += bonus;
@@ -3031,7 +3029,6 @@
   function resolveWorldBoundsAndCollisions(obj, radius = 0.65) {
     const era = getUnlockedEra();
     if (obj.z > 20.0) {
-      // Region A: Dedicated Southern Resource Valley (Zones 1~10, z in [20.0, 60.5])
       if (obj.z < 21.8) {
         obj.x = Math.max(-3.8, Math.min(3.8, obj.x));
       } else {
@@ -3039,7 +3036,6 @@
       }
       obj.z = Math.min(era >= 4 ? 60.5 : era === 3 ? 52.8 : era === 2 ? 45.2 : 37.5, obj.z);
     } else if (obj.x > 24.0) {
-      // Region B: Dedicated East Monster Siege Battlefield
       if (obj.x < 25.4) {
         obj.z = Math.max(-3.6, Math.min(3.6, obj.z));
       } else {
@@ -3047,7 +3043,6 @@
       }
       obj.x = Math.min(40.5, obj.x);
     } else if (obj.z < -20.0) {
-      // Region D: North Expansion Districts (Era 2 NW, Era 3 NE, Era 4 Citadel)
       const minZ = era >= 4 ? -43.8 : era >= 2 ? -31.4 : -19.2;
       let minX = -23.2;
       let maxX = 23.2;
@@ -3058,7 +3053,6 @@
       obj.x = Math.max(minX, Math.min(maxX, obj.x));
       obj.z = Math.max(minZ, obj.z);
     } else {
-      // Region C: Inside Walled Base Village (48m x 40m) + open North Era passageways
       const maxX = Math.abs(obj.z) <= 3.6 ? 40.5 : 23.2;
       const maxZ = Math.abs(obj.x) <= 3.8 ? 60.5 : 19.2;
       let minZ = -19.2;
@@ -3237,10 +3231,10 @@
     runtime.conveyorTimer = 0;
 
     const links = [
-      { reqLab2: true, fromIdx: 0, toIdx: 3, toQueueKey: "inQueue", color: 0xd67aff }, // m1 -> m4 (cut_gem)
-      { reqLab2: true, fromIdx: 1, toIdx: 5, toQueueKey: "inQueue", color: 0x52ff9b }, // m2 -> m6 (magic_potion)
-      { reqLab2: true, fromIdx: 5, toIdx: 7, toQueueKey: "inQueueC", color: 0xfacc15 }, // m6 -> m8 (arcane_core)
-      { reqLab2: false, fromIdx: 7, toIdx: 8, toQueueKey: "inQueue", color: 0xf43f5e }, // m8 -> m9 (philosopher_stone)
+      { reqLab2: true, fromIdx: 0, toIdx: 3, toQueueKey: "inQueue", color: 0xd67aff },
+      { reqLab2: true, fromIdx: 1, toIdx: 5, toQueueKey: "inQueue", color: 0x52ff9b },
+      { reqLab2: true, fromIdx: 5, toIdx: 7, toQueueKey: "inQueueC", color: 0xfacc15 },
+      { reqLab2: false, fromIdx: 7, toIdx: 8, toQueueKey: "inQueue", color: 0xf43f5e },
     ];
     for (const lk of links) {
       if (lk.reqLab2 && lab2Lv <= 0) continue;
@@ -3342,7 +3336,6 @@
       maxDraw: 36,
     });
 
-    // All 4 Alchemy Research Labs (1~4호 연구소) -> Dimensional Energy (dim1 / dim2 / dim3)
     for (const cfg of LAB_CONFIGS) {
       const labObj = runtime.labs[cfg.id];
       if (!labObj) continue;
@@ -3501,7 +3494,6 @@
   function updateSpecialVehicles(dt) {
     const era = getUnlockedEra();
     const mult = getPriceMultiplier();
-    // 1) Hot Air Balloon for 4호기 (fire_runestone)
     const m4 = runtime.machines[3];
     const b = runtime.balloon;
     if (b && m4 && m4.lv > 0 && era >= 2) {
@@ -3530,7 +3522,6 @@
       if (window.Entities.animateHotAirBalloon) window.Entities.animateHotAirBalloon(b.entity, dt, moving);
     }
 
-    // 2) Dwarf Armored Train for 6호기 (arcane_core) along railway z = -29.8
     const m6 = runtime.machines[5];
     const tr = runtime.train;
     if (tr && m6 && m6.lv > 0 && era >= 3) {
@@ -3557,7 +3548,6 @@
       if (window.Entities.animateArmoredTrain) window.Entities.animateArmoredTrain(tr.entity, spd, dt);
     }
 
-    // 3) Giant Golden Sky Airship for 9호기 (philosopher_stone)
     const m9 = runtime.machines[8];
     const a = runtime.airship;
     if (a && m9 && m9.lv > 0 && era >= 4) {
@@ -3605,7 +3595,6 @@
     }
     advanceCustomerQueue(runtime.customers, dt, STALL_POS.x - 3.2, STALL_POS.z - 2.6, 1.45, Math.PI * 0.5, -5.2, STALL_POS.z + 5.8);
 
-    // Showcase facilities: m1 (idx 0), m2 (idx 1), m5 (idx 4), m7 (idx 6)
     for (let i = 0; i < runtime.machines.length; i++) {
       const m = runtime.machines[i];
       if (!m || m.lv <= 0 || !m.showcase || era < (m.cfg.era || 1)) continue;
@@ -3626,7 +3615,6 @@
       advanceCustomerQueue(m.customers, dt, m.cfg.custQueueX, m.cfg.custQueueZ0, 1.35, -Math.PI * 0.5, 1.4, m.cfg.custQueueZ0 + 6.8);
     }
 
-    // m8 Philosopher Stone direct monetization buffer if m9 not yet built
     const m8 = runtime.machines[7];
     const m9 = runtime.machines[8];
     if (m8 && m8.lv > 0 && (!m9 || m9.lv <= 0) && m8.outQueue.length > 6) {
@@ -3707,7 +3695,6 @@
     const m5AuraMult = (state.m5Lv || 0) > 0 && era >= 2 ? 1.3 : 1.0;
     const hasTeleport = (state.alchemyLab4Lv || 0) >= 1 && era >= 4;
 
-    // Build pool of currently unlocked & needed raw resources
     const wantedTypes = ["blue_ore"];
     if (state.herbGroveUnlocked) wantedTypes.push("rainbow_herb");
     if (era >= 2) wantedTypes.push("fire_mana_stone", "spirit_dew");
@@ -3769,7 +3756,6 @@
             destPos = m1.cfg.inPos; destQueue = m1.inQueue; maxQ = 24;
           }
         } else {
-          // Match exotic & herb resources directly to active labs or machines
           let matched = false;
           for (const m of runtime.machines) {
             if (m.lv <= 0 || era < (m.cfg.era || 1)) continue;
@@ -4026,7 +4012,6 @@
     const hasHerb = player.bagItems.includes("rainbow_herb");
     const m1 = runtime.machines[0];
     const m2 = runtime.machines[1];
-    const m3 = runtime.machines[2];
     const starterPed = runtime.pedestals[0];
     const starterCashCount = starterPed ? starterPed.cashValues.length : 0;
 
@@ -4038,31 +4023,27 @@
 
     // [초반 단일 순차 튜토리얼: 1호기(m1) 완공 전까지는 오직 '광석 -> 원석 교역소 -> 1호기' 순서만 안내]
     if (state.m1Lv === 0) {
-      const m1Cost = getUpgradeCost("m1"); // 50 캐시
+      const m1Cost = getUpgradeCost("m1");
 
       if (state.gems >= m1Cost) {
-        // 3단계: 1호기 건설 비용(50)이 모이면 1호기 발판 안내
         tx = MACHINE_CONFIGS[0].padPos.x;
         tz = MACHINE_CONFIGS[0].padPos.z;
         stepLabel = "3단계 · 1호기 건설";
         guideText = "⚙️ 북쪽 공방 [1호기 크리스탈 세공기] 발판을 밟아 건설하세요!";
         colorHex = 0xd67aff;
       } else if (starterCashCount > 0) {
-        // 2-2단계: 교역소에 돈이 쌓였으면 수금 발판 안내
         tx = GEM_PEDESTAL_POS.x;
         tz = GEM_PEDESTAL_POS.z;
         stepLabel = "2단계 · 교역소 수금";
         guideText = "💵 원석 교역소 북쪽 [돈 받는 곳]에서 캐시를 수금하세요!";
         colorHex = 0x2ecc71;
       } else if (hasOre) {
-        // 2-1단계: 광석을 1개라도 챘으면 원석 교역소 판매 발판 안내
         tx = SELL_PALLET_POS.x;
         tz = SELL_PALLET_POS.z;
         stepLabel = "2단계 · 원석 교역소";
         guideText = "📦 서쪽 [원석 교역소] 남쪽 발판에 푸른 광석을 판매하세요!";
         colorHex = 0x38bdf8;
       } else {
-        // 1단계: 맨 처음에는 가장 가까운 푸른 광석 안내
         let bestDist = Infinity;
         for (const n of runtime.farmNodes) {
           if (!isZoneUnlocked(n.zone) || n.respawnTimer > 0 || n.itemType !== "blue_ore") continue;
@@ -4078,7 +4059,6 @@
         colorHex = 0xffe629;
       }
     } else {
-      // [1호기 건설 완료 이후: 단일 핵심 루프 가이드]
       let nearestCashPed = null;
       let nearestCashDist = Infinity;
       for (let i = 0; i < runtime.pedestals.length; i++) {
@@ -4141,34 +4121,6 @@
         }
       }
     }
-
-    const dx = tx - player.x;
-    const dz = tz - player.z;
-    const distToTarget = Math.hypot(dx, dz);
-    const ang = Math.atan2(dx, dz);
-
-    hero.guideArrowGroup.visible = distToTarget > 1.6;
-    hero.guideArrowGroup.rotation.y = ang - player.rotY;
-    hero.guideArrowGroup.scale.set(1, 1, 1);
-
-    if (hero.guideArrowGroup.userData && hero.guideArrowGroup.userData.arrowMesh) {
-      hero.guideArrowGroup.userData.arrowMesh.position.z = 1.80 + Math.sin(runtime.time * 6.0) * 0.22;
-    }
-    if (hero.guideArrowMat && hero.guideArrowMat.color) {
-      hero.guideArrowMat.color.setHex(colorHex);
-      if (hero.guideArrowMat.emissive) hero.guideArrowMat.emissive.setHex(colorHex);
-    }
-
-    if (typeof document !== "undefined") {
-      const stepEl = document.getElementById("ui-guide-step");
-      const textEl = document.getElementById("ui-guide-text");
-      const distEl = document.getElementById("ui-guide-dist");
-      if (stepEl && stepEl.textContent !== stepLabel) stepEl.textContent = stepLabel;
-      if (textEl && textEl.textContent !== guideText) textEl.textContent = guideText;
-      const distStr = `${Math.max(0, Math.round(distToTarget))}m`;
-      if (distEl && distEl.textContent !== distStr) distEl.textContent = distStr;
-    }
-  }
 
     const dx = tx - player.x;
     const dz = tz - player.z;
@@ -4287,7 +4239,6 @@
     setText("ui-shop-cash", `💵 ${state.gems.toLocaleString()}`);
     setText("ui-shop-dim", `🔮 ${(state.dim1 || 0).toLocaleString()} · 💠 ${(state.dim2 || 0).toLocaleString()} · 🌟 ${(state.dim3 || 0).toLocaleString()}`);
 
-    // Top-Center Wave HUD
     const era = getUnlockedEra();
     const eInfo = ERA_INFO[era] || ERA_INFO[1];
     const waveHud = document.getElementById("wave-hud");
@@ -4306,7 +4257,6 @@
       setText("ui-wave-monsters", state.wave === 1 ? "평화 준비 중" : "정비 시간");
     }
 
-    // Skill Hotbar Slots
     for (const sid of SKILL_IDS) {
       const def = UPGRADE_DEFS[sid];
       const lv = getUpgradeLevel(sid);
@@ -4438,10 +4388,6 @@
     const maxHp = getGateMaxHp();
     state.gateHp = Math.min(maxHp, Math.max(1, state.gateHp !== undefined ? state.gateHp : maxHp));
     state.heroHp = state.gateHp;
-
-    const isUnderSiege = runtime.waveActive || runtime.monsters.length > 0;
-    const distToGate = Math.hypot(player.x - GATE_POS.x, player.z - GATE_POS.z);
-    updateGateAttackBanner(isUnderSiege && distToGate > 7.5, distToGate);
   }
 
   function resetGame() {
@@ -4475,6 +4421,7 @@
     runtime.waveTotalToSpawn = WAVE_TOTAL_MONSTERS;
     runtime.waveBatchTimer = 0;
     runtime.gameOver = false;
+    updateGateAttackBanner(false);
     runtime.skillCooldowns = { s1: 0, s2: 0, s3: 0, s4: 0, s5: 0 };
     if (sceneObjs.villageGate && sceneObjs.villageGate.hpFillPivot) {
       sceneObjs.villageGate.hpFillPivot.scale.x = 1;
