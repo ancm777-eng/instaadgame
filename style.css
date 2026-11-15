@@ -1399,3 +1399,32 @@ html, body {
     grid-template-columns: 1fr;
   }
 }
+
+#gate-attack-alert {
+  display: none;
+  position: fixed;
+  top: 16%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  padding: 14px 26px;
+  border-radius: 16px;
+  background: rgba(210, 24, 48, 0.94);
+  border: 3px solid #ffe066;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+  box-shadow: 0 8px 28px rgba(210, 24, 48, 0.65);
+  pointer-events: none;
+  animation: alertPulse 0.7s infinite alternate;
+}
+
+#gate-attack-alert.active {
+  display: block;
+}
+
+@keyframes alertPulse {
+  from { transform: translateX(-50%) scale(0.96); }
+  to   { transform: translateX(-50%) scale(1.05); }
+}
