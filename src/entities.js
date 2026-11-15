@@ -1,859 +1,634 @@
-/* ============================================================================
- * src/entities.js — Pure .glb Asset-Driven 3D Entity, Station & 3D Ring Pad Factory
- * Zero SphereGeometry / CylinderGeometry / ConeGeometry character/building
- * assemblies. Every entity & prop uses AssetLoader.createInstance() normalized
- * .glb models, AnimationMixer crossFadeTo, Squash-and-Stretch, White Flash,
- * and Sleek 3D Progress-Arc Step-to-Pay Pads.
- * ============================================================================ */
+// =============================================================================
+// src/entities.js - Unified Entity Builders Wiring ChibiCharacters, GLB Props,
+// 3D Slatted Wooden Pallets, and Floor Card Gauge Step Pads (Zero Floating Boxes)
+// =============================================================================
+
 (function () {
   "use strict";
 
-  var cachedArrowTex = null;
+  function chibi() {
+    return window.ChibiCharacters;
+  }
 
-  function drawRoundedRectPath(c, x, y, w, h, r) {
-    c.beginPath();
-    if (c.roundRect) {
-      c.roundRect(x, y, w, h, r);
+  function loader() {
+    return window.AssetLoader;
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    const rad = Math.min(r, w * 0.5, h * 0.5);
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(x, y, w, h, rad);
     } else {
-      c.rect(x, y, w, h);
+      ctx.moveTo(x + rad, y);
+      ctx.lineTo(x + w - rad, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+      ctx.lineTo(x + w, y + h - rad);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+      ctx.lineTo(x + rad, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+      ctx.lineTo(x, y + rad);
+      ctx.quadraticCurveTo(x, y, x + rad, y);
+      ctx.closePath();
     }
   }
 
-  function getGuideArrowTexture() {
-    if (cachedArrowTex) return cachedArrowTex;
-    if (typeof document === "undefined") return new THREE.Texture();
-    var c = document.createElement("canvas");
-    c.width = 128;
-    c.height = 128;
-    var ctx = c.getContext("2d");
-    ctx.clearRect(0, 0, 128, 128);
-    ctx.beginPath();
-    ctx.moveTo(64, 14);
-    ctx.lineTo(108, 70);
-    ctx.lineTo(82, 70);
-    ctx.lineTo(82, 114);
-    ctx.lineTo(46, 114);
-    ctx.lineTo(46, 70);
-    ctx.lineTo(20, 70);
-    ctx.closePath();
-    var grad = ctx.createLinearGradient(0, 14, 0, 114);
-    grad.addColorStop(0, "#fff8a6");
-    grad.addColorStop(1, "#ffae3d");
-    ctx.fillStyle = grad;
+  // ---------------------------------------------------------------------------
+  // Character / Stack / Machine / Truck Delegates -> window.ChibiCharacters
+  // ---------------------------------------------------------------------------
+  function createPlayerHero() {
+    return chibi().createAlchemistHero();
+  }
+
+  function updateHeroTier(hero, tier) {
+    return chibi().updateHeroTier(hero, tier);
+  }
+
+  function animatePlayerHero(hero, state, dt) {
+    return chibi().animateHero(hero, state, dt);
+  }
+
+  function createFairyWorker(idx) {
+    return chibi().createFairyWorker(idx);
+  }
+
+  function animateFairy(fairy, dt) {
+    return chibi().animateFairy(fairy, dt);
+  }
+
+  function createCustomer(variantIdx) {
+    return chibi().createAnimalCustomer(variantIdx);
+  }
+
+  function animateCustomer(cust, walking, dt) {
+    return chibi().animateCustomer(cust, walking, dt);
+  }
+
+  function createItemBlock(itemType) {
+    return chibi().createResourceCrate(itemType);
+  }
+
+  function createProductionMachine(kind) {
+    return chibi().createProductionMachine(kind);
+  }
+
+  function animateProductionMachine(machine, processing, dt) {
+    return chibi().animateProductionMachine(machine, processing, dt);
+  }
+
+  function createHarvesterCart() {
+    return chibi().createHarvesterTruck();
+  }
+
+  function animateHarvesterTruck(truck, speed, dt) {
+    return chibi().animateHarvesterTruck(truck, speed, dt);
+  }
+
+  // ---------------------------------------------------------------------------
+  // GLB Props & Environment Stations (Sales Stall, Gem Pedestal, Resource Nodes)
+  // ---------------------------------------------------------------------------
+  function createSalesStall(x = -13.5, z = 2.5) {
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+
+    const visualRoot = new THREE.Group();
+    root.add(visualRoot);
+
+    const L = loader();
+    let built = false;
+    if (L && L.hasRole && L.hasRole("sales_stall")) {
+      const inst = L.createInstance("sales_stall", {
+        targetHeight: 3.1,
+        castShadow: true,
+        receiveShadow: true,
+      });
+      if (inst && inst.root) {
+        visualRoot.add(inst.root);
+        built = true;
+      }
+    }
+    if (!built) {
+      const matWood = chibi().makeToonMat(0xb07540);
+      const matCanopy = chibi().makeToonMat(0xe85a72);
+      const matTrim = chibi().makeToonMat(0xfff0cc);
+      chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(3.4, 1.15, 2.0), matWood, { pos: [0, 0.58, 0] });
+      chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(3.7, 0.45, 2.3), matCanopy, { pos: [0, 2.75, 0] });
+      chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(3.75, 0.14, 2.35), matTrim, { pos: [0, 2.48, 0] });
+      [-1.5, 1.5].forEach((px) => {
+        chibi().addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.11, 0.11, 2.6, 8), matWood, { pos: [px, 1.3, 0.85] });
+      });
+    }
+
+    // Countertop display anchor + glowing shop sign crystal
+    const stockAnchor = new THREE.Group();
+    stockAnchor.position.set(0, 1.24, 0);
+    root.add(stockAnchor);
+
+    return { root, visualRoot, stockAnchor };
+  }
+
+  function createGemPedestal(x = -9.6, z = -2.2) {
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+
+    const visualRoot = new THREE.Group();
+    root.add(visualRoot);
+
+    // Wide sturdy 3x3 collection platform base
+    const baseMat = chibi().makeToonMat(0x524c78);
+    const rimMat = chibi().makeToonMat(0x52efff, { emissive: 0x1fc4ff, emissiveIntensity: 0.35 });
+    chibi().addOutlinedMesh(visualRoot, new THREE.BoxGeometry(2.55, 0.24, 2.25), baseMat, {
+      pos: [0, 0.12, 0],
+      castShadow: true,
+      receiveShadow: true,
+      outlineScale: 1.03,
+    });
+    const innerPad = new THREE.Mesh(
+      new THREE.BoxGeometry(2.24, 0.05, 1.94),
+      rimMat
+    );
+    innerPad.position.set(0, 0.245, 0);
+    visualRoot.add(innerPad);
+
+    const L = loader();
+    if (L && L.hasRole && L.hasRole("gem_pedestal")) {
+      const inst = L.createInstance("gem_pedestal", {
+        targetHeight: 0.72,
+        castShadow: true,
+        receiveShadow: true,
+      });
+      if (inst && inst.root) {
+        inst.root.position.set(0, 0.22, -1.25);
+        visualRoot.add(inst.root);
+      }
+    }
+
+    // 3x3 Tall Mana Gem Skyscraper Anchor
+    const stackAnchor = new THREE.Group();
+    stackAnchor.position.set(0, 0.27, 0);
+    root.add(stackAnchor);
+
+    return { root, visualRoot, stackAnchor };
+  }
+
+  function createResourceNode(kind, x, z) {
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+
+    const visualRoot = new THREE.Group();
+    root.add(visualRoot);
+
+    const isCrystal = kind === "crystal";
+    const role = isCrystal ? "rock_crystal" : "berry_bush";
+    const L = loader();
+
+    let built = false;
+    if (L && L.hasRole && L.hasRole(role)) {
+      const inst = L.createInstance(role, {
+        targetHeight: isCrystal ? 1.55 : 1.42,
+        tint: isCrystal ? 0x56ecff : 0xff739c,
+        tintStrength: isCrystal ? 0.28 : 0.22,
+        emissiveTint: isCrystal ? 0x1bbfff : 0xe03274,
+        emissiveIntensity: isCrystal ? 0.25 : 0.12,
+        castShadow: true,
+        receiveShadow: true,
+      });
+      if (inst && inst.root) {
+        inst.root.rotation.y = ((Math.abs(x * 7 + z * 13)) % 6.28);
+        visualRoot.add(inst.root);
+        built = true;
+      }
+    }
+
+    if (!built) {
+      if (isCrystal) {
+        const mat = chibi().makeToonMat(0x52e8ff, { emissive: 0x1cb2ff, emissiveIntensity: 0.35 });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.55, 0), mat, {
+          pos: [0, 0.72, 0],
+          scale: [0.95, 1.45, 0.95],
+        });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.35, 0), mat, {
+          pos: [0.36, 0.44, 0.22],
+          rot: [0.3, 0.4, -0.35],
+          scale: [0.9, 1.35, 0.9],
+        });
+      } else {
+        const bushMat = chibi().makeToonMat(0x42b549);
+        const berryMat = chibi().makeToonMat(0xff528e, { emissive: 0xd12662, emissiveIntensity: 0.22 });
+        chibi().addOutlinedMesh(visualRoot, new THREE.DodecahedronGeometry(0.62, 1), bushMat, { pos: [0, 0.56, 0] });
+        [[-0.35, 0.76, 0.36], [0.36, 0.72, 0.32], [0, 0.96, 0.18], [-0.22, 0.55, -0.35]].forEach(([bx, by, bz]) => {
+          chibi().addOutlinedMesh(visualRoot, new THREE.SphereGeometry(0.16, 8, 8), berryMat, { pos: [bx, by, bz] });
+        });
+      }
+    }
+
+    // Subtle ground highlight ring
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: isCrystal ? 0x52e8ff : 0xff709e,
+      transparent: true,
+      opacity: 0.32,
+      depthWrite: false,
+    });
+    const ringMesh = new THREE.Mesh(new THREE.RingGeometry(0.66, 0.80, 18), ringMat);
+    ringMesh.rotation.x = -Math.PI * 0.5;
+    ringMesh.position.y = 0.03;
+    root.add(ringMesh);
+
+    return { root, visualRoot, ringMesh, kind };
+  }
+
+  // ---------------------------------------------------------------------------
+  // 3D Slatted Wooden Pallet + White-Bordered Drop / Pickup Zone
+  // ---------------------------------------------------------------------------
+  function makePalletMatTexture(w = 256, h = 256, accentColor = "#ffffff", badgeText = "") {
+    if (typeof document === "undefined") return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Translucent dark-tinted floor zone background
+    roundRectPath(ctx, 10, 10, w - 20, h - 20, 22);
+    ctx.fillStyle = "rgba(18, 28, 48, 0.42)";
     ctx.fill();
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = "#241434";
+
+    // Thick crisp white outer border
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "#ffffff";
     ctx.stroke();
 
-    var tex = new THREE.CanvasTexture(c);
-    if (THREE.sRGBEncoding !== undefined) tex.encoding = THREE.sRGBEncoding;
-    cachedArrowTex = tex;
+    // Accent inner dash border
+    roundRectPath(ctx, 22, 22, w - 44, h - 44, 14);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = accentColor;
+    ctx.stroke();
+
+    if (badgeText) {
+      ctx.font = "900 32px Pretendard, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillText(badgeText, w * 0.5 + 2, h - 20);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(badgeText, w * 0.5, h - 22);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+    else if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+    tex.needsUpdate = true;
     return tex;
   }
 
-  function createShadowDisc(radius) {
-    var geo = new THREE.CircleGeometry(radius, 24);
-    geo.rotateX(-Math.PI / 2);
-    var mat = new THREE.MeshBasicMaterial({
-      map: Engine.getShadowTexture(),
+  function createWoodenPalletZone(opts = {}) {
+    const x = opts.x || 0;
+    const z = opts.z || 0;
+    const w = opts.w || 2.35;
+    const d = opts.d || 1.95;
+    const accentHex = opts.accentColor || "#5ef0ff";
+    const badgeText = opts.badgeText || "";
+
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+
+    // White-bordered floor mat
+    const matTex = makePalletMatTexture(256, 256, accentHex, badgeText);
+    const floorMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      map: matTex,
       transparent: true,
-      opacity: 0.72,
-      depthWrite: false
+      depthWrite: false,
     });
-    var m = new THREE.Mesh(geo, mat);
-    m.position.y = 0.028;
-    return m;
-  }
+    const matMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floorMat);
+    matMesh.rotation.x = -Math.PI * 0.5;
+    matMesh.position.y = 0.026;
+    root.add(matMesh);
 
-  /* ------------------------------------------------------------------------
-   * Visual Feedback Helpers (Flash White & Elastic Squash-and-Stretch)
-   * ------------------------------------------------------------------------ */
-  function flashModelWhite(entityModel, duration) {
-    if (!entityModel) return;
-    entityModel.flashTimer = duration !== undefined ? duration : 0.12;
-    entityModel._isFlashing = true;
-    var mats = entityModel.materials || (entityModel.glb && entityModel.glb.materials) || [];
-    for (var i = 0; i < mats.length; i++) {
-      var m = mats[i];
-      if (!m) continue;
-      if (m.color && typeof m.color.setHex === "function") m.color.setHex(0xffffff);
-      if (m.emissive && typeof m.emissive.setHex === "function") {
-        m.emissive.setHex(0xffffff);
-        m.emissiveIntensity = 0.95;
-      }
-    }
-  }
+    // 3D Slatted Wooden Pallet resting inside the bordered zone
+    const palletGroup = new THREE.Group();
+    const pw = w * 0.72;
+    const pd = d * 0.68;
+    const matRunner = chibi().makeToonMat(0x7c4f2b);
+    const matSlat = chibi().makeToonMat(0xc48b52);
 
-  function updateModelFlash(entityModel, dt) {
-    if (!entityModel || !entityModel._isFlashing) return;
-    entityModel.flashTimer = Math.max(0, (entityModel.flashTimer || 0) - dt);
-    if (entityModel.flashTimer <= 0) {
-      entityModel._isFlashing = false;
-      var mats = entityModel.materials || (entityModel.glb && entityModel.glb.materials) || [];
-      for (var i = 0; i < mats.length; i++) {
-        var m = mats[i];
-        if (!m || !m.userData) continue;
-        if (m.color && m.userData._baseColor && typeof m.color.copy === "function") {
-          m.color.copy(m.userData._baseColor);
-        }
-        if (m.emissive && m.userData._baseEmissive && typeof m.emissive.copy === "function") {
-          m.emissive.copy(m.userData._baseEmissive);
-        }
-        m.emissiveIntensity = m.userData._baseEmissiveIntensity !== undefined ? m.userData._baseEmissiveIntensity : 0;
-      }
-    }
-  }
-
-  function triggerStationSquash(stationObj) {
-    if (!stationObj || !stationObj.visualRoot) return;
-    stationObj.squashTimer = 0.22;
-    stationObj.squashDuration = 0.22;
-    stationObj.visualRoot.scale.set(1.15, 0.85, 1.15);
-  }
-
-  function updateStationSquash(stationObj, dt) {
-    if (!stationObj || !stationObj.visualRoot || !(stationObj.squashTimer > 0)) return;
-    stationObj.squashTimer = Math.max(0, stationObj.squashTimer - dt);
-    var dur = stationObj.squashDuration || 0.22;
-    var p = 1 - stationObj.squashTimer / dur;
-    // Elastic damping curve back toward (1, 1, 1)
-    var env = Math.exp(-5.5 * p) * Math.cos(p * Math.PI * 2.5);
-    var sxz = 1 + 0.15 * env;
-    var sy = 1 - 0.15 * env;
-    stationObj.visualRoot.scale.set(sxz, sy, sxz);
-    if (stationObj.squashTimer <= 0) {
-      stationObj.visualRoot.scale.set(1, 1, 1);
-    }
-  }
-
-  /* ------------------------------------------------------------------------
-   * 1. HERO WIZARD (.glb Skeletal Character + Aura + Guide + BackStack)
-   * ------------------------------------------------------------------------ */
-  function createWizardModel() {
-    var root = new THREE.Group();
-    root.name = "WizardHero";
-
-    var shadowMesh = createShadowDisc(0.75);
-    root.add(shadowMesh);
-
-    var auraGeo = new THREE.RingGeometry(0.62, 0.80, 32);
-    auraGeo.rotateX(-Math.PI / 2);
-    var auraMat = new THREE.MeshBasicMaterial({
-      color: 0x5ceeff,
-      transparent: true,
-      opacity: 0.72,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    var auraMesh = new THREE.Mesh(auraGeo, auraMat);
-    auraMesh.position.y = 0.04;
-    root.add(auraMesh);
-
-    var guideArrowGroup = new THREE.Group();
-    guideArrowGroup.position.y = 0.055;
-    var arrowGeo = new THREE.PlaneGeometry(1.05, 1.05);
-    arrowGeo.rotateX(-Math.PI / 2);
-    arrowGeo.rotateY(Math.PI);
-    var arrowMat = new THREE.MeshBasicMaterial({
-      map: getGuideArrowTexture(),
-      transparent: true,
-      alphaTest: 0.12,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    var arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
-    arrowMesh.position.set(0, 0, 1.55);
-    guideArrowGroup.add(arrowMesh);
-    root.add(guideArrowGroup);
-
-    var bodyPivot = new THREE.Group();
-    root.add(bodyPivot);
-
-    var glb = AssetLoader.createInstance("wizard", {
-      targetHeight: 1.8,
-      tint: 0x4a90e2,
-      tintStrength: 0.45
-    });
-    bodyPivot.add(glb.root);
-
-    var backStackAnchor = new THREE.Group();
-    backStackAnchor.position.set(0, 0.88, -0.45);
-    root.add(backStackAnchor);
-
-    return {
-      root: root,
-      bodyPivot: bodyPivot,
-      glb: glb,
-      materials: glb.materials,
-      auraMesh: auraMesh,
-      auraMat: auraMat,
-      shadowMesh: shadowMesh,
-      guideArrowGroup: guideArrowGroup,
-      backStackAnchor: backStackAnchor,
-      tierScale: 1,
-      currentState: "idle"
-    };
-  }
-
-  function updateWizardTier(wizard, tier) {
-    if (!wizard || !wizard.auraMat) return;
-    var tierColors = [0x5ceeff, 0xff7be5, 0xb388ff, 0xffd26e, 0xffeb7a];
-    var col = tierColors[Math.max(0, Math.min(tierColors.length - 1, tier - 1))];
-    wizard.auraMat.color.setHex(col);
-    wizard.tierScale = 1 + (Math.max(1, tier) - 1) * 0.045;
-  }
-
-  function animateWizard(wizard, animState, dt) {
-    if (!wizard || !wizard.bodyPivot) return;
-    var spd = animState.speed || 0;
-    var swingT = animState.swingTimer || 0;
-    var time = animState.time || 0;
-
-    var nextState = "idle";
-    if (swingT > 0.01) nextState = "attack";
-    else if (spd > 2.2) nextState = "run";
-    else if (spd > 0.35) nextState = "walk";
-
-    if (wizard.glb && wizard.glb.anim) {
-      if (wizard.currentState !== nextState || nextState === "attack") {
-        wizard.currentState = nextState;
-        wizard.glb.anim.play(nextState, 0.15);
-      }
-      wizard.glb.anim.update(dt);
-    }
-
-    var ts = wizard.tierScale || 1;
-    var bounceY = nextState === "run" || nextState === "walk" ? Math.abs(Math.sin(animState.walkPhase || 0)) * 0.04 : 0;
-    wizard.bodyPivot.position.y = bounceY;
-    wizard.bodyPivot.scale.set(ts, ts, ts);
-
-    if (wizard.auraMesh) {
-      var pulse = 1 + Math.sin(time * 4.0) * 0.05;
-      wizard.auraMesh.scale.set(pulse, pulse, pulse);
-    }
-    if (wizard.shadowMesh) {
-      var shS = Math.max(0.8, 1 - bounceY * 0.4);
-      wizard.shadowMesh.scale.set(shS, shS, shS);
-    }
-  }
-
-  /* ------------------------------------------------------------------------
-   * 2. FAIRY WORKER, VILLAGE CUSTOMERS & SLIMES (.glb Skeletal Instances)
-   * ------------------------------------------------------------------------ */
-  function createFairyModel(idx) {
-    var root = new THREE.Group();
-    var shadowMesh = createShadowDisc(0.45);
-    shadowMesh.position.y = -1.25;
-    root.add(shadowMesh);
-
-    var bodyPivot = new THREE.Group();
-    root.add(bodyPivot);
-
-    var glb = AssetLoader.createInstance("fairy_worker", {
-      targetHeight: 1.3,
-      tint: idx % 2 === 0 ? 0xff9ef0 : 0x8cf4ff,
-      tintStrength: 0.32
-    });
-    if (glb.anim) glb.anim.play("walk", 0.15);
-    bodyPivot.add(glb.root);
-
-    var bagAnchor = new THREE.Group();
-    bagAnchor.position.set(0, -0.1, 0.25);
-    root.add(bagAnchor);
-
-    return {
-      root: root,
-      bodyPivot: bodyPivot,
-      glb: glb,
-      materials: glb.materials,
-      bagAnchor: bagAnchor
-    };
-  }
-
-  function animateFairy(model, dt) {
-    if (!model) return;
-    if (model.glb && model.glb.anim) {
-      model.glb.anim.update(dt);
-    }
-  }
-
-  function createCustomerModel(variantIdx) {
-    var root = new THREE.Group();
-    var shadowMesh = createShadowDisc(0.55);
-    root.add(shadowMesh);
-
-    var bodyPivot = new THREE.Group();
-    root.add(bodyPivot);
-
-    var tints = [0x90e0ff, 0xffa6d0, 0xffe484, 0xa8f59a];
-    var glb = AssetLoader.createInstance("customer", {
-      targetHeight: 1.6,
-      tint: tints[variantIdx % tints.length],
-      tintStrength: 0.28
-    });
-    bodyPivot.add(glb.root);
-
-    return {
-      root: root,
-      bodyPivot: bodyPivot,
-      glb: glb,
-      materials: glb.materials,
-      currentState: "idle"
-    };
-  }
-
-  function animateCustomer(model, walking, dt) {
-    if (!model) return;
-    var nextState = walking ? "walk" : "idle";
-    if (model.glb && model.glb.anim) {
-      if (model.currentState !== nextState) {
-        model.currentState = nextState;
-        model.glb.anim.play(nextState, 0.15);
-      }
-      model.glb.anim.update(dt);
-    }
-  }
-
-  function createSlimeModel(isKing) {
-    var root = new THREE.Group();
-    var shadowMesh = createShadowDisc(isKing ? 1.55 : 0.65);
-    root.add(shadowMesh);
-
-    var bodyGroup = new THREE.Group();
-    root.add(bodyGroup);
-
-    var glb = AssetLoader.createInstance(isKing ? "slime_king" : "slime_normal", {
-      targetHeight: isKing ? 3.2 : 1.2,
-      tint: isKing ? 0xff4fa8 : 0x56f084,
-      tintStrength: isKing ? 0.42 : 0.36
-    });
-    if (glb.anim) glb.anim.play("walk", 0.15);
-    bodyGroup.add(glb.root);
-
-    var hpBarHolder = null;
-    var hpBarFill = null;
-    if (isKing) {
-      hpBarHolder = new THREE.Group();
-      hpBarHolder.position.set(0, 3.65, 0);
-
-      var bg = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.5, 0.3),
-        new THREE.MeshBasicMaterial({ color: 0x241434, side: THREE.DoubleSide })
-      );
-      hpBarHolder.add(bg);
-
-      hpBarFill = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.34, 0.2),
-        new THREE.MeshBasicMaterial({ color: 0xff5a9c, side: THREE.DoubleSide })
-      );
-      hpBarFill.position.z = 0.02;
-      hpBarHolder.add(hpBarFill);
-      root.add(hpBarHolder);
-    }
-
-    return {
-      root: root,
-      bodyGroup: bodyGroup,
-      shadowMesh: shadowMesh,
-      glb: glb,
-      materials: glb.materials,
-      hpBarHolder: hpBarHolder,
-      hpBarFill: hpBarFill,
-      flashTimer: 0,
-      _isFlashing: false
-    };
-  }
-
-  /* ------------------------------------------------------------------------
-   * 3. ALCHEMY STATIONS & HARVESTER CART (.glb + Squash-and-Stretch Root)
-   * ------------------------------------------------------------------------ */
-  function createCauldronStation() {
-    var root = new THREE.Group();
-    var shadowMesh = createShadowDisc(1.45);
-    root.add(shadowMesh);
-
-    var visualRoot = new THREE.Group();
-    root.add(visualRoot);
-
-    var glb = AssetLoader.createInstance("cauldron", {
-      targetHeight: 1.15,
-      tint: 0xd99b43,
-      tintStrength: 0.3
-    });
-    visualRoot.add(glb.root);
-
-    var glowMat = new THREE.MeshBasicMaterial({
-      color: 0xff7ae6,
-      transparent: true,
-      opacity: 0.55,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    var liquidGeo = new THREE.RingGeometry(0.85, 1.18, 28);
-    liquidGeo.rotateX(-Math.PI / 2);
-    var liquidRing = new THREE.Mesh(liquidGeo, glowMat);
-    liquidRing.position.y = 0.048;
-    root.add(liquidRing);
-
-    var stirGroup = new THREE.Group();
-    stirGroup.position.set(0, 1.05, 0);
-    root.add(stirGroup);
-
-    var bubbles = [];
-    var bubbleColors = [0xff8af4, 0x72f2ff, 0xffe066, 0xa2ffb8, 0xff9ad8];
-    var bGeo = new THREE.PlaneGeometry(0.4, 0.4);
-    for (var i = 0; i < 5; i++) {
-      var bMat = new THREE.MeshBasicMaterial({
-        map: Engine.getGlowTexture(),
-        color: bubbleColors[i % bubbleColors.length],
-        transparent: true,
-        opacity: 0.85,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide
+    // 3 bottom support runners along Z
+    [-pw * 0.38, 0, pw * 0.38].forEach((rx) => {
+      chibi().addOutlinedMesh(palletGroup, new THREE.BoxGeometry(0.18, 0.09, pd), matRunner, {
+        pos: [rx, 0.065, 0],
+        castShadow: true,
+        receiveShadow: true,
+        outlineScale: 1.04,
       });
-      var bMesh = new THREE.Mesh(bGeo, bMat);
-      root.add(bMesh);
-      bubbles.push({
-        mesh: bMesh,
-        baseAngle: (i / 5) * Math.PI * 2,
-        phase: i * 0.22
+    });
+
+    // 5 top slatted oak deck boards across X
+    const slatCount = 5;
+    const slatD = (pd * 0.78) / slatCount;
+    for (let i = 0; i < slatCount; i++) {
+      const sz = -pd * 0.42 + (i / (slatCount - 1)) * (pd * 0.84);
+      chibi().addOutlinedMesh(palletGroup, new THREE.BoxGeometry(pw, 0.055, slatD), matSlat, {
+        pos: [0, 0.135, sz],
+        castShadow: true,
+        receiveShadow: true,
+        outlineScale: 1.03,
       });
     }
+    root.add(palletGroup);
 
-    return {
-      root: root,
-      visualRoot: visualRoot,
-      glb: glb,
-      stirGroup: stirGroup,
-      liquidMat: glowMat,
-      bubbles: bubbles,
-      squashTimer: 0,
-      squashDuration: 0.22
-    };
-  }
-
-  function createSalesStation() {
-    var root = new THREE.Group();
-    var shadowMesh = createShadowDisc(1.9);
-    root.add(shadowMesh);
-
-    var visualRoot = new THREE.Group();
-    root.add(visualRoot);
-
-    var glb = AssetLoader.createInstance("sales_stall", {
-      targetHeight: 2.5
-    });
-    visualRoot.add(glb.root);
-
-    var stockAnchor = new THREE.Group();
-    stockAnchor.position.set(0.05, 0.9, 0.72);
-    root.add(stockAnchor);
-
-    return {
-      root: root,
-      visualRoot: visualRoot,
-      glb: glb,
-      stockAnchor: stockAnchor,
-      squashTimer: 0,
-      squashDuration: 0.22
-    };
-  }
-
-  function createGemPedestal() {
-    var root = new THREE.Group();
-    var shadowMesh = createShadowDisc(1.0);
-    root.add(shadowMesh);
-
-    var visualRoot = new THREE.Group();
-    root.add(visualRoot);
-
-    var glb = AssetLoader.createInstance("gem_pedestal", {
-      targetHeight: 0.85,
-      tint: 0xffd26e,
-      tintStrength: 0.22
-    });
-    visualRoot.add(glb.root);
-
-    var stackAnchor = new THREE.Group();
-    stackAnchor.position.set(0, 0.68, 0);
+    // Stack anchor cleanly above top pallet slats
+    const stackAnchor = new THREE.Group();
+    stackAnchor.position.set(0, 0.17, 0);
     root.add(stackAnchor);
 
-    return {
-      root: root,
-      visualRoot: visualRoot,
-      glb: glb,
-      stackAnchor: stackAnchor,
-      squashTimer: 0,
-      squashDuration: 0.22
-    };
+    return { root, matMesh, floorMat, palletGroup, stackAnchor, w, d };
   }
 
-  function createHarvesterCartModel() {
-    var root = new THREE.Group();
-    var shadowMesh = createShadowDisc(1.2);
-    root.add(shadowMesh);
-
-    var bodyPivot = new THREE.Group();
-    root.add(bodyPivot);
-
-    var glb = AssetLoader.createInstance("harvester_cart", {
-      targetHeight: 1.6
-    });
-    bodyPivot.add(glb.root);
-
-    var cargoAnchor = new THREE.Group();
-    cargoAnchor.position.set(0, 0.88, -0.1);
-    root.add(cargoAnchor);
-
-    return {
-      root: root,
-      bodyPivot: bodyPivot,
-      glb: glb,
-      cargoAnchor: cargoAnchor
-    };
+  function updateWoodenPalletZone(zone, activeRatio = 0, pulseTime = 0) {
+    if (!zone || !zone.matMesh) return;
+    const pulse = activeRatio > 0 ? 1 + Math.sin(pulseTime * 9) * 0.04 : 1.0;
+    zone.matMesh.scale.set(pulse, pulse, 1);
   }
 
-  function createResourceNodeModel(type) {
-    var root = new THREE.Group();
-    var bodyGroup = new THREE.Group();
-    root.add(bodyGroup);
+  // ---------------------------------------------------------------------------
+  // 3D Floor Card Gauge Mat Step-Pad (ZERO floating labelMesh!)
+  // Thick white corner brackets (┌ ┐ └ ┘) + bottom-to-top emerald green fill
+  // ---------------------------------------------------------------------------
+  function drawStepPadCanvas(pad, opts) {
+    const canvas = pad.cardCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    var isCrystal = type === "starlight_crystal";
-    var role = isCrystal ? "rock_crystal" : "berry_bush";
-    var glb = AssetLoader.createInstance(role, {
-      targetHeight: isCrystal ? 1.35 : 1.25,
-      tint: isCrystal ? 0x62ecff : 0xff6ebc,
-      tintStrength: 0.45,
-      emissiveTint: isCrystal ? 0x1680b0 : 0x8c1e58,
-      emissiveIntensity: 0.24
-    });
-    bodyGroup.add(glb.root);
+    const W = canvas.width;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
 
-    return {
-      root: root,
-      bodyGroup: bodyGroup,
-      glb: glb,
-      materials: glb.materials,
-      flashTimer: 0,
-      _isFlashing: false
-    };
-  }
+    const paidRatio = Math.max(0, Math.min(1, opts.paidRatio || 0));
+    const isMax = !!opts.isMax;
+    const unlocked = opts.unlocked !== false;
+    const canAfford = !!opts.canAfford;
+    const isActive = !!opts.isStepped;
+    const icon = opts.icon || "✨";
+    const title = opts.title || "";
+    const price = opts.price || "";
+    const levelText = opts.levelText || "";
+    const accentHex = opts.accentHex || "#52f0ff";
 
-  /* ------------------------------------------------------------------------
-   * 4. .glb STACK BLOCKS, MANA GEMS & 3D DEBRIS / COMBAT VFX
-   * ------------------------------------------------------------------------ */
-  function createResourceMesh(type) {
-    if (type === "mana_gem") {
-      var gemInst = AssetLoader.createInstance("mana_gem", {
-        targetHeight: 0.18,
-        tint: 0x3ef2ff,
-        tintStrength: 0.55,
-        emissiveTint: 0x0f91b5,
-        emissiveIntensity: 0.38
-      });
-      return gemInst.root;
-    }
+    const padX = 16;
+    const padY = 16;
+    const cw = W - padX * 2;
+    const ch = H - padY * 2;
+    const radius = 34;
 
-    var palette = {
-      starlight_crystal: { tint: 0x5cd8ff, em: 0x1278a8 },
-      rainbow_berry: { tint: 0xff6ebb, em: 0x991c5d },
-      slime_jelly: { tint: 0x72f582, em: 0x1a8f38 },
-      rainbow_potion: { tint: 0xd07eff, em: 0x7c20b8 }
-    };
-    var pal = palette[type] || palette.starlight_crystal;
-    var blockInst = AssetLoader.createInstance("stack_block", {
-      targetHeight: 0.22,
-      tint: pal.tint,
-      tintStrength: 0.55,
-      emissiveTint: pal.em,
-      emissiveIntensity: 0.24
-    });
-    return blockInst.root;
-  }
+    // 1. Dark translucent card backing clipped inside rounded rectangle
+    ctx.save();
+    roundRectPath(ctx, padX, padY, cw, ch, radius);
+    ctx.fillStyle = unlocked
+      ? isActive
+        ? "rgba(22, 34, 62, 0.86)"
+        : "rgba(14, 22, 42, 0.78)"
+      : "rgba(30, 32, 46, 0.62)";
+    ctx.fill();
+    ctx.clip();
 
-  function createDebrisMesh(colorHex) {
-    var geo = new THREE.OctahedronGeometry(0.12, 0);
-    var mat = new THREE.MeshStandardMaterial({
-      color: colorHex !== undefined ? colorHex : 0xffe066,
-      emissive: colorHex !== undefined ? colorHex : 0xffe066,
-      emissiveIntensity: 0.3,
-      roughness: 0.35,
-      metalness: 0.15
-    });
-    var m = new THREE.Mesh(geo, mat);
-    m.castShadow = true;
-    return m;
-  }
-
-  function createProjectileMesh(colorHex) {
-    var g = new THREE.Group();
-    var c = colorHex !== undefined ? colorHex : 0xffe46b;
-    var mat = new THREE.MeshBasicMaterial({
-      map: Engine.getGlowTexture(),
-      color: c,
-      transparent: true,
-      opacity: 0.95,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide
-    });
-    var flare = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.75), mat);
-    g.add(flare);
-
-    var core = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.16, 0),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
-    );
-    g.add(core);
-    return g;
-  }
-
-  function createShockwaveRing(colorHex) {
-    var geo = new THREE.RingGeometry(0.45, 0.62, 28);
-    geo.rotateX(-Math.PI / 2);
-    var mat = new THREE.MeshBasicMaterial({
-      color: colorHex !== undefined ? colorHex : 0xffffff,
-      transparent: true,
-      opacity: 0.88,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    return new THREE.Mesh(geo, mat);
-  }
-
-  function createSparkParticle(colorHex) {
-    var mat = new THREE.MeshBasicMaterial({
-      map: Engine.getGlowTexture(),
-      color: colorHex !== undefined ? colorHex : 0xffe066,
-      transparent: true,
-      opacity: 0.95,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide
-    });
-    return new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.32), mat);
-  }
-
-  function createSlashArcMesh(colorHex) {
-    var g = new THREE.Group();
-    var outerGeo = new THREE.RingGeometry(0.68, 1.15, 24, 1, -0.45, Math.PI * 0.9);
-    outerGeo.rotateX(-Math.PI / 2);
-    var outerMat = new THREE.MeshBasicMaterial({
-      color: colorHex !== undefined ? colorHex : 0x72f2ff,
-      transparent: true,
-      opacity: 0.92,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
-    });
-    g.add(new THREE.Mesh(outerGeo, outerMat));
-
-    var innerGeo = new THREE.RingGeometry(0.76, 1.0, 24, 1, -0.4, Math.PI * 0.8);
-    innerGeo.rotateX(-Math.PI / 2);
-    var innerMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.88,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
-    });
-    var innerMesh = new THREE.Mesh(innerGeo, innerMat);
-    innerMesh.position.y = 0.025;
-    g.add(innerMesh);
-
-    return { root: g, outerMat: outerMat, innerMat: innerMat };
-  }
-
-  /* ------------------------------------------------------------------------
-   * 5. SLEEK 3D RING PROGRESS-ARC STEP-TO-PAY PADS + FLOATING LABEL
-   * ------------------------------------------------------------------------ */
-  function createStepPad(cfg) {
-    var root = new THREE.Group();
-    root.position.set(cfg.x, 0.038, cfg.z);
-
-    var size = cfg.size || 2.8;
-    var ringR = size * 0.48;
-    var accentHex = cfg.accentHex !== undefined ? cfg.accentHex : 0x5cf2a8;
-
-    var innerDiscMat = new THREE.MeshBasicMaterial({
-      color: accentHex,
-      transparent: true,
-      opacity: 0.12,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    var innerDisc = new THREE.Mesh(new THREE.CircleGeometry(ringR - 0.16, 36), innerDiscMat);
-    innerDisc.rotation.x = -Math.PI / 2;
-    root.add(innerDisc);
-
-    var trackMat = new THREE.MeshBasicMaterial({
-      color: 0x241434,
-      transparent: true,
-      opacity: 0.42,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    var trackRing = new THREE.Mesh(new THREE.RingGeometry(ringR - 0.16, ringR, 48), trackMat);
-    trackRing.rotation.x = -Math.PI / 2;
-    trackRing.position.y = 0.008;
-    root.add(trackRing);
-
-    var arcMat = new THREE.MeshBasicMaterial({
-      color: accentHex,
-      transparent: true,
-      opacity: 0.94,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    var arcGeo = new THREE.RingGeometry(ringR - 0.15, ringR - 0.01, 48, 1, Math.PI * 0.5, 0.02);
-    var arcMesh = new THREE.Mesh(arcGeo, arcMat);
-    arcMesh.rotation.x = -Math.PI / 2;
-    arcMesh.position.y = 0.016;
-    root.add(arcMesh);
-
-    // Compact semi-transparent floating billboard label above the ring
-    var canvas = null;
-    var ctx2d = null;
-    var texture = new THREE.Texture();
-    if (typeof document !== "undefined") {
-      canvas = document.createElement("canvas");
-      canvas.width = 320;
-      canvas.height = 108;
-      ctx2d = canvas.getContext("2d");
-      texture = new THREE.CanvasTexture(canvas);
-      if (THREE.sRGBEncoding !== undefined) texture.encoding = THREE.sRGBEncoding;
-      texture.anisotropy = 4;
-    }
-
-    var labelMat = new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: true,
-      opacity: 0.95,
-      depthWrite: false,
-      side: THREE.DoubleSide
-    });
-    var labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.15, 0.72), labelMat);
-    labelMesh.position.set(0, 1.32, -0.32);
-    root.add(labelMesh);
-
-    return {
-      id: cfg.id,
-      root: root,
-      ringR: ringR,
-      accentHex: accentHex,
-      accentCss: cfg.accentCss || "#43d997",
-      innerDiscMat: innerDiscMat,
-      arcMesh: arcMesh,
-      arcMat: arcMat,
-      labelMesh: labelMesh,
-      canvas: canvas,
-      ctx2d: ctx2d,
-      texture: texture,
-      lastCacheKey: "",
-      lastArcBucket: -1
-    };
-  }
-
-  function updateStepPadTexture(pad, info) {
-    if (!pad) return;
-    var ratio = Math.max(0, Math.min(1, info.progressRatio || 0));
-    var pctBucket = Math.round(ratio * 48);
-
-    // Update 3D circular progress arc geometry cleanly when bucket changes
-    if (pad.arcMesh && pad.lastArcBucket !== pctBucket) {
-      pad.lastArcBucket = pctBucket;
-      var sweep = info.isDone ? Math.PI * 2 : Math.max(0.06, ratio * Math.PI * 2);
-      var newGeo = new THREE.RingGeometry(pad.ringR - 0.15, pad.ringR - 0.01, 48, 1, Math.PI * 0.5, sweep);
-      if (pad.arcMesh.geometry && typeof pad.arcMesh.geometry.dispose === "function") {
-        pad.arcMesh.geometry.dispose();
+    // 2. Bottom-to-top green progress fill gauge
+    const fillRatio = isMax ? 1 : paidRatio;
+    if (fillRatio > 0.005) {
+      const fillH = ch * fillRatio;
+      const fillTop = padY + ch - fillH;
+      const grad = ctx.createLinearGradient(0, padY + ch, 0, fillTop);
+      if (isMax) {
+        grad.addColorStop(0, "rgba(255, 196, 46, 0.78)");
+        grad.addColorStop(1, "rgba(255, 232, 108, 0.88)");
+      } else {
+        grad.addColorStop(0, "rgba(18, 178, 86, 0.88)");
+        grad.addColorStop(1, "rgba(74, 252, 142, 0.94)");
       }
-      pad.arcMesh.geometry = newGeo;
+      ctx.fillStyle = grad;
+      ctx.fillRect(padX, fillTop, cw, fillH);
+
+      // Bright glowing meniscus bar at fill frontier
+      if (fillRatio < 0.995) {
+        ctx.fillStyle = "#d8ffe6";
+        ctx.fillRect(padX, fillTop, cw, 6);
+      }
     }
 
-    if (pad.innerDiscMat) {
-      pad.innerDiscMat.opacity = info.activeGlow ? 0.26 : 0.11;
+    // Subtle top accent tint stripe
+    ctx.fillStyle = accentHex;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(padX, padY, cw, 10);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // 3. Thin dark-tinted inner perimeter
+    roundRectPath(ctx, padX, padY, cw, ch, radius);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = canAfford && unlocked ? "rgba(120, 255, 176, 0.95)" : "rgba(255, 255, 255, 0.35)";
+    ctx.stroke();
+
+    // 4. Four thick white corner brackets (┌ ┐ └ ┘)
+    const arm = 48;
+    const inset = 6;
+    const x0 = padX + inset;
+    const y0 = padY + inset;
+    const x1 = padX + cw - inset;
+    const y1 = padY + ch - inset;
+    const cr = 22;
+
+    ctx.lineWidth = 14;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = isMax ? "#ffe36e" : "#ffffff";
+
+    // Top-Left ┌
+    ctx.beginPath();
+    ctx.moveTo(x0, y0 + arm);
+    ctx.lineTo(x0, y0 + cr);
+    ctx.quadraticCurveTo(x0, y0, x0 + cr, y0);
+    ctx.lineTo(x0 + arm, y0);
+    ctx.stroke();
+
+    // Top-Right ┐
+    ctx.beginPath();
+    ctx.moveTo(x1 - arm, y0);
+    ctx.lineTo(x1 - cr, y0);
+    ctx.quadraticCurveTo(x1, y0, x1, y0 + cr);
+    ctx.lineTo(x1, y0 + arm);
+    ctx.stroke();
+
+    // Bottom-Left └
+    ctx.beginPath();
+    ctx.moveTo(x0, y1 - arm);
+    ctx.lineTo(x0, y1 - cr);
+    ctx.quadraticCurveTo(x0, y1, x0 + cr, y1);
+    ctx.lineTo(x0 + arm, y1);
+    ctx.stroke();
+
+    // Bottom-Right ┘
+    ctx.beginPath();
+    ctx.moveTo(x1 - arm, y1);
+    ctx.lineTo(x1 - cr, y1);
+    ctx.quadraticCurveTo(x1, y1, x1, y1 - cr);
+    ctx.lineTo(x1, y1 - arm);
+    ctx.stroke();
+
+    // 5. Integrated Card Typography & Icon on the Floor Mat
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Level pill chip at top-right inside frame
+    if (levelText) {
+      const chipW = 112;
+      const chipH = 40;
+      const chipX = x1 - chipW - 22;
+      const chipY = y0 + 24;
+      roundRectPath(ctx, chipX, chipY, chipW, chipH, 16);
+      ctx.fillStyle = isMax ? "#f59e0b" : "rgba(15, 23, 42, 0.85)";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(255,255,255,0.65)";
+      ctx.stroke();
+      ctx.font = "900 24px Pretendard, system-ui, sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(levelText, chipX + chipW * 0.5, chipY + chipH * 0.5 + 1);
     }
-    if (pad.arcMat) {
-      pad.arcMat.color.setHex(info.isDone ? 0x7effb2 : pad.accentHex);
-      pad.arcMat.opacity = info.activeGlow ? 1.0 : 0.85;
+
+    // Large crisp Emoji Icon
+    ctx.font = "84px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(icon, W * 0.5 - (levelText ? 34 : 0), H * 0.30);
+
+    // Bold readable title with dark drop outline
+    ctx.font = "900 38px Pretendard, Apple SD Gothic Neo, system-ui, sans-serif";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(10, 14, 28, 0.92)";
+    ctx.strokeText(title, W * 0.5, H * 0.57);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(title, W * 0.5, H * 0.57);
+
+    // Bold Price Pill at bottom half
+    if (price) {
+      const pillW = Math.min(cw - 76, 336);
+      const pillH = 66;
+      const pillX = (W - pillW) * 0.5;
+      const pillY = H * 0.72;
+      roundRectPath(ctx, pillX, pillY, pillW, pillH, 24);
+      ctx.fillStyle = isMax
+        ? "rgba(180, 110, 12, 0.94)"
+        : canAfford
+        ? "rgba(12, 116, 62, 0.92)"
+        : "rgba(24, 30, 52, 0.92)";
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = isMax ? "#fff3a8" : canAfford ? "#8effbe" : "rgba(255,255,255,0.42)";
+      ctx.stroke();
+
+      ctx.font = "900 38px Pretendard, system-ui, sans-serif";
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = "rgba(8, 12, 22, 0.9)";
+      ctx.strokeText(price, W * 0.5, pillY + pillH * 0.5 + 2);
+      ctx.fillStyle = isMax ? "#fff8cc" : canAfford ? "#ffffff" : "#ffd866";
+      ctx.fillText(price, W * 0.5, pillY + pillH * 0.5 + 2);
     }
-
-    if (!pad.ctx2d) return;
-    var cacheKey = info.title + "|" + info.remainingCost + "|" + pctBucket + "|" + !!info.isDone + "|" + (info.actionHint || "") + "|" + !!info.activeGlow;
-    if (pad.lastCacheKey === cacheKey) return;
-    pad.lastCacheKey = cacheKey;
-
-    var c = pad.ctx2d;
-    var W = 320;
-    var H = 108;
-    c.clearRect(0, 0, W, H);
-
-    // Sleek compact translucent floating pill
-    c.fillStyle = info.activeGlow ? "rgba(42, 24, 68, 0.88)" : "rgba(28, 16, 46, 0.78)";
-    drawRoundedRectPath(c, 6, 6, W - 12, H - 12, 22);
-    c.fill();
-
-    c.strokeStyle = info.isDone ? "#7effb2" : pad.accentCss;
-    c.lineWidth = info.activeGlow ? 5 : 3.5;
-    c.stroke();
-
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.fillStyle = "#fff9e6";
-    c.font = "900 28px 'Pretendard', 'Malgun Gothic', sans-serif";
-    c.fillText(info.title, W * 0.5, 36);
-
-    if (info.isActionOnly) {
-      c.fillStyle = "#ffe88c";
-      c.font = "900 24px 'Pretendard', 'Malgun Gothic', sans-serif";
-      c.fillText(info.actionHint || "투입", W * 0.5, 74);
-    } else if (info.isDone) {
-      c.fillStyle = "#7effb2";
-      c.font = "900 26px 'Pretendard', 'Malgun Gothic', sans-serif";
-      c.fillText("MAX", W * 0.5, 74);
-    } else {
-      c.fillStyle = "#5ef2ff";
-      c.font = "900 28px 'Pretendard', 'Malgun Gothic', sans-serif";
-      c.fillText("💎 " + String(info.remainingCost), W * 0.5, 74);
-    }
-
-    pad.texture.needsUpdate = true;
   }
 
-  var EntitiesApi = {
-    createWizardModel: createWizardModel,
-    updateWizardTier: updateWizardTier,
-    animateWizard: animateWizard,
-    createFairyModel: createFairyModel,
-    animateFairy: animateFairy,
-    createCustomerModel: createCustomerModel,
-    animateCustomer: animateCustomer,
-    createSlimeModel: createSlimeModel,
-    createCauldronStation: createCauldronStation,
-    createSalesStation: createSalesStation,
-    createGemPedestal: createGemPedestal,
-    createHarvesterCartModel: createHarvesterCartModel,
-    createResourceNodeModel: createResourceNodeModel,
-    createResourceMesh: createResourceMesh,
-    createDebrisMesh: createDebrisMesh,
-    createProjectileMesh: createProjectileMesh,
-    createShockwaveRing: createShockwaveRing,
-    createSparkParticle: createSparkParticle,
-    createSlashArcMesh: createSlashArcMesh,
-    createStepPad: createStepPad,
-    updateStepPadTexture: updateStepPadTexture,
-    flashModelWhite: flashModelWhite,
-    updateModelFlash: updateModelFlash,
-    triggerStationSquash: triggerStationSquash,
-    updateStationSquash: updateStationSquash
+  function createStepPad(opts = {}) {
+    const w = opts.w || 3.3;
+    const d = opts.d || 2.55;
+    const root = new THREE.Group();
+    root.position.set(opts.x || 0, 0, opts.z || 0);
+
+    let cardCanvas = null;
+    let cardTex = null;
+    if (typeof document !== "undefined") {
+      cardCanvas = document.createElement("canvas");
+      cardCanvas.width = 512;
+      cardCanvas.height = 396;
+      cardTex = new THREE.CanvasTexture(cardCanvas);
+      if (THREE.SRGBColorSpace) cardTex.colorSpace = THREE.SRGBColorSpace;
+      else if (THREE.sRGBEncoding) cardTex.encoding = THREE.sRGBEncoding;
+    }
+
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      map: cardTex,
+      transparent: true,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat);
+    mesh.rotation.x = -Math.PI * 0.5;
+    mesh.position.y = 0.032;
+    root.add(mesh);
+
+    const pad = {
+      id: opts.id || "",
+      root,
+      mesh,
+      mat,
+      cardCanvas,
+      cardTex,
+      w,
+      d,
+      _lastKey: "",
+    };
+
+    updateStepPadTexture(pad, opts);
+    return pad;
+  }
+
+  function updateStepPadTexture(pad, opts = {}) {
+    if (!pad) return;
+    const qRatio = Math.round((opts.paidRatio || 0) * 60) / 60;
+    const key = [
+      opts.icon || "",
+      opts.title || "",
+      opts.price || "",
+      opts.levelText || "",
+      qRatio,
+      opts.isMax ? 1 : 0,
+      opts.unlocked === false ? 0 : 1,
+      opts.canAfford ? 1 : 0,
+      opts.isStepped ? 1 : 0,
+      opts.accentHex || "",
+    ].join("|");
+
+    if (pad.mesh) {
+      const targetScale = opts.isStepped ? 1.045 : 1.0;
+      pad.mesh.scale.set(targetScale, targetScale, 1);
+    }
+    if (key === pad._lastKey) return;
+    pad._lastKey = key;
+
+    if (pad.cardCanvas) {
+      drawStepPadCanvas(pad, { ...opts, paidRatio: qRatio });
+      if (pad.cardTex) pad.cardTex.needsUpdate = true;
+    }
+  }
+
+  window.Entities = {
+    createPlayerHero,
+    updateHeroTier,
+    animatePlayerHero,
+    animateHero: animatePlayerHero,
+    createFairyWorker,
+    animateFairy,
+    createCustomer,
+    animateCustomer,
+    createItemBlock,
+    createProductionMachine,
+    animateProductionMachine,
+    createHarvesterCart,
+    animateHarvesterTruck,
+    createSalesStall,
+    createGemPedestal,
+    createResourceNode,
+    createWoodenPalletZone,
+    updateWoodenPalletZone,
+    createStepPad,
+    updateStepPadTexture,
   };
-
-  if (typeof window !== "undefined") {
-    window.Entities = EntitiesApi;
-  }
-  if (typeof module !== "undefined" && module.exports) {
-    module.exports = EntitiesApi;
-  }
 })();

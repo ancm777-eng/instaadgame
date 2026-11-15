@@ -1,2970 +1,1933 @@
-/* ============================================================================
- * src/gameplay.js — Commercial 3D Hyper-Casual Fairy Alchemy Core Loop
- * Driven by AssetLoader (.glb), Engine (PerspectiveCamera + RoomEnvironment),
- * and Entities (AnimationMixer, Squash-and-Stretch, 3D Progress-Arc Pads).
- *
- * Step 4 Physics & Game Juice Features:
- *   - 1:1 Screen-Aligned Controls (vx = ix, vz = iy)
- *   - Tangent Wall Sliding Collisions
- *   - Incremental Stack Push/Pop Management (zero full-rebuild frame drops)
- *   - 0.04s Rapid Pop + 360-deg Spin + Quadratic Bezier Arc + Squash/Stretch
- *   - 2x2 Mana Gem Tower + Pop-Up Homing Magnet Vacuum + Rising Marimba/Harp SFX
- *   - Combat Hit-Stop, Knockback, Instant White Flash & 3D Tumbling Debris
- * ============================================================================ */
+// =============================================================================
+// src/gameplay.js - Pure 3-Stage Fairy Alchemy Tycoon Simulation, Pallets,
+// 3-Machine Production Line, 84 Dense Farm Nodes, 3x3 Gem Skyscraper & Shop
+// =============================================================================
+
 (function () {
   "use strict";
 
-  var SAVE_KEY = "fairy_alchemy_glb_v2";
-  var MEADOW_LIMIT_R = 25.0;
-  var MAX_VISIBLE_BACK_STACK = 50;
-  var MAX_COUNTER_STOCK = 60;
-  var MAX_PEDESTAL_GEMS = 128;
-  var BOSS_INTERVAL = 120;
+  const SAVE_KEY = "fairy_alchemy_tycoon_v4";
 
-  var CAULDRON_POS = { x: 0, y: 0.95, z: -5.5 };
-  var SALES_POS = { x: -7.2, y: 1.35, z: 1.2 };
-  var PEDESTAL_POS = { x: -5.2, y: 0.72, z: -1.8 };
-
-  var RESOURCE_INFO = {
-    starlight_crystal: { name: "별빛 수정", price: 14, color: 0x6ce8ff, css: "#57d9ff", raw: true },
-    rainbow_berry:     { name: "무지개 열매", price: 10, color: 0xff62b8, css: "#ff72c0", raw: true },
-    slime_jelly:       { name: "슬라임 젤리", price: 18, color: 0x6ff57e, css: "#6ff57e", raw: true },
-    rainbow_potion:    { name: "무지개 포션", price: 42, color: 0xffb86c, css: "#ffd26e", raw: false },
-    mana_gem:          { name: "마나 보석", price: 1, color: 0x3ef2ff, css: "#3ef2ff", raw: false }
+  const ITEM_META = {
+    starlight_crystal: { label: "별빛 수정", val: 10 },
+    rainbow_berry: { label: "무지개 열매", val: 10 },
+    potion_2x: { label: "황금 포션(2x)", val: 20 },
+    cut_gem_3x: { label: "가공 보석(3x)", val: 30 },
+    elixir_5x: { label: "무지개 엘릭서(5x)", val: 50 },
   };
 
-  var TIER_TITLES = [
-    "견습 꼬마 마법사",
-    "별빛 정원 마법사",
-    "무지개 비술사",
-    "숲의 대연금술사",
-    "아크메이지 연금왕"
+  const UPGRADE_DEFS = {
+    tool: {
+      id: "tool",
+      tab: "wizard",
+      icon: "🪄",
+      title: "수확 속도",
+      desc: "크리스탈·열매 채집 속도와 수확 배율을 높입니다.",
+      accent: "#52efff",
+      baseCost: 30,
+      mult: 1.85,
+      maxLv: 8,
+    },
+    bag: {
+      id: "bag",
+      tab: "wizard",
+      icon: "🎒",
+      title: "지게 적재",
+      desc: "등 뒤 나무 지게에 쌓이는 상자 최대 수를 늘립니다.",
+      accent: "#ffd24c",
+      baseCost: 35,
+      mult: 1.8,
+      maxLv: 8,
+    },
+    speed: {
+      id: "speed",
+      tab: "wizard",
+      icon: "👢",
+      title: "신속 부츠",
+      desc: "꼬마 연금술사의 이동 속도를 크게 높입니다.",
+      accent: "#7effa2",
+      baseCost: 40,
+      mult: 1.8,
+      maxLv: 6,
+    },
+    m1: {
+      id: "m1",
+      tab: "automation",
+      icon: "⚗️",
+      title: "1호기 가마솥",
+      desc: "원석/열매 상자를 2배 가치 황금 포션으로 연성합니다.",
+      accent: "#52ff9b",
+      baseCost: 50,
+      mult: 1.9,
+      maxLv: 6,
+    },
+    m2: {
+      id: "m2",
+      tab: "automation",
+      icon: "💎",
+      title: "2호기 커팅기",
+      desc: "크리스탈을 3배 가치 빛나는 보석으로 세공합니다.",
+      accent: "#d67aff",
+      baseCost: 180,
+      mult: 1.9,
+      maxLv: 6,
+    },
+    m3: {
+      id: "m3",
+      tab: "automation",
+      icon: "🌈",
+      title: "3호기 증류기",
+      desc: "마력 자원을 5배 가치 무지개 엘릭서로 증류합니다.",
+      accent: "#ff78d2",
+      baseCost: 480,
+      mult: 1.9,
+      maxLv: 6,
+    },
+    fairy: {
+      id: "fairy",
+      tab: "automation",
+      icon: "🧚",
+      title: "요정 일꾼",
+      desc: "자동으로 채집하고 설비·판매대에 납품하는 요정(최대 15).",
+      accent: "#ff88c2",
+      baseCost: 60,
+      mult: 1.55,
+      maxLv: 15,
+    },
+    truck: {
+      id: "truck",
+      tab: "automation",
+      icon: "🚜",
+      title: "수확 트럭",
+      desc: "농장을 휩쓸며 대량으로 상자를 수확하는 메가 트럭.",
+      accent: "#4ce6d8",
+      baseCost: 220,
+      mult: 1.95,
+      maxLv: 5,
+    },
+    farm2: {
+      id: "farm2",
+      tab: "automation",
+      icon: "🌿",
+      title: "북동 농장",
+      desc: "24개 고밀도 별빛 수정·열매 농장을 북동 게이트에 해금.",
+      accent: "#6bff9e",
+      baseCost: 160,
+      mult: 1,
+      maxLv: 1,
+    },
+    farm3: {
+      id: "farm3",
+      tab: "automation",
+      icon: "🌺",
+      title: "북서 농장",
+      desc: "24개 최고밀도 마법 농장을 북서 게이트에 해금.",
+      accent: "#c985ff",
+      baseCost: 360,
+      mult: 1,
+      maxLv: 1,
+    },
+  };
+
+  const MACHINE_CONFIGS = [
+    {
+      id: "m1",
+      padId: "m1",
+      kind: "cauldron",
+      x: -10.5,
+      z: -12.8,
+      inPos: { x: -13.6, z: -11.4 },
+      outPos: { x: -7.4, z: -11.4 },
+      padPos: { x: -10.5, z: -7.4 },
+      outputType: "potion_2x",
+      baseCraftTime: 1.55,
+      accent: "#52ff9b",
+    },
+    {
+      id: "m2",
+      padId: "m2",
+      kind: "cutter",
+      x: 0.0,
+      z: -12.8,
+      inPos: { x: -3.1, z: -11.4 },
+      outPos: { x: 3.1, z: -11.4 },
+      padPos: { x: 0.0, z: -7.4 },
+      outputType: "cut_gem_3x",
+      baseCraftTime: 1.85,
+      accent: "#d67aff",
+    },
+    {
+      id: "m3",
+      padId: "m3",
+      kind: "distillery",
+      x: 10.5,
+      z: -12.8,
+      inPos: { x: 7.4, z: -11.4 },
+      outPos: { x: 13.6, z: -11.4 },
+      padPos: { x: 10.5, z: -7.4 },
+      outputType: "elixir_5x",
+      baseCraftTime: 2.15,
+      accent: "#ff78d2",
+    },
   ];
 
-  var QUEUE_SLOTS = [
-    { x: -7.2, z: 3.6 },
-    { x: -8.1, z: 5.1 },
-    { x: -9.1, z: 6.6 },
-    { x: -10.1, z: 8.1 },
-    { x: -11.1, z: 9.6 }
-  ];
-  var TRAIL_SPAWN = { x: -13.8, z: 12.2 };
+  const STALL_POS = { x: -14.2, z: 2.2 };
+  const SELL_PALLET_POS = { x: -9.8, z: 2.4 };
+  const GEM_PEDESTAL_POS = { x: -9.8, z: -2.2 };
 
-  var NODE_SPOTS = [
-    { type: "starlight_crystal", x: -2.2, z: -12.6 },
-    { type: "rainbow_berry", x: 1.6, z: -13.4 },
-    { type: "starlight_crystal", x: 10.6, z: -9.8 },
-    { type: "rainbow_berry", x: 13.8, z: -6.4 },
-    { type: "starlight_crystal", x: 13.4, z: -1.4 },
-    { type: "rainbow_berry", x: 16.2, z: 0.4 },
-    { type: "starlight_crystal", x: 14.4, z: 9.8 },
-    { type: "rainbow_berry", x: 9.8, z: 12.4 },
-    { type: "starlight_crystal", x: 4.8, z: 13.8 },
-    { type: "rainbow_berry", x: -1.2, z: 13.6 },
-    { type: "starlight_crystal", x: -4.8, z: 16.4 },
-    { type: "rainbow_berry", x: -13.6, z: 3.4 },
-    { type: "starlight_crystal", x: -13.4, z: -2.6 },
-    { type: "rainbow_berry", x: -12.4, z: -7.8 },
-    { type: "starlight_crystal", x: -8.6, z: -11.4 },
-    { type: "rainbow_berry", x: -15.2, z: -12.8 },
-    { type: "starlight_crystal", x: -9.8, z: -17.6 },
-    { type: "rainbow_berry", x: -3.2, z: -19.2 },
-    { type: "starlight_crystal", x: 3.6, z: -19.8 },
-    { type: "rainbow_berry", x: 11.4, z: -16.8 },
-    { type: "starlight_crystal", x: 17.6, z: -12.2 },
-    { type: "rainbow_berry", x: 20.4, z: -5.4 },
-    { type: "starlight_crystal", x: 21.2, z: 1.8 },
-    { type: "rainbow_berry", x: 19.8, z: 10.6 },
-    { type: "starlight_crystal", x: 13.4, z: 17.4 },
-    { type: "rainbow_berry", x: 4.8, z: 20.6 },
-    { type: "starlight_crystal", x: -18.8, z: 1.8 },
-    { type: "rainbow_berry", x: -19.2, z: -6.4 }
-  ];
-
-  var CART_WAYPOINTS = [
-    { x: -3.8, z: -1.2 },
-    { x: 2.0, z: 2.2 },
-    { x: 8.54, z: 4.81 },
-    { x: 13.8, z: 12.2 },
-    { x: 4.5, z: 17.2 },
-    { x: -5.6, z: 17.6 },
-    { x: -15.2, z: 13.8 },
-    { x: -18.2, z: 1.8 },
-    { x: -15.6, z: -11.4 },
-    { x: -6.8, z: -17.2 },
-    { x: 3.8, z: -18.4 },
-    { x: 14.8, z: -13.8 },
-    { x: 19.4, z: -4.4 },
-    { x: 17.2, z: 3.6 },
-    { x: 10.6, z: -6.2 },
-    { x: 4.65, z: -7.1 },
-    { x: 2.4, z: -2.2 }
-  ];
+  // ---------------------------------------------------------------------------
+  // State & Runtime Containers
+  // ---------------------------------------------------------------------------
+  let state = createDefaultState();
 
   function createDefaultState() {
     return {
-      gems: 60,
-      totalGemsEarned: 60,
-      crystalsHarvested: 0,
-      potionsBrewed: 0,
-      slimesDefeated: 0,
-      level: 1,
+      gems: 20,
+      totalEarnedGems: 0,
       xp: 0,
-      wave: 1,
-      bossTimer: BOSS_INTERVAL,
-      wandLv: 1,
-      harvestLv: 1,
-      bagLv: 1,
-      speedLv: 1,
-      cauldronLv: 1,
-      fairies: 0,
-      fairyLv: 1,
-      cartLv: 0,
-      wandUpgLv: 1,
-      speedUpgLv: 1,
-      pedestalGems: 0,
-      bag: [],
-      counterStock: [],
+      xpMax: 100,
+      level: 1,
+      toolLv: 0,
+      bagLv: 0,
+      speedLv: 0,
+      m1Lv: 0,
+      m2Lv: 0,
+      m3Lv: 0,
+      fairyCount: 0,
+      truckLv: 0,
+      farm2Unlocked: false,
+      farm3Unlocked: false,
       muted: false,
-      shopTab: "wizard"
+      padPaid: {},
     };
   }
 
-  var state = createDefaultState();
-
-  var player = {
+  const player = {
     x: 0,
     z: 2.0,
     vx: 0,
     vz: 0,
-    yaw: 0,
+    rotY: 0,
     walkPhase: 0,
     swingTimer: 0,
     swingDuration: 0.26,
-    wandCooldown: 0,
+    bagItems: [],
     harvestCooldown: 0,
-    feedCooldown: 0,
-    sellCooldown: 0,
-    gemCooldown: 0,
-    stackInertiaX: 0,
-    stackInertiaZ: 0,
-    stackVelX: 0,
-    stackVelZ: 0
+    transferCooldown: 0,
   };
 
-  var runtime = {
-    initialized: false,
-    ready: false,
-    time: 0,
-    saveTimer: 0,
-    hitStopTimer: 0,
+  const input = {
+    keys: new Set(),
     joyX: 0,
     joyY: 0,
-    keys: {},
-    activePointerId: null,
-    shopOpen: false,
-    resetOpen: false,
-    gemCombo: 0,
-    gemComboTimer: 0,
-    gemPopupAcc: 0,
-    guideYaw: 0,
-    lastTier: 1,
-    cartWpIdx: 0,
-    cartX: -3.8,
-    cartZ: -1.2,
-    cartYaw: 0,
-    cartUnloadCooldown: 0,
-    cartBag: [],
-    toastTimer: 0
+    joyActive: false,
+    joyId: null,
+    originX: 0,
+    originY: 0,
   };
 
-  var audio = {
-    ctx: null,
-    unlocked: false
-  };
-
-  var dom = {};
-  var sceneObjs = {
-    wizard: null,
-    cauldron: null,
-    sales: null,
-    pedestal: null,
-    cart: null,
-    nodes: [],
-    slimes: [],
+  const runtime = {
+    time: 0,
+    fpsSmooth: 60,
+    farmNodes: [],
+    machines: [],
+    stepPads: [],
+    sellPalletQueue: [],
+    sellPalletVisuals: [],
+    pedestalGems: [], // array of brick value/visual items
+    pedestalVisuals: [],
+    flyingBricks: [],
+    particles: [],
     fairies: [],
     customers: [],
-    pads: [],
-    projectiles: [],
-    flyingItems: [],
-    magnetGems: [],
-    drops: [],
-    rings: [],
-    slashes: [],
-    sparks: [],
-    debris: [],
-    popups: [],
-    stackPool: {},
-    activeStackMeshes: [],
-    counterMeshes: [],
-    pedestalMeshes: [],
-    cartCargoMeshes: []
+    truck: null,
+    heroBackVisuals: [],
+    sellCooldown: 0,
+    gemVacuumCooldown: 0,
+    gemCombo: 0,
+    shopOpen: false,
+    shopTab: "wizard",
+    lastHudSync: 0,
+    toastTimer: 0,
   };
 
-  // =========================================================================
-  // Audio Synthesizer (Rising Marimba/Harp SFX & Arcade Feedback)
-  // =========================================================================
-  var PENTA_FREQS = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.5];
+  const sceneObjs = {
+    hero: null,
+    stall: null,
+    sellPallet: null,
+    gemPedestal: null,
+  };
 
-  function unlockAudio() {
-    if (audio.unlocked && audio.ctx) {
-      if (audio.ctx.state === "suspended" && typeof audio.ctx.resume === "function") {
-        audio.ctx.resume().catch(function () {});
-      }
-      return;
-    }
-    var AudioCtx = typeof window !== "undefined" ? (window.AudioContext || window.webkitAudioContext) : null;
-    if (!AudioCtx) return;
-    try {
-      audio.ctx = audio.ctx || new AudioCtx();
-      if (audio.ctx.state === "suspended" && typeof audio.ctx.resume === "function") {
-        audio.ctx.resume().catch(function () {});
-      }
-      audio.unlocked = true;
-    } catch (e) {
-      audio.ctx = null;
-    }
-  }
+  let _initialized = false;
+  let _domBound = false;
+  let _rafId = null;
+  let _lastRafTs = 0;
 
-  function playTone(freq, type, duration, gainPeak, slideTo) {
-    if (state.muted || !audio.ctx) return;
+  // ---------------------------------------------------------------------------
+  // WebAudio Harmonic Tycoon Synthesizer (Safe when AudioContext unavailable)
+  // ---------------------------------------------------------------------------
+  let _audioCtx = null;
+
+  function playTone(freq, dur = 0.08, type = "sine", gainVal = 0.06, delay = 0) {
+    if (state.muted || typeof window === "undefined") return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
     try {
-      var now = audio.ctx.currentTime;
-      var osc = audio.ctx.createOscillator();
-      var gain = audio.ctx.createGain();
-      osc.type = type || "sine";
+      if (!_audioCtx) _audioCtx = new AC();
+      if (_audioCtx.state === "suspended") _audioCtx.resume();
+      const now = _audioCtx.currentTime + delay;
+      const osc = _audioCtx.createOscillator();
+      const gain = _audioCtx.createGain();
+      osc.type = type;
       osc.frequency.setValueAtTime(freq, now);
-      if (slideTo) {
-        osc.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), now + duration);
-      }
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(gainPeak || 0.08, now + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      gain.gain.setValueAtTime(gainVal, now);
+      gain.gain.exponentialRampToValueAtTime(0.0005, now + dur);
       osc.connect(gain);
-      gain.connect(audio.ctx.destination);
+      gain.connect(_audioCtx.destination);
       osc.start(now);
-      osc.stop(now + duration + 0.02);
-    } catch (e) {}
+      osc.stop(now + dur + 0.02);
+    } catch (e) {
+      // ignore autoplay blocks
+    }
   }
 
-  function playHarvestChime() {
-    var freq = PENTA_FREQS[Math.floor(Math.random() * 5)];
-    playTone(freq, "triangle", 0.13, 0.075, freq * 1.16);
+  function playHarvestChime(pitchIdx = 0) {
+    const scale = [523.25, 587.33, 659.25, 783.99, 880.0];
+    playTone(scale[pitchIdx % scale.length], 0.09, "triangle", 0.055);
   }
 
-  function playGemChime(combo) {
-    // Rising dual-oscillator Marimba fundamental + bright Harp shimmer overtone
-    var c = Math.max(0, combo || 0);
-    var baseFreq = 392.0 * Math.pow(1.036, Math.min(32, c));
-    playTone(baseFreq, "triangle", 0.11, 0.085, baseFreq * 1.03);
-    playTone(baseFreq * 2.0, "sine", 0.16, 0.045, baseFreq * 2.04);
-  }
-
-  function playBoltCast() {
-    playTone(720, "sine", 0.11, 0.045, 360);
-  }
-
-  function playHitPop() {
-    playTone(260, "triangle", 0.08, 0.06, 130);
+  function playGemChime(combo = 0) {
+    const semitones = Math.min(20, combo);
+    const freq = 587.33 * Math.pow(2, semitones / 14);
+    playTone(freq, 0.075, "sine", 0.05);
   }
 
   function playBuildPop() {
-    playTone(523.25, "triangle", 0.14, 0.09);
-    playTone(659.25, "sine", 0.18, 0.08, 783.99);
-    playTone(1046.5, "sine", 0.24, 0.07);
+    playTone(523.25, 0.09, "triangle", 0.07, 0);
+    playTone(659.25, 0.10, "triangle", 0.07, 0.06);
+    playTone(783.99, 0.16, "triangle", 0.08, 0.12);
   }
 
-  function playBossFanfare() {
-    playTone(392.0, "sawtooth", 0.16, 0.06);
-    playTone(523.25, "triangle", 0.22, 0.08);
-    playTone(659.25, "triangle", 0.34, 0.09, 783.99);
-  }
-
-  // =========================================================================
-  // Progression Formulas & Helpers
-  // =========================================================================
-  function xpNeeded(lv) {
-    return Math.round(60 * Math.pow(1.26, lv - 1));
-  }
-
-  function getWizardTier() {
-    if (state.level >= 20) return 5;
-    if (state.level >= 15) return 4;
-    if (state.level >= 10) return 3;
-    if (state.level >= 5) return 2;
-    return 1;
-  }
-
-  function getBackpackCap() {
-    return 25 + (state.bagLv - 1) * 18 + (state.level - 1) * 8;
-  }
-
-  function getMoveSpeed() {
-    return 6.6 + (state.speedLv - 1) * 0.42;
-  }
-
-  function getHarvestPower() {
-    return 12 + (state.harvestLv - 1) * 7 + (state.level - 1) * 2;
-  }
-
-  function getHarvestRange() {
-    return 2.65 + (state.harvestLv - 1) * 0.14;
-  }
-
-  function getWandDamage() {
-    return 16 + (state.wandLv - 1) * 9 + (state.level - 1) * 3;
-  }
-
-  function getWandRange() {
-    return 7.8 + (state.wandLv - 1) * 0.25;
-  }
-
-  function getWandCooldown() {
-    return Math.max(0.24, 0.72 - (state.wandLv - 1) * 0.03);
-  }
-
-  function getMultiShot() {
-    if (state.wandLv >= 14) return 5;
-    if (state.wandLv >= 9) return 3;
-    if (state.wandLv >= 4) return 2;
-    return 1;
-  }
-
-  function getCauldronMult() {
-    return 3.0 + (state.cauldronLv - 1) * 0.25;
-  }
-
-  function formatNum(n) {
-    var v = Math.floor(n);
-    if (v >= 1000000) return (v / 1000000).toFixed(1) + "M";
-    if (v >= 10000) return (v / 1000).toFixed(1) + "K";
-    return String(v);
-  }
-
-  function showToast(msg) {
-    if (!dom.toastBanner) return;
-    dom.toastBanner.textContent = msg;
-    dom.toastBanner.classList.add("show");
-    runtime.toastTimer = 2.6;
-  }
-
-  function gainXp(amount) {
-    state.xp += amount;
-    var leveled = false;
-    while (state.level < 25 && state.xp >= xpNeeded(state.level)) {
-      state.xp -= xpNeeded(state.level);
-      state.level += 1;
-      leveled = true;
-    }
-    if (state.level >= 25) {
-      state.xp = xpNeeded(25);
-    }
-    if (leveled) {
-      var tier = getWizardTier();
-      if (tier !== runtime.lastTier && sceneObjs.wizard) {
-        runtime.lastTier = tier;
-        Entities.updateWizardTier(sceneObjs.wizard, tier);
-        showToast("각성! " + TIER_TITLES[tier - 1] + " 진화!");
-      } else {
-        showToast("레벨 업! Lv." + state.level);
-      }
-      playBuildPop();
-      spawnShockwave(player.x, 0.2, player.z, 0xffd26e, 2.8);
-      spawnPopup(player.x, 2.2, player.z, "LEVEL " + state.level + "!", "#ffe66d");
+  // ---------------------------------------------------------------------------
+  // Economy Helpers
+  // ---------------------------------------------------------------------------
+  function getUpgradeLevel(id) {
+    switch (id) {
+      case "tool": return state.toolLv;
+      case "bag": return state.bagLv;
+      case "speed": return state.speedLv;
+      case "m1": return state.m1Lv;
+      case "m2": return state.m2Lv;
+      case "m3": return state.m3Lv;
+      case "fairy": return state.fairyCount;
+      case "truck": return state.truckLv;
+      case "farm2": return state.farm2Unlocked ? 1 : 0;
+      case "farm3": return state.farm3Unlocked ? 1 : 0;
+      default: return 0;
     }
   }
 
-  // =========================================================================
-  // Incremental Stack Mesh Pool & Push/Pop Management (Zero Full-Rebuild)
-  // =========================================================================
-  function acquirePooledMesh(type) {
-    if (!sceneObjs.stackPool[type]) sceneObjs.stackPool[type] = [];
-    var pool = sceneObjs.stackPool[type];
-    if (pool.length > 0) {
-      var reused = pool.pop();
-      reused.visible = true;
-      reused.rotation.set(0, 0, 0);
-      reused.scale.set(1, 1, 1);
-      return reused;
-    }
-    return Entities.createResourceMesh(type);
+  function getUpgradeCost(id) {
+    const def = UPGRADE_DEFS[id];
+    if (!def) return 999999;
+    const lv = getUpgradeLevel(id);
+    if (lv >= def.maxLv) return 0;
+    return Math.round(def.baseCost * Math.pow(def.mult, lv));
   }
 
-  function releaseSingleMesh(type, mesh) {
-    if (!mesh) return;
-    if (mesh.parent) mesh.parent.remove(mesh);
-    mesh.visible = false;
-    mesh.rotation.set(0, 0, 0);
-    mesh.scale.set(1, 1, 1);
-    if (!sceneObjs.stackPool[type]) sceneObjs.stackPool[type] = [];
-    sceneObjs.stackPool[type].push(mesh);
+  function isUpgradeMax(id) {
+    const def = UPGRADE_DEFS[id];
+    return !def || getUpgradeLevel(id) >= def.maxLv;
   }
 
-  function releaseTaggedMeshes(list) {
-    for (var i = 0; i < list.length; i++) {
-      releaseSingleMesh(list[i].type, list[i].mesh);
+  function applyUpgradeLevel(id) {
+    switch (id) {
+      case "tool":
+        state.toolLv++;
+        if (window.Entities && sceneObjs.hero) {
+          window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 2)));
+        }
+        showToast(`🪄 수확 속도 Lv.${state.toolLv} 달성!`);
+        break;
+      case "bag":
+        state.bagLv++;
+        showToast(`🎒 지게 용량 ${getHeroBagCap()}칸으로 확장!`);
+        break;
+      case "speed":
+        state.speedLv++;
+        showToast(`👢 이동 속도 Lv.${state.speedLv} 가속!`);
+        break;
+      case "m1":
+        state.m1Lv++;
+        if (runtime.machines[0]) runtime.machines[0].lv = state.m1Lv;
+        showToast(state.m1Lv === 1 ? "⚗️ 1호기 황금 가마솥(2x) 가동 시작!" : `⚗️ 1호기 Lv.${state.m1Lv} 가속!`);
+        break;
+      case "m2":
+        state.m2Lv++;
+        if (runtime.machines[1]) runtime.machines[1].lv = state.m2Lv;
+        showToast(state.m2Lv === 1 ? "💎 2호기 크리스탈 커팅기(3x) 가동!" : `💎 2호기 Lv.${state.m2Lv} 가속!`);
+        break;
+      case "m3":
+        state.m3Lv++;
+        if (runtime.machines[2]) runtime.machines[2].lv = state.m3Lv;
+        showToast(state.m3Lv === 1 ? "🌈 3호기 무지개 증류기(5x) 가동!" : `🌈 3호기 Lv.${state.m3Lv} 가속!`);
+        break;
+      case "fairy":
+        state.fairyCount++;
+        syncFairiesCount();
+        showToast(`🧚 요정 일꾼 ${state.fairyCount}호 합류!`);
+        break;
+      case "truck":
+        state.truckLv++;
+        ensureTruckSpawned();
+        showToast(state.truckLv === 1 ? "🚜 메가 수확 트럭 출고!" : `🚜 메가 트럭 Lv.${state.truckLv} 업그레이드!`);
+        break;
+      case "farm2":
+        state.farm2Unlocked = true;
+        refreshFarmZoneVisibility();
+        showToast("🌿 북동 게이트 24노드 농장 해금!");
+        break;
+      case "farm3":
+        state.farm3Unlocked = true;
+        refreshFarmZoneVisibility();
+        showToast("🌺 북서 게이트 24노드 농장 해금!");
+        break;
+      default:
+        break;
     }
-    list.length = 0;
+    state.padPaid[id] = 0;
+    addXp(25);
+    playBuildPop();
+    spawnBurstVfx(player.x, 1.0, player.z, 0x62ffaa, 12);
+    saveGame();
+    if (runtime.shopOpen) renderShop();
   }
 
-  function pushBackStackMesh(type) {
-    if (!sceneObjs.wizard || !sceneObjs.wizard.backStackAnchor) return;
-    if (sceneObjs.activeStackMeshes.length >= MAX_VISIBLE_BACK_STACK) {
-      var bottomEntry = sceneObjs.activeStackMeshes.shift();
-      releaseSingleMesh(bottomEntry.type, bottomEntry.mesh);
-    }
-    var idx = sceneObjs.activeStackMeshes.length;
-    var mesh = acquirePooledMesh(type);
-    mesh.scale.set(1.15, 0.85, 1.15);
-    mesh.position.set(0, idx * 0.19, 0);
-    sceneObjs.wizard.backStackAnchor.add(mesh);
-    sceneObjs.activeStackMeshes.push({ type: type, mesh: mesh });
-  }
-
-  function popBackStackMeshAtBagIndex(bagIdx, prevBagLength) {
-    var visLen = sceneObjs.activeStackMeshes.length;
-    if (visLen === 0) return null;
-    var startBagIdx = Math.max(0, prevBagLength - visLen);
-    var visIdx = bagIdx - startBagIdx;
-    var poppedWorldPos = { x: player.x, y: 1.05 + Math.max(0, visLen - 1) * 0.19, z: player.z };
-
-    if (visIdx >= 0 && visIdx < visLen) {
-      var entry = sceneObjs.activeStackMeshes[visIdx];
-      if (entry.mesh && typeof entry.mesh.getWorldPosition === "function") {
-        var wp = new THREE.Vector3();
-        entry.mesh.getWorldPosition(wp);
-        poppedWorldPos = { x: wp.x, y: wp.y, z: wp.z };
-      }
-      sceneObjs.activeStackMeshes.splice(visIdx, 1);
-      releaseSingleMesh(entry.type, entry.mesh);
-    }
-
-    // If bag still had hidden items below the 50-item window, slide one into bottom
-    if (state.bag.length >= MAX_VISIBLE_BACK_STACK && sceneObjs.activeStackMeshes.length < MAX_VISIBLE_BACK_STACK) {
-      var revealIdx = state.bag.length - MAX_VISIBLE_BACK_STACK;
-      var revealItem = state.bag[revealIdx];
-      var revealMesh = acquirePooledMesh(revealItem.type);
-      sceneObjs.wizard.backStackAnchor.add(revealMesh);
-      sceneObjs.activeStackMeshes.unshift({ type: revealItem.type, mesh: revealMesh });
-    }
-    return poppedWorldPos;
-  }
-
-  function rebuildInitialBackStack() {
-    releaseTaggedMeshes(sceneObjs.activeStackMeshes);
-    if (!sceneObjs.wizard || !sceneObjs.wizard.backStackAnchor) return;
-    var visibleCount = Math.min(MAX_VISIBLE_BACK_STACK, state.bag.length);
-    var startIdx = Math.max(0, state.bag.length - visibleCount);
-    for (var i = 0; i < visibleCount; i++) {
-      var item = state.bag[startIdx + i];
-      var mesh = acquirePooledMesh(item.type);
-      mesh.position.set(0, i * 0.19, 0);
-      sceneObjs.wizard.backStackAnchor.add(mesh);
-      sceneObjs.activeStackMeshes.push({ type: item.type, mesh: mesh });
-    }
-  }
-
-  function addToBag(type, value) {
-    if (state.bag.length >= getBackpackCap()) return false;
-    var info = RESOURCE_INFO[type] || RESOURCE_INFO.starlight_crystal;
-    state.bag.push({
-      type: type,
-      value: typeof value === "number" ? value : info.price
-    });
-    if (type === "starlight_crystal" || type === "rainbow_berry" || type === "slime_jelly") {
-      state.crystalsHarvested += 1;
-    }
-    pushBackStackMesh(type);
+  function purchaseUpgradeDirect(id) {
+    if (isUpgradeMax(id)) return false;
+    const cost = getUpgradeCost(id);
+    if (state.gems < cost) return false;
+    state.gems -= cost;
+    applyUpgradeLevel(id);
     return true;
   }
 
-  function removeFromBagAt(idx) {
-    if (idx < 0 || idx >= state.bag.length) return null;
-    var prevLen = state.bag.length;
-    var removed = state.bag.splice(idx, 1)[0];
-    var originPos = popBackStackMeshAtBagIndex(idx, prevLen);
-    return { item: removed, originPos: originPos || { x: player.x, y: 1.2, z: player.z } };
+  function getHeroBagCap() {
+    return 16 + state.bagLv * 8;
   }
 
-  function layoutCounterMeshAt(entry, i) {
-    var col = i % 3;
-    var row = Math.floor(i / 3) % 2;
-    var layer = Math.floor(i / 6);
-    entry.mesh.scale.set(0.88, 0.88, 0.88);
-    entry.mesh.position.set((col - 1.0) * 0.54, layer * 0.16, (row - 0.5) * 0.38);
+  function getHeroMoveSpeed() {
+    return 7.6 + state.speedLv * 0.95;
   }
 
-  function pushCounterStockMesh(type) {
-    if (!sceneObjs.sales || !sceneObjs.sales.stockAnchor) return;
-    if (sceneObjs.counterMeshes.length >= MAX_COUNTER_STOCK) return;
-    var mesh = acquirePooledMesh(type);
-    var entry = { type: type, mesh: mesh };
-    layoutCounterMeshAt(entry, sceneObjs.counterMeshes.length);
-    sceneObjs.sales.stockAnchor.add(mesh);
-    sceneObjs.counterMeshes.push(entry);
+  function getHeroHarvestInterval() {
+    return Math.max(0.11, 0.34 - state.toolLv * 0.032);
   }
 
-  function shiftCounterStockMesh() {
-    if (sceneObjs.counterMeshes.length === 0) return;
-    var entry = sceneObjs.counterMeshes.shift();
-    releaseSingleMesh(entry.type, entry.mesh);
-    // Reflow remaining visible slots sequentially
-    for (var i = 0; i < sceneObjs.counterMeshes.length; i++) {
-      layoutCounterMeshAt(sceneObjs.counterMeshes[i], i);
-    }
-    if (state.counterStock.length >= MAX_COUNTER_STOCK && sceneObjs.counterMeshes.length < MAX_COUNTER_STOCK) {
-      var backIdx = MAX_COUNTER_STOCK - 1;
-      pushCounterStockMesh(state.counterStock[backIdx].type);
+  function getHeroHarvestYield() {
+    return 1 + Math.floor(state.toolLv / 3);
+  }
+
+  function addXp(amount) {
+    state.xp += amount;
+    while (state.xp >= state.xpMax) {
+      state.xp -= state.xpMax;
+      state.level++;
+      state.xpMax = Math.round(state.xpMax * 1.35);
+      showToast(`✨ 연금술사 Lv.${state.level} 달성!`);
     }
   }
 
-  function addToCounterStock(item) {
-    state.counterStock.push({ type: item.type, value: item.value });
-    pushCounterStockMesh(item.type);
-  }
-
-  function rebuildInitialCounterStock() {
-    releaseTaggedMeshes(sceneObjs.counterMeshes);
-    var visibleCount = Math.min(MAX_COUNTER_STOCK, state.counterStock.length);
-    for (var i = 0; i < visibleCount; i++) {
-      pushCounterStockMesh(state.counterStock[i].type);
-    }
-  }
-
-  function pushPedestalGems(count) {
-    if (!sceneObjs.pedestal || !sceneObjs.pedestal.stackAnchor) return;
-    var target = Math.min(MAX_PEDESTAL_GEMS, Math.floor(state.pedestalGems + count));
-    while (sceneObjs.pedestalMeshes.length < target) {
-      var idx = sceneObjs.pedestalMeshes.length;
-      var col = idx % 2;
-      var row = Math.floor(idx / 2) % 2;
-      var layer = Math.floor(idx / 4);
-      var mesh = acquirePooledMesh("mana_gem");
-      mesh.scale.set(0.95, 0.95, 0.95);
-      mesh.position.set((col - 0.5) * 0.44, layer * 0.11, (row - 0.5) * 0.44);
-      sceneObjs.pedestal.stackAnchor.add(mesh);
-      sceneObjs.pedestalMeshes.push({ type: "mana_gem", mesh: mesh });
-    }
-  }
-
-  function popPedestalTopGem() {
-    var topIdx = sceneObjs.pedestalMeshes.length - 1;
-    var spawnWorld = { x: PEDESTAL_POS.x, y: PEDESTAL_POS.y + 0.15, z: PEDESTAL_POS.z };
-    if (topIdx >= 0) {
-      var entry = sceneObjs.pedestalMeshes.pop();
-      if (entry.mesh && typeof entry.mesh.getWorldPosition === "function") {
-        var wp = new THREE.Vector3();
-        entry.mesh.getWorldPosition(wp);
-        spawnWorld = { x: wp.x, y: wp.y, z: wp.z };
-      }
-      releaseSingleMesh(entry.type, entry.mesh);
-    }
-    return spawnWorld;
-  }
-
-  function rebuildInitialPedestalGems() {
-    releaseTaggedMeshes(sceneObjs.pedestalMeshes);
-    if (state.pedestalGems > 0) {
-      pushPedestalGems(0);
-    }
-  }
-
-  function updateBackStackPhysics(dt, worldAx, worldAz) {
-    if (!sceneObjs.wizard) return;
-    var cosY = Math.cos(-player.yaw);
-    var sinY = Math.sin(-player.yaw);
-    var localAx = worldAx * cosY - worldAz * sinY;
-    var localAz = worldAx * sinY + worldAz * cosY;
-
-    var springK = 36;
-    var damp = 7.8;
-    player.stackVelX += (-localAx * 0.035 - springK * player.stackInertiaX - damp * player.stackVelX) * dt;
-    player.stackVelZ += (-localAz * 0.035 - springK * player.stackInertiaZ - damp * player.stackVelZ) * dt;
-    player.stackInertiaX = Math.max(-0.55, Math.min(0.55, player.stackInertiaX + player.stackVelX * dt));
-    player.stackInertiaZ = Math.max(-0.55, Math.min(0.55, player.stackInertiaZ + player.stackVelZ * dt));
-
-    var count = sceneObjs.activeStackMeshes.length;
-    var moveRatio = Math.min(1, Math.hypot(player.vx, player.vz) / 6.0);
-    for (var i = 0; i < count; i++) {
-      var mesh = sceneObjs.activeStackMeshes[i].mesh;
-      // Smooth elastic pop restore when pushed onto stack
-      mesh.scale.x += (1 - mesh.scale.x) * Math.min(1, dt * 16);
-      mesh.scale.y += (1 - mesh.scale.y) * Math.min(1, dt * 16);
-      mesh.scale.z += (1 - mesh.scale.z) * Math.min(1, dt * 16);
-
-      var hFactor = (i + 1) * 0.045;
-      var quadFactor = Math.min(3.2, i * i * 0.0024 + hFactor);
-      var swayX = player.stackInertiaX * quadFactor + Math.sin(runtime.time * 6.0 - i * 0.25) * 0.016 * moveRatio * (i / 10);
-      var swayZ = player.stackInertiaZ * quadFactor - moveRatio * hFactor * 0.32;
-      mesh.position.set(swayX, i * 0.19, swayZ);
-      mesh.rotation.z = -swayX * 0.18;
-      mesh.rotation.x = swayZ * 0.18;
-    }
-  }
-
-  // =========================================================================
-  // VFX, Quadratic Bezier Flying Items, Homing Magnet & 3D Debris
-  // =========================================================================
-  function spawnShockwave(x, y, z, colorHex, maxScale) {
-    var mesh = Entities.createShockwaveRing(colorHex);
-    mesh.position.set(x, y, z);
-    mesh.scale.set(0.2, 0.2, 0.2);
-    Engine.scene.add(mesh);
-    sceneObjs.rings.push({
-      mesh: mesh,
-      life: 0,
-      duration: 0.42,
-      maxScale: maxScale || 2.0
-    });
-  }
-
-  function spawnSlashArc(x, y, z, yaw, colorHex, scale) {
-    if (!Entities.createSlashArcMesh) return;
-    var arcObj = Entities.createSlashArcMesh(colorHex);
-    arcObj.root.position.set(x, y, z);
-    arcObj.root.rotation.y = yaw - Math.PI * 0.5;
-    arcObj.root.rotation.z = (Math.random() - 0.5) * 0.24;
-    var baseScale = scale || 1.0;
-    arcObj.root.scale.setScalar(baseScale * 0.72);
-    Engine.scene.add(arcObj.root);
-    sceneObjs.slashes.push({
-      mesh: arcObj.root,
-      outerMat: arcObj.outerMat,
-      innerMat: arcObj.innerMat,
-      life: 0,
-      duration: 0.22,
-      startScale: baseScale * 0.72,
-      endScale: baseScale * 1.48
-    });
-  }
-
-  function spawnSparks(x, y, z, colorHex, count) {
-    var total = count || 6;
-    for (var i = 0; i < total; i++) {
-      var mesh = Entities.createSparkParticle(colorHex);
-      mesh.position.set(x, y, z);
-      Engine.scene.add(mesh);
-      var ang = Math.random() * Math.PI * 2;
-      var spd = 2.0 + Math.random() * 3.8;
-      sceneObjs.sparks.push({
-        mesh: mesh,
-        vx: Math.cos(ang) * spd,
-        vy: 2.5 + Math.random() * 4.2,
-        vz: Math.sin(ang) * spd,
-        life: 0,
-        duration: 0.42 + Math.random() * 0.22
-      });
-    }
-  }
-
-  function spawnDebrisParticles(x, y, z, colorHex, count) {
-    var total = count || 6;
-    for (var i = 0; i < total; i++) {
-      var mesh = Entities.createDebrisMesh(colorHex);
-      mesh.position.set(x, y, z);
-      var sc = 0.7 + Math.random() * 0.75;
-      mesh.scale.setScalar(sc);
-      Engine.scene.add(mesh);
-      var ang = Math.random() * Math.PI * 2;
-      var spd = 2.2 + Math.random() * 4.2;
-      sceneObjs.debris.push({
-        mesh: mesh,
-        x: x,
-        y: y,
-        z: z,
-        vx: Math.cos(ang) * spd,
-        vy: 3.4 + Math.random() * 4.0,
-        vz: Math.sin(ang) * spd,
-        rx: (Math.random() - 0.5) * 14,
-        ry: (Math.random() - 0.5) * 14,
-        rz: (Math.random() - 0.5) * 14,
-        life: 0,
-        duration: 0.65 + Math.random() * 0.25,
-        baseScale: sc
-      });
-    }
-  }
-
-  function spawnPopup(x, y, z, text, color) {
-    if (!dom.fxOverlay || typeof document === "undefined") return;
-    if (sceneObjs.popups.length >= 24) {
-      var oldest = sceneObjs.popups.shift();
-      if (oldest && oldest.el && oldest.el.parentNode) {
-        oldest.el.parentNode.removeChild(oldest.el);
-      }
-    }
-    var el = document.createElement("div");
-    el.className = "float-popup";
-    el.textContent = text;
-    el.style.color = color || "#ffffff";
-    dom.fxOverlay.appendChild(el);
-    var p = {
-      el: el,
-      wx: x,
-      wy: y,
-      wz: z,
-      life: 0,
-      duration: 0.85
-    };
-    var screen = Engine.worldToScreen(new THREE.Vector3(x, y, z));
-    el.style.left = screen.x.toFixed(1) + "px";
-    el.style.top = screen.y.toFixed(1) + "px";
-    sceneObjs.popups.push(p);
-  }
-
-  function spawnFlyingItem(type, startPos, targetMode, targetPos, onArrive, duration) {
-    var mesh = Entities.createResourceMesh(type);
-    mesh.position.set(startPos.x, startPos.y, startPos.z);
-    Engine.scene.add(mesh);
-    var midX = (startPos.x + targetPos.x) * 0.5 + (Math.random() - 0.5) * 0.45;
-    var midZ = (startPos.z + targetPos.z) * 0.5 + (Math.random() - 0.5) * 0.45;
-    var arcH = duration && duration <= 0.26 ? 1.55 : (2.1 + Math.random() * 0.9);
-    var ctrlY = Math.max(startPos.y, targetPos.y) + arcH;
-
-    sceneObjs.flyingItems.push({
-      mesh: mesh,
-      type: type,
-      sx: startPos.x,
-      sy: startPos.y,
-      sz: startPos.z,
-      cx: midX,
-      cy: ctrlY,
-      cz: midZ,
-      targetMode: targetMode,
-      tx: targetPos.x,
-      ty: targetPos.y,
-      tz: targetPos.z,
-      life: 0,
-      duration: duration || (0.34 + Math.random() * 0.08),
-      startYaw: Math.random() * Math.PI * 0.5,
-      onArrive: onArrive
-    });
-  }
-
-  function spawnMagnetGem(startPos, amount, onCollect) {
-    var mesh = Entities.createResourceMesh("mana_gem");
-    mesh.position.set(startPos.x, startPos.y, startPos.z);
-    Engine.scene.add(mesh);
-    var popAng = Math.random() * Math.PI * 2;
-    sceneObjs.magnetGems.push({
-      mesh: mesh,
-      x: startPos.x,
-      y: startPos.y,
-      z: startPos.z,
-      vx: Math.cos(popAng) * 1.6,
-      vy: 6.4,
-      vz: Math.sin(popAng) * 1.6,
-      age: 0,
-      amount: amount,
-      onCollect: onCollect
-    });
-  }
-
-  function spawnDrop(type, x, z, value) {
-    var mesh = Entities.createResourceMesh(type);
-    mesh.position.set(x, 0.35, z);
-    Engine.scene.add(mesh);
-    var ang = Math.random() * Math.PI * 2;
-    sceneObjs.drops.push({
-      mesh: mesh,
-      type: type,
-      value: value || (RESOURCE_INFO[type] ? RESOURCE_INFO[type].price : 14),
-      x: x + Math.cos(ang) * 0.7,
-      z: z + Math.sin(ang) * 0.7,
-      age: 0
-    });
-  }
-
-  // =========================================================================
-  // World Initialization
-  // =========================================================================
-  function buildWorldObjects() {
-    var scene = Engine.scene;
-
-    // 1. Wizard
-    sceneObjs.wizard = Entities.createWizardModel();
-    sceneObjs.wizard.root.position.set(player.x, 0, player.z);
-    runtime.lastTier = getWizardTier();
-    Entities.updateWizardTier(sceneObjs.wizard, runtime.lastTier);
-    scene.add(sceneObjs.wizard.root);
-
-    // 2. Cauldron, Sales Counter & Mana Gem Pedestal (.glb)
-    sceneObjs.cauldron = Entities.createCauldronStation();
-    sceneObjs.cauldron.root.position.set(CAULDRON_POS.x, 0, CAULDRON_POS.z);
-    scene.add(sceneObjs.cauldron.root);
-
-    sceneObjs.sales = Entities.createSalesStation();
-    sceneObjs.sales.root.position.set(SALES_POS.x, 0, SALES_POS.z);
-    scene.add(sceneObjs.sales.root);
-
-    sceneObjs.pedestal = Entities.createGemPedestal();
-    sceneObjs.pedestal.root.position.set(PEDESTAL_POS.x, 0, PEDESTAL_POS.z);
-    scene.add(sceneObjs.pedestal.root);
-
-    // 3. Sleek 3D Ring Step-to-Pay & Action Pads
-    var padSpecs = [
-      { id: "cauldron_feed", x: -2.8, z: -3.8, size: 2.8, accentHex: 0xffb84d, accentCss: "#ffb84d", isActionOnly: true },
-      { id: "sell_pad",      x: -4.2, z: 3.2,  size: 3.0, accentHex: 0x4cf099, accentCss: "#4cf099", isActionOnly: true },
-      { id: "cauldron_upg",  x: 2.8,  z: -3.8, size: 2.7, accentHex: 0xffd34e, accentCss: "#ffd34e", isActionOnly: false },
-      { id: "hire_fairy",    x: 2.35, z: 2.2,  size: 2.7, accentHex: 0xff8ae2, accentCss: "#ff8ae2", isActionOnly: false },
-      { id: "upg_wand",      x: 5.5,  z: -0.2, size: 2.7, accentHex: 0x6ae2ff, accentCss: "#6ae2ff", isActionOnly: false },
-      { id: "upg_speed",     x: 3.6,  z: 5.6,  size: 2.7, accentHex: 0x9bff78, accentCss: "#9bff78", isActionOnly: false },
-      { id: "unlock_cart",   x: -1.4, z: 6.4,  size: 2.8, accentHex: 0xb98cff, accentCss: "#b98cff", isActionOnly: false }
-    ];
-
-    for (var i = 0; i < padSpecs.length; i++) {
-      var spec = padSpecs[i];
-      var padModel = Entities.createStepPad(spec);
-      scene.add(padModel.root);
-      sceneObjs.pads.push({
-        id: spec.id,
-        x: spec.x,
-        z: spec.z,
-        size: spec.size,
-        isActionOnly: spec.isActionOnly,
-        model: padModel,
-        paid: 0,
-        cooldown: 0,
-        gemFxTimer: 0,
-        activeGlow: false
-      });
-    }
-    refreshAllPadTextures();
-
-    // 4. Resource Groves (28 Outer-Wilds Nodes)
-    for (var n = 0; n < NODE_SPOTS.length; n++) {
-      var spot = NODE_SPOTS[n];
-      var nodeModel = Entities.createResourceNodeModel(spot.type);
-      nodeModel.root.position.set(spot.x, 0, spot.z);
-      scene.add(nodeModel.root);
-      sceneObjs.nodes.push({
-        type: spot.type,
-        x: spot.x,
-        z: spot.z,
-        model: nodeModel,
-        hp: 40,
-        maxHp: 40,
-        respawnTimer: 0,
-        shakeTimer: 0,
-        popScale: 1
-      });
-    }
-
-    // 5. Patrol Slimes (12 Outer-Wilds Monsters)
-    var slimeSpots = [
-      { ang: 0.15, r: 14.5 }, { ang: 0.72, r: 19.2 }, { ang: 1.28, r: 15.6 },
-      { ang: 1.85, r: 20.4 }, { ang: 2.85, r: 16.5 }, { ang: 3.35, r: 19.8 },
-      { ang: 3.85, r: 14.2 }, { ang: 4.35, r: 20.5 }, { ang: 4.85, r: 15.8 },
-      { ang: 5.38, r: 19.4 }, { ang: 5.82, r: 14.8 }, { ang: 6.12, r: 21.0 }
-    ];
-    for (var s = 0; s < slimeSpots.length; s++) {
-      var ss = slimeSpots[s];
-      spawnSlimeEntity(false, Math.cos(ss.ang) * ss.r, 1.0 + Math.sin(ss.ang) * ss.r, s * 0.85);
-    }
-
-    // 6. Customer Queue (4 Active Villagers)
-    for (var c = 0; c < 4; c++) {
-      var custModel = Entities.createCustomerModel(c);
-      var slot = QUEUE_SLOTS[c];
-      custModel.root.position.set(slot.x, 0, slot.z);
-      scene.add(custModel.root);
-      sceneObjs.customers.push({
-        model: custModel,
-        variant: c,
-        x: slot.x,
-        z: slot.z,
-        slotIdx: c,
-        state: "queued",
-        waitTimer: 0.4 + c * 0.25,
-        walkPhase: c * 0.8
-      });
-    }
-
-    syncFairyEntities();
-    syncCartEntity();
-    rebuildInitialBackStack();
-    rebuildInitialCounterStock();
-    rebuildInitialPedestalGems();
-  }
-
-  function spawnSlimeEntity(isKing, x, z, phase) {
-    var model = Entities.createSlimeModel(isKing);
-    model.root.position.set(x, 0, z);
-    Engine.scene.add(model.root);
-    var maxHp = isKing ? (380 + state.wave * 120) : (45 + (state.wave - 1) * 12);
-    var slime = {
-      isKing: !!isKing,
-      model: model,
-      x: x,
-      z: z,
-      homeX: x,
-      homeZ: z,
-      hp: maxHp,
-      maxHp: maxHp,
-      alive: true,
-      respawnTimer: 0,
-      phase: phase || Math.random() * Math.PI * 2,
-      wanderAng: Math.random() * Math.PI * 2,
-      wanderTimer: 1.5,
-      knockVx: 0,
-      knockVz: 0,
-      squashTimer: 0
-    };
-    sceneObjs.slimes.push(slime);
-    return slime;
-  }
-
-  function syncFairyEntities() {
-    while (sceneObjs.fairies.length < state.fairies) {
-      var idx = sceneObjs.fairies.length;
-      var fModel = Entities.createFairyModel(idx);
-      var ang = (idx / Math.max(1, state.fairies)) * Math.PI * 2;
-      var fx = Math.cos(ang) * 3.5;
-      var fz = Math.sin(ang) * 3.5;
-      fModel.root.position.set(fx, 1.35, fz);
-      Engine.scene.add(fModel.root);
-      sceneObjs.fairies.push({
-        idx: idx,
-        model: fModel,
-        x: fx,
-        z: fz,
-        yaw: 0,
-        state: "seek_node",
-        targetNodeIdx: idx % NODE_SPOTS.length,
-        waitTimer: 0,
-        bag: [],
-        bagMesh: null
-      });
-    }
-    while (sceneObjs.fairies.length > state.fairies) {
-      var removed = sceneObjs.fairies.pop();
-      if (removed && removed.model && removed.model.root.parent) {
-        removed.model.root.parent.remove(removed.model.root);
+  function showToast(msg) {
+    runtime.toastTimer = 2.6;
+    if (typeof document !== "undefined") {
+      const el = document.getElementById("toast-banner");
+      if (el) {
+        el.textContent = msg;
+        el.classList.add("show");
       }
     }
   }
 
-  function syncCartEntity() {
-    if (state.cartLv >= 1 && !sceneObjs.cart) {
-      sceneObjs.cart = Entities.createHarvesterCartModel();
-      sceneObjs.cart.root.position.set(runtime.cartX, 0, runtime.cartZ);
-      Engine.scene.add(sceneObjs.cart.root);
-    } else if (state.cartLv <= 0 && sceneObjs.cart) {
-      if (sceneObjs.cart.root.parent) sceneObjs.cart.root.parent.remove(sceneObjs.cart.root);
-      sceneObjs.cart = null;
-      runtime.cartBag.length = 0;
+  // ---------------------------------------------------------------------------
+  // Pooled 3D Wide Crate Stacking (Backpacks, Pallets, 3x3 Gem Skyscraper)
+  // ---------------------------------------------------------------------------
+  function syncCrateStackVisuals(anchor, itemList, poolList, opts = {}) {
+    if (!anchor || !window.Entities) return;
+    const cols = opts.cols || 1;
+    const xStep = opts.xStep || 1.02;
+    const zStep = opts.zStep || 0.72;
+    const yStep = opts.yStep || 0.21;
+    const maxDraw = opts.maxDraw || 40;
+    const drawCount = Math.min(itemList.length, maxDraw);
+
+    while (poolList.length < drawCount) {
+      const idx = poolList.length;
+      const type = itemList[idx];
+      const mesh = window.Entities.createItemBlock(type);
+      anchor.add(mesh);
+      poolList.push({ mesh, type });
+    }
+    while (poolList.length > drawCount) {
+      const popped = poolList.pop();
+      anchor.remove(popped.mesh);
+    }
+
+    for (let i = 0; i < drawCount; i++) {
+      const entry = poolList[i];
+      const desiredType = itemList[i];
+      if (entry.type !== desiredType) {
+        anchor.remove(entry.mesh);
+        entry.mesh = window.Entities.createItemBlock(desiredType);
+        entry.type = desiredType;
+        anchor.add(entry.mesh);
+      }
+      if (cols <= 1) {
+        // Neat Hero Backpack Column (stacks up cleanly, 2nd column after 18)
+        const col = Math.floor(i / 18);
+        const layer = i % 18;
+        entry.mesh.position.set(col * 0.98, layer * yStep, 0);
+      } else {
+        const slot = i % (cols * (opts.rows || 2));
+        const layer = Math.floor(i / (cols * (opts.rows || 2)));
+        const cx = slot % cols;
+        const cz = Math.floor(slot / cols);
+        entry.mesh.position.set(
+          (cx - (cols - 1) * 0.5) * xStep,
+          layer * yStep,
+          (cz - ((opts.rows || 2) - 1) * 0.5) * zStep
+        );
+      }
     }
   }
 
-  // =========================================================================
-  // Pad Details & Step-to-Pay Logic
-  // =========================================================================
-  function getPadSpecState(pad) {
-    if (pad.id === "cauldron_feed") {
-      var rawCount = 0;
-      for (var i = 0; i < state.bag.length; i++) {
-        if (RESOURCE_INFO[state.bag[i].type] && RESOURCE_INFO[state.bag[i].type].raw) rawCount++;
-      }
-      return {
-        title: "포션 연성 (3배)",
-        remainingCost: 0,
-        totalCost: 0,
-        progressRatio: rawCount > 0 ? 1 : 0,
-        isDone: false,
-        isActionOnly: true,
-        actionHint: rawCount > 0 ? "연성 중 (" + rawCount + ")" : "재료 투입"
-      };
+  function syncGemPedestalVisuals() {
+    const anchor = sceneObjs.gemPedestal && sceneObjs.gemPedestal.stackAnchor;
+    if (!anchor || !window.Entities) return;
+    const total = Math.min(runtime.pedestalGems.length, 108);
+    const pool = runtime.pedestalVisuals;
+
+    while (pool.length < total) {
+      const m = window.Entities.createItemBlock("mana_gem");
+      anchor.add(m);
+      pool.push(m);
+    }
+    while (pool.length > total) {
+      const m = pool.pop();
+      anchor.remove(m);
     }
 
-    if (pad.id === "sell_pad") {
-      return {
-        title: "판매대 (SELL)",
-        remainingCost: 0,
-        totalCost: 0,
-        progressRatio: state.bag.length > 0 ? 1 : 0,
-        isDone: false,
-        isActionOnly: true,
-        actionHint: state.bag.length > 0 ? "진열 중 (" + state.bag.length + ")" : "진열 납품"
-      };
-    }
-
-    if (pad.id === "cauldron_upg") {
-      var maxC = 15;
-      var doneC = state.cauldronLv >= maxC;
-      var costC = doneC ? 0 : Math.round(150 * Math.pow(1.5, state.cauldronLv - 1));
-      return {
-        title: "가마솥 Lv." + state.cauldronLv,
-        totalCost: costC,
-        remainingCost: Math.max(0, costC - pad.paid),
-        progressRatio: costC > 0 ? Math.min(1, pad.paid / costC) : 1,
-        isDone: doneC,
-        isActionOnly: false
-      };
-    }
-
-    if (pad.id === "hire_fairy") {
-      var maxF = 10;
-      var doneF = state.fairies >= maxF;
-      var costF = doneF ? 0 : Math.round(80 * Math.pow(1.45, state.fairies));
-      return {
-        title: "요정 일꾼 (" + state.fairies + "/" + maxF + ")",
-        totalCost: costF,
-        remainingCost: Math.max(0, costF - pad.paid),
-        progressRatio: costF > 0 ? Math.min(1, pad.paid / costF) : 1,
-        isDone: doneF,
-        isActionOnly: false
-      };
-    }
-
-    if (pad.id === "upg_wand") {
-      var maxW = 20;
-      var doneW = state.wandUpgLv >= maxW;
-      var costW = doneW ? 0 : Math.round(50 * Math.pow(1.32, state.wandUpgLv - 1));
-      return {
-        title: "지팡이·채집 강화",
-        totalCost: costW,
-        remainingCost: Math.max(0, costW - pad.paid),
-        progressRatio: costW > 0 ? Math.min(1, pad.paid / costW) : 1,
-        isDone: doneW,
-        isActionOnly: false
-      };
-    }
-
-    if (pad.id === "upg_speed") {
-      var maxS = 20;
-      var doneS = state.speedUpgLv >= maxS;
-      var costS = doneS ? 0 : Math.round(50 * Math.pow(1.32, state.speedUpgLv - 1));
-      return {
-        title: "배낭·이속 강화",
-        totalCost: costS,
-        remainingCost: Math.max(0, costS - pad.paid),
-        progressRatio: costS > 0 ? Math.min(1, pad.paid / costS) : 1,
-        isDone: doneS,
-        isActionOnly: false
-      };
-    }
-
-    var maxCart = 10;
-    var doneCart = state.cartLv >= maxCart;
-    var costCart = doneCart ? 0 : (state.cartLv === 0 ? 250 : Math.round(300 * Math.pow(1.5, state.cartLv - 1)));
-    return {
-      title: state.cartLv === 0 ? "자동 수확 수레" : "수레 Lv." + state.cartLv,
-      totalCost: costCart,
-      remainingCost: Math.max(0, costCart - pad.paid),
-      progressRatio: costCart > 0 ? Math.min(1, pad.paid / costCart) : 1,
-      isDone: doneCart,
-      isActionOnly: false
-    };
-  }
-
-  function applyPadCompletion(pad) {
-    if (pad.id === "cauldron_upg") {
-      if (state.cauldronLv < 15) state.cauldronLv += 1;
-      spawnPopup(pad.x, 2.2, pad.z, "가마솥 Lv." + state.cauldronLv + "!", "#ffd34e");
-      showToast("황금 가마솥 승급! 포션 가치 " + getCauldronMult().toFixed(2) + "배!");
-    } else if (pad.id === "hire_fairy") {
-      if (state.fairies < 10) state.fairies += 1;
-      syncFairyEntities();
-      spawnPopup(pad.x, 2.2, pad.z, "요정 일꾼 +1!", "#ff8ae2");
-      showToast("새로운 요정 일꾼이 합류했습니다! (" + state.fairies + "마리)");
-    } else if (pad.id === "upg_wand") {
-      if (state.wandUpgLv < 20) {
-        if (state.wandUpgLv % 2 === 1 && state.wandLv < 25) {
-          state.wandLv += 1;
-          spawnPopup(pad.x, 2.2, pad.z, "지팡이 Lv." + state.wandLv + "!", "#6ae2ff");
-        } else if (state.harvestLv < 25) {
-          state.harvestLv += 1;
-          spawnPopup(pad.x, 2.2, pad.z, "채집 Lv." + state.harvestLv + "!", "#6ae2ff");
-        } else if (state.wandLv < 25) {
-          state.wandLv += 1;
-          spawnPopup(pad.x, 2.2, pad.z, "지팡이 Lv." + state.wandLv + "!", "#6ae2ff");
-        }
-        state.wandUpgLv += 1;
-      }
-    } else if (pad.id === "upg_speed") {
-      if (state.speedUpgLv < 20) {
-        if (state.speedUpgLv % 2 === 1 && state.bagLv < 25) {
-          state.bagLv += 1;
-          spawnPopup(pad.x, 2.2, pad.z, "배낭 확장 (" + getBackpackCap() + ")!", "#9bff78");
-        } else if (state.speedLv < 25) {
-          state.speedLv += 1;
-          spawnPopup(pad.x, 2.2, pad.z, "이속 Lv." + state.speedLv + "!", "#9bff78");
-        } else if (state.bagLv < 25) {
-          state.bagLv += 1;
-          spawnPopup(pad.x, 2.2, pad.z, "배낭 확장 (" + getBackpackCap() + ")!", "#9bff78");
-        }
-        state.speedUpgLv += 1;
-      }
-    } else if (pad.id === "unlock_cart") {
-      var wasLocked = state.cartLv === 0;
-      if (state.cartLv < 10) state.cartLv += 1;
-      syncCartEntity();
-      spawnPopup(pad.x, 2.2, pad.z, wasLocked ? "수레 해금!" : "수레 Lv." + state.cartLv + "!", "#b98cff");
-      showToast(wasLocked ? "자동 수확 마법 수레가 숲 순찰을 시작합니다!" : "수확 수레 Lv." + state.cartLv + " 강화 완료!");
-    }
-
-    pad.paid = 0;
-    pad.cooldown = 0.45;
-    playBuildPop();
-    Engine.addShake(0.18);
-    spawnShockwave(pad.x, 0.16, pad.z, 0xffffff, 2.6);
-    spawnSparks(pad.x, 0.5, pad.z, 0xffe066, 12);
-    gainXp(25);
-  }
-
-  function refreshAllPadTextures() {
-    for (var i = 0; i < sceneObjs.pads.length; i++) {
-      var pad = sceneObjs.pads[i];
-      var info = getPadSpecState(pad);
-      Entities.updateStepPadTexture(pad.model, {
-        title: info.title,
-        remainingCost: info.remainingCost,
-        progressRatio: info.progressRatio,
-        isDone: info.isDone,
-        isActionOnly: info.isActionOnly,
-        actionHint: info.actionHint,
-        activeGlow: pad.activeGlow
-      });
-    }
-  }
-
-  // =========================================================================
-  // Wall Sliding Collision & 1:1 Player Controls
-  // =========================================================================
-  function resolvePlayerCollisions(nx, nz) {
-    var playerR = 0.48;
-    var obstacles = [
-      { x: CAULDRON_POS.x, z: CAULDRON_POS.z, r: 1.55 + playerR },
-      { x: SALES_POS.x, z: SALES_POS.z, r: 1.5 + playerR },
-      { x: PEDESTAL_POS.x, z: PEDESTAL_POS.z, r: 0.55 + playerR }
-    ];
-    for (var i = 0; i < sceneObjs.nodes.length; i++) {
-      var nd = sceneObjs.nodes[i];
-      if (nd.respawnTimer <= 0) {
-        obstacles.push({ x: nd.x, z: nd.z, r: 0.42 + playerR });
-      }
-    }
-    if (Engine.wallColliders) {
-      for (var wcIdx = 0; wcIdx < Engine.wallColliders.length; wcIdx++) {
-        var wc = Engine.wallColliders[wcIdx];
-        obstacles.push({ x: wc.x, z: wc.z, r: (wc.r || 0.95) * 0.78 + playerR });
-      }
-    }
-
-    // Two-pass normal projection & tangent velocity sliding
-    for (var pass = 0; pass < 2; pass++) {
-      for (var k = 0; k < obstacles.length; k++) {
-        var ob = obstacles[k];
-        var dx = nx - ob.x;
-        var dz = nz - ob.z;
-        var dist = Math.hypot(dx, dz);
-        if (dist < ob.r) {
-          var normX = dist > 0.0001 ? dx / dist : 0;
-          var normZ = dist > 0.0001 ? dz / dist : 1;
-          nx = ob.x + normX * ob.r;
-          nz = ob.z + normZ * ob.r;
-
-          // Project velocity onto tangent vector (slide smoothly along obstacle surface)
-          var vn = player.vx * normX + player.vz * normZ;
-          if (vn < 0) {
-            player.vx -= vn * normX;
-            player.vz -= vn * normZ;
-          }
-        }
-      }
-    }
-
-    var mag = Math.hypot(nx, nz);
-    if (mag > MEADOW_LIMIT_R) {
-      var limNx = nx / mag;
-      var limNz = nz / mag;
-      nx = limNx * MEADOW_LIMIT_R;
-      nz = limNz * MEADOW_LIMIT_R;
-      var rimVn = player.vx * limNx + player.vz * limNz;
-      if (rimVn > 0) {
-        player.vx -= rimVn * limNx;
-        player.vz -= rimVn * limNz;
-      }
-    }
-    return { x: nx, z: nz };
-  }
-
-  function updatePlayerMovement(dt) {
-    var ix = runtime.joyX;
-    var iy = runtime.joyY;
-    if (runtime.keys.KeyD || runtime.keys.ArrowRight) ix += 1;
-    if (runtime.keys.KeyA || runtime.keys.ArrowLeft) ix -= 1;
-    if (runtime.keys.KeyS || runtime.keys.ArrowDown) iy += 1;
-    if (runtime.keys.KeyW || runtime.keys.ArrowUp) iy -= 1;
-
-    var mag = Math.hypot(ix, iy);
-    if (mag > 1) {
-      ix /= mag;
-      iy /= mag;
-    }
-
-    // 1:1 Screen-aligned controls (PerspectiveCamera behind player: Right=+X, Down=+Z, Up=-Z)
-    var wx = ix;
-    var wz = iy;
-
-    var maxSpd = getMoveSpeed();
-    var targetVx = wx * maxSpd;
-    var targetVz = wz * maxSpd;
-    var blend = Math.min(1, dt * 15);
-    var prevVx = player.vx;
-    var prevVz = player.vz;
-    player.vx += (targetVx - player.vx) * blend;
-    player.vz += (targetVz - player.vz) * blend;
-
-    var worldAx = dt > 0.0001 ? (player.vx - prevVx) / dt : 0;
-    var worldAz = dt > 0.0001 ? (player.vz - prevVz) / dt : 0;
-
-    var resolved = resolvePlayerCollisions(player.x + player.vx * dt, player.z + player.vz * dt);
-    player.x = resolved.x;
-    player.z = resolved.z;
-
-    var speed = Math.hypot(player.vx, player.vz);
-    if (speed > 0.25) {
-      var desiredYaw = Math.atan2(player.vx, player.vz);
-      var diff = desiredYaw - player.yaw;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      player.yaw += diff * Math.min(1, dt * 14);
-      player.walkPhase += dt * (4.8 + speed * 1.15);
-    }
-
-    if (player.swingTimer > 0) {
-      player.swingTimer = Math.max(0, player.swingTimer - dt);
-    }
-
-    if (sceneObjs.wizard) {
-      sceneObjs.wizard.root.position.set(player.x, 0, player.z);
-      sceneObjs.wizard.root.rotation.y = player.yaw;
-      Entities.animateWizard(
-        sceneObjs.wizard,
-        {
-          speed: speed,
-          walkPhase: player.walkPhase,
-          swingTimer: player.swingTimer,
-          swingDuration: player.swingDuration,
-          time: runtime.time
-        },
-        dt
+    // Strict 3x3 Skyscraper grid
+    for (let i = 0; i < total; i++) {
+      const slot = i % 9;
+      const layer = Math.floor(i / 9);
+      const col = slot % 3;
+      const row = Math.floor(slot / 3);
+      pool[i].position.set(
+        (col - 1) * 0.54,
+        layer * 0.135,
+        (row - 1) * 0.44
       );
     }
-
-    updateBackStackPhysics(dt, worldAx, worldAz);
   }
 
-  function updatePadsAndStations(dt) {
-    player.feedCooldown = Math.max(0, player.feedCooldown - dt);
-    player.sellCooldown = Math.max(0, player.sellCooldown - dt);
-    player.gemCooldown = Math.max(0, player.gemCooldown - dt);
+  // ---------------------------------------------------------------------------
+  // VFX: Particles & Curved Magnet Arcs
+  // ---------------------------------------------------------------------------
+  function spawnBurstVfx(x, y, z, color = 0x5effb8, count = 8) {
+    const Engine = window.Engine;
+    if (!Engine || !Engine.vfxGroup) return;
+    const geo = new THREE.SphereGeometry(0.11, 6, 6);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92 });
+    for (let i = 0; i < count; i++) {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      Engine.vfxGroup.add(m);
+      const ang = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+      const spd = 2.0 + Math.random() * 2.5;
+      runtime.particles.push({
+        mesh: m,
+        vx: Math.cos(ang) * spd,
+        vy: 2.6 + Math.random() * 2.2,
+        vz: Math.sin(ang) * spd,
+        life: 0,
+        maxLife: 0.42 + Math.random() * 0.16,
+      });
+    }
+  }
 
-    // 1. Collect Mana Gems from 2x2 Pedestal Tower (0.03s rapid top-down Homing Magnet vacuum)
-    if (state.pedestalGems > 0 && player.gemCooldown <= 0) {
-      var dp = Math.hypot(player.x - PEDESTAL_POS.x, player.z - PEDESTAL_POS.z);
-      if (dp <= 2.8) {
-        var drain = Math.min(state.pedestalGems, Math.max(1, Math.ceil(state.pedestalGems / 32)));
-        var originGemPos = popPedestalTopGem();
+  function spawnFlyingItem(itemType, fromX, fromY, fromZ, toX, toY, toZ, onArrive) {
+    const Engine = window.Engine;
+    if (!Engine || !Engine.vfxGroup || !window.Entities) {
+      if (onArrive) onArrive();
+      return;
+    }
+    const mesh = window.Entities.createItemBlock(itemType);
+    mesh.position.set(fromX, fromY, fromZ);
+    mesh.scale.set(0.85, 0.85, 0.85);
+    Engine.vfxGroup.add(mesh);
+    runtime.flyingBricks.push({
+      mesh,
+      sx: fromX,
+      sy: fromY,
+      sz: fromZ,
+      tx: toX,
+      ty: toY,
+      tz: toZ,
+      t: 0,
+      dur: 0.24,
+      onArrive,
+    });
+  }
 
-        state.pedestalGems -= drain;
-        player.gemCooldown = 0.03;
+  function updateVFX(dt) {
+    const Engine = window.Engine;
+    for (let i = runtime.particles.length - 1; i >= 0; i--) {
+      const p = runtime.particles[i];
+      p.life += dt;
+      if (p.life >= p.maxLife) {
+        if (Engine && Engine.vfxGroup) Engine.vfxGroup.remove(p.mesh);
+        runtime.particles.splice(i, 1);
+        continue;
+      }
+      p.vy -= 9.5 * dt;
+      p.mesh.position.x += p.vx * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      const s = 1 - p.life / p.maxLife;
+      p.mesh.scale.set(s, s, s);
+    }
 
-        spawnMagnetGem(originGemPos, drain, function (collectedAmt) {
-          state.gems += collectedAmt;
-          state.totalGemsEarned += collectedAmt;
-          runtime.gemCombo += 1;
-          runtime.gemComboTimer = 0.85;
-          runtime.gemPopupAcc += collectedAmt;
-          playGemChime(runtime.gemCombo);
+    for (let i = runtime.flyingBricks.length - 1; i >= 0; i--) {
+      const f = runtime.flyingBricks[i];
+      f.t += dt / f.dur;
+      if (f.t >= 1) {
+        if (Engine && Engine.vfxGroup) Engine.vfxGroup.remove(f.mesh);
+        const cb = f.onArrive;
+        runtime.flyingBricks.splice(i, 1);
+        if (cb) cb();
+        continue;
+      }
+      const p = f.t;
+      const arc = Math.sin(p * Math.PI) * 1.45;
+      // Track player dynamically if target is gem vacuum
+      const tx = f.trackPlayer ? player.x : f.tx;
+      const ty = f.trackPlayer ? 1.15 : f.ty;
+      const tz = f.trackPlayer ? player.z : f.tz;
+      f.mesh.position.set(
+        f.sx + (tx - f.sx) * p,
+        f.sy + (ty - f.sy) * p + arc,
+        f.sz + (tz - f.sz) * p
+      );
+      f.mesh.rotation.y += dt * 9;
+    }
+  }
 
-          if (runtime.gemCombo % 4 === 1 || state.pedestalGems === 0) {
-            spawnPopup(player.x, 2.0, player.z, "+" + formatNum(runtime.gemPopupAcc) + " 💎", "#5ef2ff");
-            runtime.gemPopupAcc = 0;
-            spawnSparks(originGemPos.x, originGemPos.y + 0.15, originGemPos.z, 0x3ef2ff, 4);
-          }
+  // ---------------------------------------------------------------------------
+  // World Population: 84 Dense Farm Nodes, 3 North Machines, Market & Pads
+  // ---------------------------------------------------------------------------
+  function buildDenseFarmNodes() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities) return;
+
+    const specs = [];
+    // Zone 1: East Gate Dense Farm (6 x 6 = 36 nodes, 2.0m spacing, unlocked)
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 6; c++) {
+        specs.push({
+          zone: 1,
+          kind: (r + c) % 2 === 0 ? "crystal" : "berry",
+          x: 23.0 + c * 2.0,
+          z: -5.0 + r * 2.0,
+        });
+      }
+    }
+    // Zone 2: North-East Dense Farm (6 x 4 = 24 nodes, 2.0m spacing)
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 6; c++) {
+        specs.push({
+          zone: 2,
+          kind: (r + c) % 2 === 0 ? "crystal" : "berry",
+          x: 5.0 + c * 2.0,
+          z: -27.5 + r * 2.0,
+        });
+      }
+    }
+    // Zone 3: North-West Dense Farm (6 x 4 = 24 nodes, 2.0m spacing)
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 6; c++) {
+        specs.push({
+          zone: 3,
+          kind: (r + c) % 2 === 0 ? "berry" : "crystal",
+          x: -15.0 + c * 2.0,
+          z: -27.5 + r * 2.0,
         });
       }
     }
 
-    // 2. Step-to-Pay & Action Pads (0.04s rapid pop + 360-spin Bezier curve + squash-and-stretch)
-    for (var i = 0; i < sceneObjs.pads.length; i++) {
-      var pad = sceneObjs.pads[i];
-      if (pad.cooldown > 0) pad.cooldown = Math.max(0, pad.cooldown - dt);
-
-      var dist = Math.hypot(player.x - pad.x, player.z - pad.z);
-      var standing = dist <= pad.size * 0.62;
-      pad.activeGlow = standing;
-
-      if (!standing) continue;
-
-      if (pad.id === "cauldron_feed") {
-        if (player.feedCooldown <= 0) {
-          var rawIdx = -1;
-          for (var b = state.bag.length - 1; b >= 0; b--) {
-            if (RESOURCE_INFO[state.bag[b].type] && RESOURCE_INFO[state.bag[b].type].raw) {
-              rawIdx = b;
-              break;
-            }
-          }
-          if (rawIdx >= 0) {
-            var popped = removeFromBagAt(rawIdx);
-            var rawItem = popped.item;
-            player.feedCooldown = 0.04;
-            player.swingTimer = Math.max(player.swingTimer, 0.14);
-            var potionPrice = Math.round(rawItem.value * getCauldronMult());
-            playHarvestChime();
-            spawnFlyingItem(
-              rawItem.type,
-              popped.originPos,
-              "world",
-              CAULDRON_POS,
-              function () {
-                Entities.triggerStationSquash(sceneObjs.cauldron);
-                state.potionsBrewed += 1;
-                gainXp(4);
-                spawnSparks(CAULDRON_POS.x, CAULDRON_POS.y, CAULDRON_POS.z, 0xff9ef6, 5);
-                spawnFlyingItem(
-                  "rainbow_potion",
-                  CAULDRON_POS,
-                  "world",
-                  SALES_POS,
-                  function () {
-                    Entities.triggerStationSquash(sceneObjs.sales);
-                    addToCounterStock({ type: "rainbow_potion", value: potionPrice });
-                  },
-                  0.32
-                );
-              },
-              0.32
-            );
-          }
-        }
-      } else if (pad.id === "sell_pad") {
-        if (player.sellCooldown <= 0 && state.bag.length > 0) {
-          var poppedSell = removeFromBagAt(state.bag.length - 1);
-          var soldItem = poppedSell.item;
-          player.sellCooldown = 0.04;
-          playHarvestChime();
-          spawnFlyingItem(
-            soldItem.type,
-            poppedSell.originPos,
-            "world",
-            SALES_POS,
-            function () {
-              Entities.triggerStationSquash(sceneObjs.sales);
-              addToCounterStock(soldItem);
-            },
-            0.3
-          );
-        }
-      } else if (pad.cooldown <= 0) {
-        var spec = getPadSpecState(pad);
-        if (!spec.isDone && spec.remainingCost > 0 && state.gems > 0) {
-          var rate = Math.max(40, Math.ceil(spec.totalCost * 1.15));
-          var spend = Math.min(state.gems, spec.remainingCost, Math.max(1, Math.ceil(rate * dt)));
-          if (spend > 0) {
-            state.gems -= spend;
-            pad.paid += spend;
-            pad.gemFxTimer -= dt;
-            if (pad.gemFxTimer <= 0) {
-              pad.gemFxTimer = 0.09;
-              playGemChime(Math.floor(pad.paid / 15));
-              spawnFlyingItem(
-                "mana_gem",
-                { x: player.x, y: 1.0, z: player.z },
-                "world",
-                { x: pad.x, y: 0.25, z: pad.z },
-                null,
-                0.24
-              );
-            }
-            if (pad.paid >= spec.totalCost) {
-              applyPadCompletion(pad);
-            }
-          }
-        }
-      }
+    for (let i = 0; i < specs.length; i++) {
+      const s = specs[i];
+      const entity = Entities.createResourceNode(s.kind, s.x, s.z);
+      Engine.nodeGroup.add(entity.root);
+      runtime.farmNodes.push({
+        id: `node_${i}`,
+        zone: s.zone,
+        kind: s.kind,
+        itemType: s.kind === "crystal" ? "starlight_crystal" : "rainbow_berry",
+        x: s.x,
+        z: s.z,
+        hp: 2,
+        maxHp: 2,
+        respawnTimer: 0,
+        hitAnim: 0,
+        entity,
+      });
     }
+    refreshFarmZoneVisibility();
+  }
 
-    refreshAllPadTextures();
+  function isZoneUnlocked(zone) {
+    if (zone === 1) return true;
+    if (zone === 2) return !!state.farm2Unlocked;
+    if (zone === 3) return !!state.farm3Unlocked;
+    return false;
+  }
 
-    // 3. Animate Cauldron Glow & Bubbles
-    if (sceneObjs.cauldron) {
-      sceneObjs.cauldron.stirGroup.rotation.y += dt * 1.75;
-      var hue = (runtime.time * 0.18) % 1;
-      if (sceneObjs.cauldron.liquidMat && sceneObjs.cauldron.liquidMat.color && typeof sceneObjs.cauldron.liquidMat.color.setHSL === "function") {
-        sceneObjs.cauldron.liquidMat.color.setHSL(hue, 0.85, 0.62);
-      }
-      for (var bi = 0; bi < sceneObjs.cauldron.bubbles.length; bi++) {
-        var bObj = sceneObjs.cauldron.bubbles[bi];
-        bObj.phase += dt * 1.15;
-        var cycle = bObj.phase % 1;
-        bObj.mesh.position.y = 1.05 + cycle * 0.65;
-        bObj.mesh.position.x = Math.cos(bObj.baseAngle + runtime.time * 0.9) * (0.48 * (1 - cycle * 0.35));
-        bObj.mesh.position.z = Math.sin(bObj.baseAngle + runtime.time * 0.9) * (0.48 * (1 - cycle * 0.35));
-        var bScale = Math.max(0.05, Math.sin(cycle * Math.PI) * 1.15);
-        bObj.mesh.scale.set(bScale, bScale, bScale);
+  function refreshFarmZoneVisibility() {
+    for (const node of runtime.farmNodes) {
+      const active = isZoneUnlocked(node.zone) && node.respawnTimer <= 0;
+      if (node.entity && node.entity.root) {
+        node.entity.root.visible = isZoneUnlocked(node.zone);
+        if (!active && node.entity.visualRoot) {
+          node.entity.visualRoot.scale.set(0.01, 0.01, 0.01);
+        } else if (active && node.entity.visualRoot) {
+          node.entity.visualRoot.scale.set(1, 1, 1);
+        }
       }
     }
   }
 
-  function updateResourceNodes(dt) {
-    player.harvestCooldown = Math.max(0, player.harvestCooldown - dt);
+  function buildProductionMachines() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities) return;
 
-    var bestNode = null;
-    var bestDist = Infinity;
-    var hRange = getHarvestRange();
+    for (const cfg of MACHINE_CONFIGS) {
+      const ent = Entities.createProductionMachine(cfg.kind);
+      ent.root.position.set(cfg.x, 0, cfg.z);
+      Engine.stationGroup.add(ent.root);
 
-    for (var i = 0; i < sceneObjs.nodes.length; i++) {
-      var node = sceneObjs.nodes[i];
+      const inPallet = Entities.createWoodenPalletZone({
+        x: cfg.inPos.x,
+        z: cfg.inPos.z,
+        w: 2.35,
+        d: 1.95,
+        accentColor: "#5ef0ff",
+        badgeText: "IN",
+      });
+      Engine.stationGroup.add(inPallet.root);
+
+      const outPallet = Entities.createWoodenPalletZone({
+        x: cfg.outPos.x,
+        z: cfg.outPos.z,
+        w: 2.35,
+        d: 1.95,
+        accentColor: "#ffd85e",
+        badgeText: "OUT",
+      });
+      Engine.stationGroup.add(outPallet.root);
+
+      runtime.machines.push({
+        cfg,
+        lv: getUpgradeLevel(cfg.id),
+        entity: ent,
+        inPallet,
+        outPallet,
+        inQueue: [],
+        inVisuals: [],
+        outQueue: [],
+        outVisuals: [],
+        craftProgress: 0,
+      });
+    }
+  }
+
+  function buildMarketAndQueue() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities) return;
+
+    sceneObjs.stall = Entities.createSalesStall(STALL_POS.x, STALL_POS.z);
+    Engine.stationGroup.add(sceneObjs.stall.root);
+
+    sceneObjs.sellPallet = Entities.createWoodenPalletZone({
+      x: SELL_PALLET_POS.x,
+      z: SELL_PALLET_POS.z,
+      w: 2.75,
+      d: 2.25,
+      accentColor: "#58ff9c",
+      badgeText: "SELL",
+    });
+    Engine.stationGroup.add(sceneObjs.sellPallet.root);
+
+    sceneObjs.gemPedestal = Entities.createGemPedestal(GEM_PEDESTAL_POS.x, GEM_PEDESTAL_POS.z);
+    Engine.stationGroup.add(sceneObjs.gemPedestal.root);
+
+    // 5 cute Animal-Hood Villager Customers lined up at West Market Plaza
+    for (let i = 0; i < 5; i++) {
+      const custEnt = Entities.createCustomer(i);
+      const slotZ = 5.0 + i * 1.9;
+      custEnt.root.position.set(STALL_POS.x + 0.4, 0, slotZ);
+      custEnt.root.rotation.y = Math.PI;
+      Engine.unitGroup.add(custEnt.root);
+      runtime.customers.push({
+        slot: i,
+        x: STALL_POS.x + 0.4,
+        z: slotZ,
+        targetX: STALL_POS.x + 0.4,
+        targetZ: slotZ,
+        leaving: false,
+        entity: custEnt,
+      });
+    }
+  }
+
+  function buildStepPads() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities) return;
+
+    const padCoords = [
+      { id: "tool", x: -3.8, z: 7.5 },
+      { id: "bag", x: 0.2, z: 7.5 },
+      { id: "speed", x: 4.2, z: 7.5 },
+      { id: "fairy", x: -3.8, z: 12.2 },
+      { id: "truck", x: 0.2, z: 12.2 },
+      { id: "m1", x: MACHINE_CONFIGS[0].padPos.x, z: MACHINE_CONFIGS[0].padPos.z },
+      { id: "m2", x: MACHINE_CONFIGS[1].padPos.x, z: MACHINE_CONFIGS[1].padPos.z },
+      { id: "m3", x: MACHINE_CONFIGS[2].padPos.x, z: MACHINE_CONFIGS[2].padPos.z },
+      { id: "farm2", x: 8.0, z: -14.2 },
+      { id: "farm3", x: -8.0, z: -14.2 },
+    ];
+
+    for (const p of padCoords) {
+      const def = UPGRADE_DEFS[p.id];
+      const pad = Entities.createStepPad({
+        id: p.id,
+        x: p.x,
+        z: p.z,
+        w: 3.3,
+        d: 2.55,
+        icon: def.icon,
+        title: def.title,
+        price: `💎 ${getUpgradeCost(p.id)}`,
+        levelText: `Lv.${getUpgradeLevel(p.id)}`,
+        accentHex: def.accent,
+        paidRatio: 0,
+      });
+      Engine.stationGroup.add(pad.root);
+      runtime.stepPads.push({
+        id: p.id,
+        x: p.x,
+        z: p.z,
+        w: 3.3,
+        d: 2.55,
+        pad,
+      });
+    }
+  }
+
+  function syncFairiesCount() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities) return;
+
+    const desired = Math.min(15, state.fairyCount);
+    while (runtime.fairies.length < desired) {
+      const idx = runtime.fairies.length;
+      const ent = Entities.createFairyWorker(idx);
+      const sx = -2.0 + (idx % 5) * 1.1;
+      const sz = 4.2 + Math.floor(idx / 5) * 1.1;
+      ent.root.position.set(sx, 0, sz);
+      Engine.unitGroup.add(ent.root);
+      runtime.fairies.push({
+        idx,
+        x: sx,
+        z: sz,
+        bag: [],
+        bagVisuals: [],
+        state: "seek_node",
+        targetNode: null,
+        targetMachineIdx: -1,
+        workTimer: 0,
+        entity: ent,
+      });
+    }
+    while (runtime.fairies.length > desired) {
+      const removed = runtime.fairies.pop();
+      Engine.unitGroup.remove(removed.entity.root);
+    }
+  }
+
+  function ensureTruckSpawned() {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Entities) return;
+
+    if (state.truckLv <= 0) {
+      if (runtime.truck) {
+        Engine.unitGroup.remove(runtime.truck.entity.root);
+        runtime.truck = null;
+      }
+      return;
+    }
+    if (!runtime.truck) {
+      const ent = Entities.createHarvesterCart();
+      ent.root.position.set(16.0, 0, 0);
+      Engine.unitGroup.add(ent.root);
+      runtime.truck = {
+        x: 16.0,
+        z: 0,
+        rotY: Math.PI * 0.5,
+        state: "harvest",
+        waypointIdx: 0,
+        bag: [],
+        bagVisuals: [],
+        entity: ent,
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Simulation Steps
+  // ---------------------------------------------------------------------------
+  function resolveWorldBoundsAndCollisions(obj, radius = 0.65) {
+    const inEastGate = obj.x > 17.5 && Math.abs(obj.z) < 4.0;
+    const inEastFarm = obj.x >= 18.6;
+    const inNeGate = state.farm2Unlocked && obj.z < -15.5 && obj.x >= 5.2 && obj.x <= 10.8;
+    const inNeFarm = state.farm2Unlocked && obj.z <= -17.0 && obj.x >= 2.2 && obj.x <= 18.2;
+    const inNwGate = state.farm3Unlocked && obj.z < -15.5 && obj.x >= -10.8 && obj.x <= -5.2;
+    const inNwFarm = state.farm3Unlocked && obj.z <= -17.0 && obj.x >= -18.2 && obj.x <= -2.2;
+
+    if (!inEastFarm && !inNeFarm && !inNwFarm) {
+      obj.x = Math.max(-18.2, Math.min(inEastGate ? 35.2 : 18.2, obj.x));
+      obj.z = Math.max(inNeGate || inNwGate ? -29.8 : -16.2, Math.min(16.2, obj.z));
+    } else if (inEastFarm) {
+      obj.x = Math.max(18.0, Math.min(35.2, obj.x));
+      if (obj.x < 19.6) {
+        obj.z = Math.max(-3.8, Math.min(3.8, obj.z));
+      } else {
+        obj.z = Math.max(-13.0, Math.min(13.0, obj.z));
+      }
+    } else if (inNeFarm) {
+      obj.z = Math.max(-29.8, Math.min(-16.0, obj.z));
+      if (obj.z > -18.0) {
+        obj.x = Math.max(5.5, Math.min(10.5, obj.x));
+      } else {
+        obj.x = Math.max(2.6, Math.min(17.8, obj.x));
+      }
+    } else if (inNwFarm) {
+      obj.z = Math.max(-29.8, Math.min(-16.0, obj.z));
+      if (obj.z > -18.0) {
+        obj.x = Math.max(-10.5, Math.min(-5.5, obj.x));
+      } else {
+        obj.x = Math.max(-17.8, Math.min(-2.6, obj.x));
+      }
+    }
+
+    // Solid obstacle pushouts (Sales Stall & 3 North Machine Cores)
+    const boxes = [
+      { cx: STALL_POS.x, cz: STALL_POS.z, hw: 1.75 + radius, hd: 1.05 + radius },
+    ];
+    for (const cfg of MACHINE_CONFIGS) {
+      boxes.push({ cx: cfg.x, cz: cfg.z, hw: 1.35 + radius, hd: 1.15 + radius });
+    }
+    for (const b of boxes) {
+      const dx = obj.x - b.cx;
+      const dz = obj.z - b.cz;
+      if (Math.abs(dx) < b.hw && Math.abs(dz) < b.hd) {
+        const ox = b.hw - Math.abs(dx);
+        const oz = b.hd - Math.abs(dz);
+        if (ox < oz) {
+          obj.x += dx >= 0 ? ox : -ox;
+        } else {
+          obj.z += dz >= 0 ? oz : -oz;
+        }
+      }
+    }
+  }
+
+  function updatePlayerMovement(dt) {
+    let moveX = 0;
+    let moveZ = 0;
+    if (input.keys.has("KeyW") || input.keys.has("ArrowUp")) moveZ -= 1;
+    if (input.keys.has("KeyS") || input.keys.has("ArrowDown")) moveZ += 1;
+    if (input.keys.has("KeyA") || input.keys.has("ArrowLeft")) moveX -= 1;
+    if (input.keys.has("KeyD") || input.keys.has("ArrowRight")) moveX += 1;
+
+    if (input.joyActive) {
+      moveX += input.joyX;
+      moveZ += input.joyY;
+    }
+
+    const len = Math.hypot(moveX, moveZ);
+    const maxSpd = getHeroMoveSpeed();
+    if (len > 0.08) {
+      const nx = moveX / Math.max(1, len);
+      const nz = moveZ / Math.max(1, len);
+      player.vx = nx * maxSpd;
+      player.vz = nz * maxSpd;
+    } else {
+      const damp = Math.exp(-14 * dt);
+      player.vx *= damp;
+      player.vz *= damp;
+      if (Math.hypot(player.vx, player.vz) < 0.05) {
+        player.vx = 0;
+        player.vz = 0;
+      }
+    }
+
+    player.x += player.vx * dt;
+    player.z += player.vz * dt;
+    resolveWorldBoundsAndCollisions(player, 0.58);
+
+    const speed = Math.hypot(player.vx, player.vz);
+    if (speed > 0.35) {
+      player.walkPhase += dt * (4.8 + speed * 0.85);
+      const desiredRot = Math.atan2(player.vx, player.vz);
+      let diff = desiredRot - player.rotY;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      player.rotY += diff * Math.min(1, dt * 14);
+    }
+
+    if (player.swingTimer > 0) player.swingTimer = Math.max(0, player.swingTimer - dt);
+
+    const hero = sceneObjs.hero;
+    if (hero && hero.root) {
+      hero.root.position.set(player.x, 0, player.z);
+      hero.root.rotation.y = player.rotY;
+      window.Entities.animatePlayerHero(hero, {
+        speed,
+        walkPhase: player.walkPhase,
+        swingTimer: player.swingTimer,
+        swingDuration: player.swingDuration,
+        time: runtime.time,
+      }, dt);
+
+      // Gentle stack sway on hero backpack crates
+      if (hero.backStackAnchor) {
+        hero.backStackAnchor.rotation.z = Math.sin(player.walkPhase) * 0.035 * Math.min(1, speed / 7);
+        hero.backStackAnchor.rotation.x = -0.05 * Math.min(1, speed / 7);
+      }
+    }
+  }
+
+  function harvestNode(node, amount, toBag, xOrig, zOrig) {
+    node.hp -= 1;
+    node.hitAnim = 0.22;
+    spawnBurstVfx(node.x, 0.8, node.z, node.kind === "crystal" ? 0x52efff : 0xff709e, 5);
+    if (node.hp <= 0) {
+      node.respawnTimer = 4.2;
+      if (node.entity && node.entity.visualRoot) {
+        node.entity.visualRoot.scale.set(0.01, 0.01, 0.01);
+      }
+    }
+    for (let i = 0; i < amount; i++) {
+      spawnFlyingItem(node.itemType, node.x, 0.85, node.z, xOrig, 1.3, zOrig, () => {
+        toBag.push(node.itemType);
+      });
+    }
+  }
+
+  function updateNodesAndHeroHarvest(dt) {
+    // Respawn & hit wobble animation across all 84 nodes
+    for (const node of runtime.farmNodes) {
+      if (!isZoneUnlocked(node.zone)) continue;
       if (node.respawnTimer > 0) {
         node.respawnTimer -= dt;
         if (node.respawnTimer <= 0) {
           node.respawnTimer = 0;
           node.hp = node.maxHp;
-          node.popScale = 0.15;
-          node.model.bodyGroup.visible = true;
-          spawnSparks(node.x, 0.6, node.z, RESOURCE_INFO[node.type].color, 5);
+          if (node.entity && node.entity.visualRoot) {
+            node.entity.visualRoot.scale.set(1, 1, 1);
+          }
         }
-        continue;
-      }
-
-      if (node.popScale < 1) {
-        node.popScale = Math.min(1, node.popScale + dt * 4.5);
-      }
-      if (node.shakeTimer > 0) {
-        node.shakeTimer = Math.max(0, node.shakeTimer - dt);
-        var jx = Math.sin(runtime.time * 52) * 0.11 * (node.shakeTimer / 0.3);
-        node.model.bodyGroup.position.set(jx, 0, 0);
-        var sq = 1 - Math.sin((node.shakeTimer / 0.3) * Math.PI) * 0.26;
-        node.model.bodyGroup.scale.set(node.popScale / Math.sqrt(sq), node.popScale * sq, node.popScale / Math.sqrt(sq));
-      } else {
-        node.model.bodyGroup.position.set(0, 0, 0);
-        node.model.bodyGroup.scale.set(node.popScale, node.popScale, node.popScale);
-      }
-
-      var dist = Math.hypot(player.x - node.x, player.z - node.z);
-      if (dist <= hRange && dist < bestDist) {
-        bestDist = dist;
-        bestNode = node;
+      } else if (node.hitAnim > 0) {
+        node.hitAnim = Math.max(0, node.hitAnim - dt);
+        if (node.entity && node.entity.visualRoot) {
+          const wob = 1 + Math.sin(node.hitAnim * 34) * 0.14;
+          node.entity.visualRoot.scale.set(wob, 2 - wob, wob);
+        }
       }
     }
 
-    if (bestNode && player.harvestCooldown <= 0 && state.bag.length < getBackpackCap()) {
-      player.harvestCooldown = Math.max(0.22, 0.44 - (state.harvestLv - 1) * 0.015);
-      player.swingTimer = player.swingDuration;
-      runtime.hitStopTimer = Math.max(runtime.hitStopTimer, 0.022);
-
-      var angToNode = Math.atan2(bestNode.x - player.x, bestNode.z - player.z);
-      if (Math.hypot(player.vx, player.vz) < 0.8) {
-        player.yaw = angToNode;
+    // Player auto-swing harvest
+    if (player.harvestCooldown > 0) player.harvestCooldown -= dt;
+    const bagCap = getHeroBagCap();
+    if (player.harvestCooldown <= 0 && player.bagItems.length < bagCap) {
+      let best = null;
+      let bestDist = 2.65;
+      for (const node of runtime.farmNodes) {
+        if (!isZoneUnlocked(node.zone) || node.respawnTimer > 0) continue;
+        const d = Math.hypot(node.x - player.x, node.z - player.z);
+        if (d < bestDist) {
+          bestDist = d;
+          best = node;
+        }
       }
-
-      bestNode.hp -= getHarvestPower();
-      bestNode.shakeTimer = 0.3;
-      Entities.flashModelWhite(bestNode.model, 0.1);
-      Engine.addShake(0.08);
-      playHarvestChime();
-
-      var info = RESOURCE_INFO[bestNode.type];
-      spawnSlashArc(bestNode.x, 0.85, bestNode.z, angToNode, info.color, 1.15);
-      spawnShockwave(bestNode.x, 0.25, bestNode.z, info.color, 1.9);
-      spawnSparks(bestNode.x, 0.9, bestNode.z, info.color, 6);
-      spawnDebrisParticles(bestNode.x, 0.7, bestNode.z, info.color, 5);
-
-      var dropCount = bestNode.hp <= 0 ? (state.harvestLv >= 5 ? 3 : 2) : 1;
-      for (var d = 0; d < dropCount; d++) {
-        (function (tType, nx, nz) {
-          spawnFlyingItem(
-            tType,
-            { x: nx, y: 0.95, z: nz },
-            "player",
-            { x: player.x, y: 1.2, z: player.z },
-            function () {
-              addToBag(tType, RESOURCE_INFO[tType].price);
-              gainXp(3);
-            }
-          );
-        })(bestNode.type, bestNode.x, bestNode.z);
-      }
-
-      if (bestNode.hp <= 0) {
-        bestNode.respawnTimer = 3.6;
-        bestNode.model.bodyGroup.visible = false;
-        spawnPopup(bestNode.x, 1.5, bestNode.z, "+" + info.name, info.css);
+      if (best) {
+        player.swingTimer = player.swingDuration;
+        player.harvestCooldown = getHeroHarvestInterval();
+        const space = bagCap - player.bagItems.length;
+        const yieldCount = Math.min(space, getHeroHarvestYield());
+        harvestNode(best, yieldCount, player.bagItems, player.x, player.z);
+        playHarvestChime(player.bagItems.length);
+        addXp(3);
       }
     }
   }
 
-  function updateCustomers(dt) {
-    for (var i = 0; i < sceneObjs.customers.length; i++) {
-      var c = sceneObjs.customers[i];
-      if (c.state === "queued") {
-        var slot = QUEUE_SLOTS[c.slotIdx] || TRAIL_SPAWN;
-        var dx = slot.x - c.x;
-        var dz = slot.z - c.z;
-        var dist = Math.hypot(dx, dz);
-        if (dist > 0.08) {
-          var step = Math.min(dist, 3.2 * dt);
-          c.x += (dx / dist) * step;
-          c.z += (dz / dist) * step;
-          c.model.root.rotation.y = Math.atan2(dx, dz);
-          Entities.animateCustomer(c.model, true, dt);
-        } else {
-          c.model.root.rotation.y = Math.atan2(SALES_POS.x - c.x, SALES_POS.z - c.z);
-          Entities.animateCustomer(c.model, false, dt);
+  function updatePalletsAndHeroTransfers(dt) {
+    if (player.transferCooldown > 0) player.transferCooldown -= dt;
 
-          if (c.slotIdx === 0 && state.counterStock.length > 0) {
-            c.waitTimer -= dt;
-            if (c.waitTimer <= 0) {
-              var batch = Math.min(state.counterStock.length, 1 + Math.floor(Math.random() * 2));
-              var totalPay = 0;
-              for (var k = 0; k < batch; k++) {
-                var bought = state.counterStock.shift();
-                shiftCounterStockMesh();
-                totalPay += bought.value;
-              }
-              c.state = "leaving";
-              playGemChime(2);
-              spawnPopup(SALES_POS.x, 2.2, SALES_POS.z, "+" + totalPay + " 💎", "#ffe866");
-              spawnFlyingItem(
-                "mana_gem",
-                SALES_POS,
-                "world",
-                PEDESTAL_POS,
-                function () {
-                  Entities.triggerStationSquash(sceneObjs.pedestal);
-                  pushPedestalGems(totalPay);
-                  state.pedestalGems += totalPay;
-                },
-                0.32
-              );
+    // 1. Machine Input & Output Wooden Pallet Transfers
+    for (const m of runtime.machines) {
+      let inPulse = 0;
+      let outPulse = 0;
 
-              for (var q = 0; q < sceneObjs.customers.length; q++) {
-                if (sceneObjs.customers[q].state === "queued" && sceneObjs.customers[q].slotIdx > 0) {
-                  sceneObjs.customers[q].slotIdx -= 1;
-                }
-              }
-            }
+      // Drop raw crates from Hero back -> Unlocked Machine IN pallet
+      if (m.lv > 0 && Math.hypot(player.x - m.cfg.inPos.x, player.z - m.cfg.inPos.z) < 2.25) {
+        inPulse = 1;
+        if (player.transferCooldown <= 0 && m.inQueue.length < 24) {
+          const rawIdx = player.bagItems.findIndex(
+            (t) => t === "starlight_crystal" || t === "rainbow_berry"
+          );
+          if (rawIdx !== -1) {
+            const item = player.bagItems.splice(rawIdx, 1)[0];
+            player.transferCooldown = 0.055;
+            spawnFlyingItem(item, player.x, 1.3, player.z, m.cfg.inPos.x, 0.35, m.cfg.inPos.z, () => {
+              m.inQueue.push(item);
+            });
+            playTone(440, 0.05, "sine", 0.04);
           }
-        }
-      } else if (c.state === "leaving") {
-        var ldx = TRAIL_SPAWN.x - c.x;
-        var ldz = TRAIL_SPAWN.z - c.z;
-        var ldist = Math.hypot(ldx, ldz);
-        if (ldist > 0.2) {
-          var lstep = Math.min(ldist, 3.8 * dt);
-          c.x += (ldx / ldist) * lstep;
-          c.z += (ldz / ldist) * lstep;
-          c.model.root.rotation.y = Math.atan2(ldx, ldz);
-          Entities.animateCustomer(c.model, true, dt);
-        } else {
-          c.state = "queued";
-          c.slotIdx = 3;
-          c.waitTimer = 0.38;
         }
       }
 
-      c.model.root.position.set(c.x, 0, c.z);
+      // Pick up crafted crates from Machine OUT pallet -> Hero back
+      const bagCap = getHeroBagCap();
+      if (Math.hypot(player.x - m.cfg.outPos.x, player.z - m.cfg.outPos.z) < 2.25) {
+        outPulse = 1;
+        if (player.transferCooldown <= 0 && m.outQueue.length > 0 && player.bagItems.length < bagCap) {
+          const crafted = m.outQueue.pop();
+          player.transferCooldown = 0.045;
+          spawnFlyingItem(crafted, m.cfg.outPos.x, 0.45, m.cfg.outPos.z, player.x, 1.35, player.z, () => {
+            player.bagItems.push(crafted);
+          });
+          playTone(660, 0.06, "triangle", 0.045);
+        }
+      }
+
+      window.Entities.updateWoodenPalletZone(m.inPallet, inPulse, runtime.time);
+      window.Entities.updateWoodenPalletZone(m.outPallet, outPulse, runtime.time);
+
+      // Process conveyor & production
+      const isProcessing = m.lv > 0 && m.inQueue.length > 0 && m.outQueue.length < 28;
+      if (isProcessing) {
+        const speedMult = 1 + (m.lv - 1) * 0.28;
+        m.craftProgress += (dt * speedMult) / m.cfg.baseCraftTime;
+        if (m.craftProgress >= 1) {
+          m.craftProgress -= 1;
+          m.inQueue.shift();
+          m.outQueue.push(m.cfg.outputType);
+          spawnBurstVfx(m.cfg.outPos.x, 0.55, m.cfg.outPos.z, 0xffe066, 4);
+        }
+      } else if (m.inQueue.length === 0) {
+        m.craftProgress = 0;
+      }
+
+      window.Entities.animateProductionMachine(m.entity, isProcessing, dt);
+      syncCrateStackVisuals(m.inPallet.stackAnchor, m.inQueue, m.inVisuals, {
+        cols: 2,
+        rows: 2,
+        xStep: 1.02,
+        zStep: 0.72,
+        maxDraw: 24,
+      });
+      syncCrateStackVisuals(m.outPallet.stackAnchor, m.outQueue, m.outVisuals, {
+        cols: 2,
+        rows: 2,
+        xStep: 1.02,
+        zStep: 0.72,
+        maxDraw: 28,
+      });
+    }
+
+    // 2. Sales Stall SELL Wooden Pallet Drop-Off
+    let sellPulse = 0;
+    if (Math.hypot(player.x - SELL_PALLET_POS.x, player.z - SELL_PALLET_POS.z) < 2.45) {
+      sellPulse = 1;
+      if (player.transferCooldown <= 0 && player.bagItems.length > 0 && runtime.sellPalletQueue.length < 36) {
+        // Prefer selling crafted crates first, otherwise raw harvested crates
+        let idx = player.bagItems.findIndex(
+          (t) => t === "elixir_5x" || t === "cut_gem_3x" || t === "potion_2x"
+        );
+        if (idx === -1) idx = player.bagItems.length - 1;
+        const item = player.bagItems.splice(idx, 1)[0];
+        player.transferCooldown = 0.045;
+        spawnFlyingItem(item, player.x, 1.3, player.z, SELL_PALLET_POS.x, 0.35, SELL_PALLET_POS.z, () => {
+          runtime.sellPalletQueue.push(item);
+        });
+        playTone(540, 0.05, "triangle", 0.04);
+      }
+    }
+    window.Entities.updateWoodenPalletZone(sceneObjs.sellPallet, sellPulse, runtime.time);
+    syncCrateStackVisuals(sceneObjs.sellPallet.stackAnchor, runtime.sellPalletQueue, runtime.sellPalletVisuals, {
+      cols: 2,
+      rows: 2,
+      xStep: 1.04,
+      zStep: 0.74,
+      maxDraw: 36,
+    });
+  }
+
+  function updateCustomersAndGemTower(dt) {
+    if (runtime.sellCooldown > 0) runtime.sellCooldown -= dt;
+
+    if (runtime.sellCooldown <= 0 && runtime.sellPalletQueue.length > 0) {
+      runtime.sellCooldown = 0.55;
+      const item = runtime.sellPalletQueue.pop();
+      const meta = ITEM_META[item] || { val: 10 };
+      const bricksToSpawn = Math.max(1, Math.round(meta.val / 10));
+      for (let i = 0; i < bricksToSpawn; i++) {
+        runtime.pedestalGems.push(10);
+      }
+      syncGemPedestalVisuals();
+      spawnBurstVfx(STALL_POS.x + 0.5, 1.4, STALL_POS.z + 1.5, 0x52efff, 4);
+
+      // Lead customer walks a cheerful cycle & rotates queue
+      const lead = runtime.customers.find((c) => c.slot === 0 && !c.leaving);
+      if (lead) {
+        lead.leaving = true;
+        lead.targetX = STALL_POS.x - 2.6;
+        lead.targetZ = STALL_POS.z + 12.5;
+      }
+    }
+
+    for (const c of runtime.customers) {
+      const dx = c.targetX - c.x;
+      const dz = c.targetZ - c.z;
+      const dist = Math.hypot(dx, dz);
+      const walking = dist > 0.12;
+      if (walking) {
+        const spd = 3.2;
+        c.x += (dx / dist) * Math.min(dist, spd * dt);
+        c.z += (dz / dist) * Math.min(dist, spd * dt);
+        c.entity.root.rotation.y = Math.atan2(dx, dz);
+      } else {
+        c.entity.root.rotation.y = Math.PI;
+        if (c.leaving) {
+          c.leaving = false;
+          c.x = STALL_POS.x + 0.4;
+          c.z = STALL_POS.z + 13.5;
+          // Push to back of queue and advance everyone
+          for (const o of runtime.customers) {
+            if (o !== c && !o.leaving) {
+              o.slot = Math.max(0, o.slot - 1);
+              o.targetX = STALL_POS.x + 0.4;
+              o.targetZ = 5.0 + o.slot * 1.9;
+            }
+          }
+          c.slot = runtime.customers.length - 1;
+          c.targetX = STALL_POS.x + 0.4;
+          c.targetZ = 5.0 + c.slot * 1.9;
+        }
+      }
+      c.entity.root.position.set(c.x, 0, c.z);
+      window.Entities.animateCustomer(c.entity, walking, dt);
+    }
+
+    // 3x3 Tall Mana Gem Skyscraper Rapid Magnet Vacuum (0.025s interval)
+    if (runtime.gemVacuumCooldown > 0) runtime.gemVacuumCooldown -= dt;
+    if (Math.hypot(player.x - GEM_PEDESTAL_POS.x, player.z - GEM_PEDESTAL_POS.z) < 2.8) {
+      if (runtime.gemVacuumCooldown <= 0 && runtime.pedestalGems.length > 0) {
+        runtime.gemVacuumCooldown = 0.025;
+        const val = runtime.pedestalGems.pop();
+        syncGemPedestalVisuals();
+        runtime.gemCombo = Math.min(20, runtime.gemCombo + 1);
+        playGemChime(runtime.gemCombo);
+
+        const Engine = window.Engine;
+        if (Engine && Engine.vfxGroup && window.Entities) {
+          const mesh = window.Entities.createItemBlock("mana_gem");
+          mesh.position.set(GEM_PEDESTAL_POS.x, 1.0, GEM_PEDESTAL_POS.z);
+          Engine.vfxGroup.add(mesh);
+          runtime.flyingBricks.push({
+            mesh,
+            sx: GEM_PEDESTAL_POS.x,
+            sy: 1.0,
+            sz: GEM_PEDESTAL_POS.z,
+            tx: player.x,
+            ty: 1.1,
+            tz: player.z,
+            trackPlayer: true,
+            t: 0,
+            dur: 0.18,
+            onArrive: () => {
+              state.gems += val;
+              state.totalEarnedGems += val;
+              addXp(2);
+            },
+          });
+        } else {
+          state.gems += val;
+          state.totalEarnedGems += val;
+          addXp(2);
+        }
+      }
+    } else {
+      runtime.gemCombo = 0;
     }
   }
 
   function updateFairies(dt) {
-    var fairySpd = 4.4 + (state.fairyLv - 1) * 0.55;
-    var fairyCap = 2 + state.fairyLv;
+    const cap = 4 + Math.floor(state.toolLv / 2);
+    for (const f of runtime.fairies) {
+      if (f.workTimer > 0) f.workTimer -= dt;
 
-    for (var i = 0; i < sceneObjs.fairies.length; i++) {
-      var f = sceneObjs.fairies[i];
-      var hoverY = 1.45 + Math.sin(runtime.time * 4.2 + i) * 0.16;
-
+      let tx = f.x;
+      let tz = f.z;
       if (f.state === "seek_node") {
-        var node = sceneObjs.nodes[f.targetNodeIdx];
-        if (!node || node.respawnTimer > 0) {
-          for (var n = 0; n < sceneObjs.nodes.length; n++) {
-            var candIdx = (f.targetNodeIdx + n + 1) % sceneObjs.nodes.length;
-            if (sceneObjs.nodes[candIdx].respawnTimer <= 0) {
-              f.targetNodeIdx = candIdx;
-              node = sceneObjs.nodes[candIdx];
-              break;
+        if (!f.targetNode || f.targetNode.respawnTimer > 0 || !isZoneUnlocked(f.targetNode.zone)) {
+          const candidates = runtime.farmNodes.filter((n) => isZoneUnlocked(n.zone) && n.respawnTimer <= 0);
+          if (candidates.length > 0) {
+            f.targetNode = candidates[(f.idx * 7 + Math.floor(runtime.time * 3)) % candidates.length];
+          }
+        }
+        if (f.targetNode) {
+          tx = f.targetNode.x;
+          tz = f.targetNode.z;
+          if (Math.hypot(tx - f.x, tz - f.z) < 1.25 && f.workTimer <= 0) {
+            f.workTimer = 0.42;
+            harvestNode(f.targetNode, 1, f.bag, f.x, f.z);
+            if (f.bag.length >= cap) {
+              // Pick active machine with lowest queue, or sell pallet
+              const openM = runtime.machines.filter((m) => m.lv > 0 && m.inQueue.length < 20);
+              if (openM.length > 0) {
+                f.targetMachineIdx = runtime.machines.indexOf(openM[f.idx % openM.length]);
+                f.state = "deliver_machine";
+              } else {
+                f.state = "deliver_sell";
+              }
             }
           }
         }
-        if (node) {
-          var dx = node.x - f.x;
-          var dz = node.z - f.z;
-          var dist = Math.hypot(dx, dz);
-          if (dist > 0.05) f.yaw = Math.atan2(dx, dz);
-          if (dist > 0.65) {
-            f.x += (dx / dist) * Math.min(dist, fairySpd * dt);
-            f.z += (dz / dist) * Math.min(dist, fairySpd * dt);
-          } else {
-            f.state = "harvest";
-            f.waitTimer = 0.45;
-          }
-        }
-      } else if (f.state === "harvest") {
-        f.waitTimer -= dt;
-        if (f.waitTimer <= 0) {
-          var hNode = sceneObjs.nodes[f.targetNodeIdx];
-          if (hNode && hNode.respawnTimer <= 0) {
-            f.bag.push({ type: hNode.type, value: RESOURCE_INFO[hNode.type].price });
-            spawnSparks(hNode.x, 1.0, hNode.z, RESOURCE_INFO[hNode.type].color, 3);
-            if (!f.bagMesh && f.model.bagAnchor) {
-              f.bagMesh = Entities.createResourceMesh(hNode.type);
-              f.bagMesh.scale.set(0.6, 0.6, 0.6);
-              f.model.bagAnchor.add(f.bagMesh);
+      } else if (f.state === "deliver_machine") {
+        const m = runtime.machines[f.targetMachineIdx];
+        if (!m || m.lv <= 0 || m.inQueue.length >= 24) {
+          f.state = "deliver_sell";
+        } else {
+          tx = m.cfg.inPos.x;
+          tz = m.cfg.inPos.z;
+          if (Math.hypot(tx - f.x, tz - f.z) < 1.35) {
+            while (f.bag.length > 0 && m.inQueue.length < 24) {
+              m.inQueue.push(f.bag.pop());
+            }
+            if (m.outQueue.length > 0 && f.bag.length < cap) {
+              while (m.outQueue.length > 0 && f.bag.length < cap) {
+                f.bag.push(m.outQueue.pop());
+              }
+              f.state = "deliver_sell";
+            } else {
+              f.state = "seek_node";
             }
           }
-          if (f.bag.length >= fairyCap) {
-            f.state = state.cauldronLv >= 2 ? "cauldron" : "deliver";
-          } else {
-            f.targetNodeIdx = (f.targetNodeIdx + 1) % sceneObjs.nodes.length;
-            f.state = "seek_node";
-          }
         }
-      } else if (f.state === "cauldron") {
-        var cdx = CAULDRON_POS.x - f.x;
-        var cdz = CAULDRON_POS.z - f.z;
-        var cdist = Math.hypot(cdx, cdz);
-        if (cdist > 0.05) f.yaw = Math.atan2(cdx, cdz);
-        if (cdist > 0.7) {
-          f.x += (cdx / cdist) * Math.min(cdist, fairySpd * dt);
-          f.z += (cdz / cdist) * Math.min(cdist, fairySpd * dt);
-        } else {
-          for (var fb = 0; fb < f.bag.length; fb++) {
-            f.bag[fb].type = "rainbow_potion";
-            f.bag[fb].value = Math.round(f.bag[fb].value * getCauldronMult());
+      } else {
+        tx = SELL_PALLET_POS.x;
+        tz = SELL_PALLET_POS.z;
+        if (Math.hypot(tx - f.x, tz - f.z) < 1.45) {
+          while (f.bag.length > 0 && runtime.sellPalletQueue.length < 36) {
+            runtime.sellPalletQueue.push(f.bag.pop());
           }
-          state.potionsBrewed += f.bag.length;
-          Entities.triggerStationSquash(sceneObjs.cauldron);
-          spawnSparks(CAULDRON_POS.x, CAULDRON_POS.y, CAULDRON_POS.z, 0xff9ef6, 5);
-          f.state = "deliver";
-        }
-      } else if (f.state === "deliver") {
-        var sdx = SALES_POS.x - f.x;
-        var sdz = SALES_POS.z - f.z;
-        var sdist = Math.hypot(sdx, sdz);
-        if (sdist > 0.05) f.yaw = Math.atan2(sdx, sdz);
-        if (sdist > 0.7) {
-          f.x += (sdx / sdist) * Math.min(sdist, fairySpd * dt);
-          f.z += (sdz / sdist) * Math.min(sdist, fairySpd * dt);
-        } else {
-          Entities.triggerStationSquash(sceneObjs.sales);
-          for (var d = 0; d < f.bag.length; d++) {
-            addToCounterStock(f.bag[d]);
-          }
-          f.bag.length = 0;
-          if (f.bagMesh) {
-            if (f.bagMesh.parent) f.bagMesh.parent.remove(f.bagMesh);
-            f.bagMesh = null;
-          }
-          f.targetNodeIdx = (i + Math.floor(Math.random() * 4)) % sceneObjs.nodes.length;
           f.state = "seek_node";
         }
       }
 
-      f.model.root.position.set(f.x, hoverY, f.z);
-      f.model.root.rotation.y = f.yaw;
-      Entities.animateFairy(f.model, dt);
+      const dx = tx - f.x;
+      const dz = tz - f.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.15) {
+        const spd = 6.2 + state.speedLv * 0.4;
+        f.x += (dx / dist) * Math.min(dist, spd * dt);
+        f.z += (dz / dist) * Math.min(dist, spd * dt);
+        f.entity.root.rotation.y = Math.atan2(dx, dz);
+      }
+      f.entity.root.position.set(f.x, 0, f.z);
+      window.Entities.animateFairy(f.entity, dt);
+      syncCrateStackVisuals(f.entity.bagAnchor, f.bag, f.bagVisuals, {
+        cols: 1,
+        yStep: 0.21,
+        maxDraw: 10,
+      });
     }
   }
 
-  function updateHarvesterCart(dt) {
-    if (!sceneObjs.cart || state.cartLv <= 0) return;
+  function updateHarvesterTruck(dt) {
+    const tr = runtime.truck;
+    if (!tr) return;
+    const maxCargo = 14 + state.truckLv * 6;
+    const speed = 5.4 + state.truckLv * 0.8;
 
-    var cartCap = 12 + state.cartLv * 4;
-    var cartSpd = 3.8 + (state.cartLv - 1) * 0.55;
-    var wp = CART_WAYPOINTS[runtime.cartWpIdx];
-    var dx = wp.x - runtime.cartX;
-    var dz = wp.z - runtime.cartZ;
-    var dist = Math.hypot(dx, dz);
-
-    if (dist < 0.6) {
-      runtime.cartWpIdx = (runtime.cartWpIdx + 1) % CART_WAYPOINTS.length;
-      wp = CART_WAYPOINTS[runtime.cartWpIdx];
-      dx = wp.x - runtime.cartX;
-      dz = wp.z - runtime.cartZ;
-      dist = Math.hypot(dx, dz);
-    }
-
-    if (dist > 0.001) {
-      var step = Math.min(dist, cartSpd * dt);
-      runtime.cartX += (dx / dist) * step;
-      runtime.cartZ += (dz / dist) * step;
-      var targetYaw = Math.atan2(dx, dz);
-      var diff = targetYaw - runtime.cartYaw;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      runtime.cartYaw += diff * Math.min(1, dt * 8);
-    }
-
-    sceneObjs.cart.root.position.set(runtime.cartX, 0, runtime.cartZ);
-    sceneObjs.cart.root.rotation.y = runtime.cartYaw;
-    if (sceneObjs.cart.bodyPivot) {
-      sceneObjs.cart.bodyPivot.position.y = Math.abs(Math.sin(runtime.time * 9.5)) * 0.05;
-    }
-
-    // Auto-scoop nearby active nodes & ground drops
-    if (runtime.cartBag.length < cartCap) {
-      for (var i = 0; i < sceneObjs.nodes.length; i++) {
-        var nd = sceneObjs.nodes[i];
-        if (nd.respawnTimer <= 0 && Math.hypot(nd.x - runtime.cartX, nd.z - runtime.cartZ) <= 3.4) {
-          nd.hp = 0;
-          nd.respawnTimer = 3.6;
-          nd.model.bodyGroup.visible = false;
-          var amt = 2;
-          for (var a = 0; a < amt && runtime.cartBag.length < cartCap; a++) {
-            runtime.cartBag.push({ type: nd.type, value: RESOURCE_INFO[nd.type].price });
-          }
-          spawnSparks(nd.x, 0.8, nd.z, RESOURCE_INFO[nd.type].color, 5);
+    let tx = 28.0;
+    let tz = 0;
+    if (tr.state === "harvest") {
+      const waypoints = [
+        { x: 24.0, z: -4.0 },
+        { x: 32.0, z: -4.0 },
+        { x: 32.0, z: 4.0 },
+        { x: 24.0, z: 4.0 },
+      ];
+      const wp = waypoints[tr.waypointIdx % waypoints.length];
+      tx = wp.x;
+      tz = wp.z;
+      if (Math.hypot(tx - tr.x, tz - tr.z) < 1.2) {
+        tr.waypointIdx = (tr.waypointIdx + 1) % waypoints.length;
+      }
+      // Sweep nodes within 3.2m
+      for (const node of runtime.farmNodes) {
+        if (!isZoneUnlocked(node.zone) || node.respawnTimer > 0) continue;
+        if (tr.bag.length >= maxCargo) break;
+        if (Math.hypot(node.x - tr.x, node.z - tr.z) < 3.1) {
+          harvestNode(node, 1, tr.bag, tr.x, tr.z);
         }
       }
-      for (var j = sceneObjs.drops.length - 1; j >= 0; j--) {
-        var dr = sceneObjs.drops[j];
-        if (Math.hypot(dr.x - runtime.cartX, dr.z - runtime.cartZ) <= 3.8 && runtime.cartBag.length < cartCap) {
-          runtime.cartBag.push({ type: dr.type, value: dr.value });
-          if (dr.mesh.parent) dr.mesh.parent.remove(dr.mesh);
-          sceneObjs.drops.splice(j, 1);
-        }
-      }
-    }
-
-    // Unload at plaza drop point (-3.8, -1.2)
-    runtime.cartUnloadCooldown = Math.max(0, runtime.cartUnloadCooldown - dt);
-    if (runtime.cartBag.length > 0 && runtime.cartUnloadCooldown <= 0 && Math.hypot(runtime.cartX - (-3.8), runtime.cartZ - (-1.2)) <= 2.4) {
-      runtime.cartUnloadCooldown = 0.04;
-      var item = runtime.cartBag.pop();
-      var refine = state.cauldronLv >= 3 && RESOURCE_INFO[item.type] && RESOURCE_INFO[item.type].raw;
-      if (refine) {
-        item = { type: "rainbow_potion", value: Math.round(item.value * getCauldronMult()) };
-        state.potionsBrewed += 1;
-      }
-      spawnFlyingItem(
-        item.type,
-        { x: runtime.cartX, y: 0.9, z: runtime.cartZ },
-        "world",
-        SALES_POS,
-        function () {
-          Entities.triggerStationSquash(sceneObjs.sales);
-          addToCounterStock(item);
-        },
-        0.32
-      );
-    }
-
-    // Visual cargo stack inside cart
-    var cargoVis = Math.min(10, Math.ceil(runtime.cartBag.length / 2));
-    if (sceneObjs.cartCargoMeshes.length !== cargoVis) {
-      releaseTaggedMeshes(sceneObjs.cartCargoMeshes);
-      for (var c = 0; c < cargoVis; c++) {
-        var cItem = runtime.cartBag[Math.min(runtime.cartBag.length - 1, c * 2)];
-        var mesh = acquirePooledMesh(cItem.type);
-        mesh.scale.set(0.65, 0.65, 0.65);
-        mesh.position.set(((c % 2) - 0.5) * 0.42, Math.floor(c / 2) * 0.22, 0);
-        sceneObjs.cart.cargoAnchor.add(mesh);
-        sceneObjs.cartCargoMeshes.push({ type: cItem.type, mesh: mesh });
-      }
-    }
-  }
-
-  function updateSlimesAndCombat(dt) {
-    var activeKing = null;
-    for (var s0 = 0; s0 < sceneObjs.slimes.length; s0++) {
-      if (sceneObjs.slimes[s0].isKing && sceneObjs.slimes[s0].alive) {
-        activeKing = sceneObjs.slimes[s0];
-        break;
-      }
-    }
-    if (!activeKing) {
-      state.bossTimer -= dt;
-      if (state.bossTimer <= 0) {
-        summonBoss();
-      }
-    }
-
-    for (var i = sceneObjs.slimes.length - 1; i >= 0; i--) {
-      var sl = sceneObjs.slimes[i];
-      if (!sl.alive) {
-        if (sl.isKing) {
-          if (sl.model.root.parent) sl.model.root.parent.remove(sl.model.root);
-          sceneObjs.slimes.splice(i, 1);
-          continue;
-        }
-        sl.respawnTimer -= dt;
-        if (sl.respawnTimer <= 0) {
-          sl.alive = true;
-          sl.maxHp = 45 + (state.wave - 1) * 12;
-          sl.hp = sl.maxHp;
-          sl.x = sl.homeX;
-          sl.z = sl.homeZ;
-          sl.knockVx = 0;
-          sl.knockVz = 0;
-          sl.squashTimer = 0;
-          sl.model.root.visible = true;
-          spawnSparks(sl.x, 0.5, sl.z, 0x72f57c, 6);
-        }
-        continue;
-      }
-
-      if (sl.squashTimer > 0) {
-        sl.squashTimer = Math.max(0, sl.squashTimer - dt);
-      }
-      if (sl.model.glb && sl.model.glb.anim) {
-        sl.model.glb.anim.update(dt);
-      }
-
-      if (sl.isKing && sl.model.hpBarFill) {
-        var hpRatio = Math.max(0.001, Math.min(1, sl.hp / Math.max(1, sl.maxHp)));
-        sl.model.hpBarFill.scale.x = hpRatio;
-        sl.model.hpBarFill.position.x = -1.17 * (1 - hpRatio);
-      }
-
-      var pdx = player.x - sl.x;
-      var pdz = player.z - sl.z;
-      var pdist = Math.hypot(pdx, pdz);
-      var chaseRange = sl.isKing ? 24 : 9.2;
-      var speed = sl.isKing ? 2.1 : 1.9 + Math.min(1.4, (state.wave - 1) * 0.08);
-      var moveDx = 0;
-      var moveDz = 0;
-
-      if (pdist < chaseRange && pdist > 1.2) {
-        moveDx = pdx / pdist;
-        moveDz = pdz / pdist;
+      if (tr.bag.length >= maxCargo) tr.state = "return";
+    } else if (tr.state === "return") {
+      // Drive back through East Gate to Sell Pallet or active machine
+      if (tr.x > 16.0) {
+        tx = 15.0;
+        tz = 0;
       } else {
-        sl.wanderTimer -= dt;
-        if (sl.wanderTimer <= 0) {
-          sl.wanderTimer = 1.4 + Math.random() * 1.4;
-          sl.wanderAng = Math.atan2(sl.homeZ - sl.z, sl.homeX - sl.x) + (Math.random() - 0.5) * 2.0;
-        }
-        moveDx = Math.cos(sl.wanderAng) * 0.5;
-        moveDz = Math.sin(sl.wanderAng) * 0.5;
-      }
-
-      sl.x += (moveDx * speed + (sl.knockVx || 0)) * dt;
-      sl.z += (moveDz * speed + (sl.knockVz || 0)) * dt;
-      var kDecay = Math.max(0, 1 - dt * 10);
-      sl.knockVx = (sl.knockVx || 0) * kDecay;
-      sl.knockVz = (sl.knockVz || 0) * kDecay;
-
-      if (!sl.isKing) {
-        var campCx = Engine.CAMP_CENTER ? Engine.CAMP_CENTER.x : 0;
-        var campCz = Engine.CAMP_CENTER ? Engine.CAMP_CENTER.z : 1.0;
-        var cdx = sl.x - campCx;
-        var cdz = sl.z - campCz;
-        var cdist = Math.hypot(cdx, cdz);
-        if (cdist < 10.6 && cdist > 0.001) {
-          sl.x = campCx + (cdx / cdist) * 10.6;
-          sl.z = campCz + (cdz / cdist) * 10.6;
-        }
-      }
-
-      var smag = Math.hypot(sl.x, sl.z);
-      if (smag > 24.2) {
-        sl.x *= 24.2 / smag;
-        sl.z *= 24.2 / smag;
-      }
-
-      var minBump = sl.isKing ? 1.8 : 1.05;
-      if (pdist < minBump && pdist > 0.001) {
-        sl.x -= (pdx / pdist) * (minBump - pdist) * 0.6;
-        sl.z -= (pdz / pdist) * (minBump - pdist) * 0.6;
-      }
-
-      var hop = Math.abs(Math.sin(runtime.time * (sl.isKing ? 3.2 : 4.4) + sl.phase));
-      var hopY = hop * (sl.isKing ? 0.25 : 0.16);
-      sl.model.root.position.set(sl.x, hopY, sl.z);
-      if (Math.hypot(moveDx, moveDz) > 0.05) {
-        sl.model.root.rotation.y = Math.atan2(moveDx, moveDz);
-      }
-      if (sl.model.shadowMesh) {
-        sl.model.shadowMesh.position.y = -hopY + 0.028;
-      }
-
-      var hitFlat = sl.squashTimer > 0 ? Math.sin((sl.squashTimer / 0.18) * Math.PI) * 0.28 : 0;
-      var squashY = Math.max(0.65, 1.0 - hitFlat);
-      var stretchXZ = 1 / Math.sqrt(squashY);
-      sl.model.bodyGroup.scale.set(stretchXZ, squashY, stretchXZ);
-    }
-
-    // Wizard Auto-Firing Starlight Bolts
-    player.wandCooldown = Math.max(0, player.wandCooldown - dt);
-    if (player.wandCooldown <= 0) {
-      var wRange = getWandRange();
-      var candidates = [];
-      for (var c = 0; c < sceneObjs.slimes.length; c++) {
-        var cand = sceneObjs.slimes[c];
-        if (!cand.alive) continue;
-        var dCand = Math.hypot(cand.x - player.x, cand.z - player.z);
-        if (dCand <= wRange) {
-          candidates.push({ slime: cand, dist: dCand });
-        }
-      }
-      if (candidates.length > 0) {
-        candidates.sort(function (a, b) { return a.dist - b.dist; });
-        var shots = getMultiShot();
-        player.wandCooldown = getWandCooldown();
-        player.swingTimer = player.swingDuration;
-        playBoltCast();
-
-        var primary = candidates[0].slime;
-        var baseAng = Math.atan2(primary.x - player.x, primary.z - player.z);
-        var castColor = getWizardTier() >= 4 ? 0xffd26e : getWizardTier() >= 2 ? 0xff7be5 : 0x57e6ff;
-        spawnSlashArc(player.x + Math.sin(baseAng) * 0.75, 1.05, player.z + Math.cos(baseAng) * 0.75, baseAng, castColor, 1.2);
-        spawnShockwave(player.x + Math.sin(baseAng) * 0.9, 1.1, player.z + Math.cos(baseAng) * 0.9, castColor, 1.1);
-
-        for (var m = 0; m < shots; m++) {
-          var targetSlime = candidates[m % candidates.length].slime;
-          var fanOffset = shots > 1 ? (m - (shots - 1) / 2) * 0.16 : 0;
-          var shootAng = Math.atan2(targetSlime.x - player.x, targetSlime.z - player.z) + fanOffset;
-          var boltColor = getWizardTier() >= 4 ? 0xffd26e : getWizardTier() >= 2 ? 0xff7be5 : 0x57e6ff;
-          var boltMesh = Entities.createProjectileMesh(boltColor);
-          boltMesh.position.set(player.x + Math.sin(shootAng) * 0.65, 1.15, player.z + Math.cos(shootAng) * 0.65);
-          Engine.scene.add(boltMesh);
-          sceneObjs.projectiles.push({
-            mesh: boltMesh,
-            target: targetSlime,
-            x: boltMesh.position.x,
-            y: 1.15,
-            z: boltMesh.position.z,
-            vx: Math.sin(shootAng) * 16,
-            vz: Math.cos(shootAng) * 16,
-            damage: getWandDamage(),
-            color: boltColor,
-            life: 0
-          });
-        }
-      }
-    }
-
-    // Update Starlight Bolts + Hit-Stop, Knockback, White Flash & 3D Debris
-    for (var p = sceneObjs.projectiles.length - 1; p >= 0; p--) {
-      var proj = sceneObjs.projectiles[p];
-      proj.life += dt;
-      if (proj.target && proj.target.alive) {
-        var tdx = proj.target.x - proj.x;
-        var tdz = proj.target.z - proj.z;
-        var tdist = Math.hypot(tdx, tdz);
-        if (tdist > 0.001) {
-          proj.vx = (tdx / tdist) * 18.5;
-          proj.vz = (tdz / tdist) * 18.5;
-        }
-      }
-      proj.x += proj.vx * dt;
-      proj.z += proj.vz * dt;
-      proj.mesh.position.set(proj.x, proj.y, proj.z);
-      proj.mesh.rotation.y += dt * 12;
-
-      var hitTarget = null;
-      for (var k = 0; k < sceneObjs.slimes.length; k++) {
-        var slHit = sceneObjs.slimes[k];
-        if (!slHit.alive) continue;
-        var hitRad = slHit.isKing ? 1.65 : 0.95;
-        if (Math.hypot(slHit.x - proj.x, slHit.z - proj.z) <= hitRad) {
-          hitTarget = slHit;
-          break;
-        }
-      }
-
-      if (hitTarget) {
-        hitTarget.hp -= proj.damage;
-        hitTarget.squashTimer = 0.18;
-        Entities.flashModelWhite(hitTarget.model, 0.12);
-        runtime.hitStopTimer = Math.max(runtime.hitStopTimer, hitTarget.isKing ? 0.045 : 0.026);
-
-        var pSpd = Math.hypot(proj.vx, proj.vz) || 1;
-        var kbForce = hitTarget.isKing ? 2.8 : 6.8;
-        hitTarget.knockVx = (proj.vx / pSpd) * kbForce;
-        hitTarget.knockVz = (proj.vz / pSpd) * kbForce;
-        Engine.addShake(hitTarget.isKing ? 0.1 : 0.055);
-        playHitPop();
-        spawnSlashArc(hitTarget.x, hitTarget.isKing ? 1.2 : 0.75, hitTarget.z, Math.atan2(proj.vx, proj.vz), proj.color, hitTarget.isKing ? 1.45 : 0.95);
-        spawnSparks(proj.x, 0.75, proj.z, proj.color, 6);
-        spawnDebrisParticles(proj.x, 0.8, proj.z, hitTarget.isKing ? 0xff4fa8 : 0x62f58c, hitTarget.isKing ? 8 : 5);
-        spawnPopup(hitTarget.x, hitTarget.isKing ? 2.6 : 1.6, hitTarget.z, "-" + proj.damage, "#fff29b");
-
-        if (hitTarget.hp <= 0) {
-          hitTarget.alive = false;
-          hitTarget.model.root.visible = false;
-          state.slimesDefeated += 1;
-
-          if (hitTarget.isKing) {
-            state.wave += 1;
-            state.bossTimer = BOSS_INTERVAL;
-            var bossGems = 120 + state.wave * 35;
-            state.gems += bossGems;
-            state.totalGemsEarned += bossGems;
-            gainXp(120);
-            Engine.addShake(0.45);
-            playBuildPop();
-            spawnShockwave(hitTarget.x, 0.25, hitTarget.z, 0xffd26e, 4.2);
-            spawnSparks(hitTarget.x, 1.0, hitTarget.z, 0xffe066, 18);
-            spawnDebrisParticles(hitTarget.x, 1.3, hitTarget.z, 0xffd26e, 14);
-            spawnPopup(hitTarget.x, 2.8, hitTarget.z, "왕 슬라임 처치! +" + bossGems + " 💎", "#ffe66d");
-            showToast("대왕 슬라임 격파! Wave " + state.wave + " 진입!");
-            for (var jd = 0; jd < 4; jd++) {
-              spawnDrop("slime_jelly", hitTarget.x, hitTarget.z, RESOURCE_INFO.slime_jelly.price);
-            }
-          } else {
-            hitTarget.respawnTimer = 6.5;
-            var sGems = 6 + Math.floor(state.wave * 2);
-            state.gems += sGems;
-            state.totalGemsEarned += sGems;
-            gainXp(18);
-            spawnShockwave(hitTarget.x, 0.2, hitTarget.z, 0x72f57c, 1.8);
-            spawnSparks(hitTarget.x, 0.7, hitTarget.z, 0x72f57c, 8);
-            spawnDebrisParticles(hitTarget.x, 0.65, hitTarget.z, 0x72f57c, 6);
-            spawnDrop("slime_jelly", hitTarget.x, hitTarget.z, RESOURCE_INFO.slime_jelly.price);
-            spawnPopup(hitTarget.x, 1.6, hitTarget.z, "+" + sGems + " 💎", "#9bff78");
+        tx = SELL_PALLET_POS.x + 2.2;
+        tz = SELL_PALLET_POS.z;
+        if (Math.hypot(tx - tr.x, tz - tr.z) < 2.2) {
+          while (tr.bag.length > 0 && runtime.sellPalletQueue.length < 36) {
+            runtime.sellPalletQueue.push(tr.bag.pop());
           }
-        }
-
-        if (proj.mesh.parent) proj.mesh.parent.remove(proj.mesh);
-        sceneObjs.projectiles.splice(p, 1);
-      } else if (proj.life >= 1.3) {
-        if (proj.mesh.parent) proj.mesh.parent.remove(proj.mesh);
-        sceneObjs.projectiles.splice(p, 1);
-      }
-    }
-
-    // Ground Loot Drops Magnet Pickup
-    for (var d = sceneObjs.drops.length - 1; d >= 0; d--) {
-      var dr = sceneObjs.drops[d];
-      dr.age += dt;
-      dr.mesh.rotation.y += dt * 3.0;
-      dr.mesh.position.y = 0.35 + Math.sin(runtime.time * 4.5 + d) * 0.1;
-
-      var ddist = Math.hypot(player.x - dr.x, player.z - dr.z);
-      if (ddist <= 4.5 && state.bag.length < getBackpackCap()) {
-        if (ddist > 0.75) {
-          dr.x += ((player.x - dr.x) / ddist) * 11 * dt;
-          dr.z += ((player.z - dr.z) / ddist) * 11 * dt;
-          dr.mesh.position.x = dr.x;
-          dr.mesh.position.z = dr.z;
-        } else {
-          addToBag(dr.type, dr.value);
-          playHarvestChime();
-          if (dr.mesh.parent) dr.mesh.parent.remove(dr.mesh);
-          sceneObjs.drops.splice(d, 1);
-          continue;
+          tr.bag.length = 0;
+          tr.state = "exit";
         }
       }
-      if (dr.age > 35) {
-        if (dr.mesh.parent) dr.mesh.parent.remove(dr.mesh);
-        sceneObjs.drops.splice(d, 1);
-      }
+    } else {
+      tx = 20.5;
+      tz = 0;
+      if (Math.hypot(tx - tr.x, tz - tr.z) < 1.5) tr.state = "harvest";
     }
+
+    const dx = tx - tr.x;
+    const dz = tz - tr.z;
+    const dist = Math.hypot(dx, dz);
+    let actualSpd = 0;
+    if (dist > 0.1) {
+      actualSpd = speed;
+      tr.x += (dx / dist) * Math.min(dist, speed * dt);
+      tr.z += (dz / dist) * Math.min(dist, speed * dt);
+      tr.rotY = Math.atan2(dx, dz);
+    }
+    tr.entity.root.position.set(tr.x, 0, tr.z);
+    tr.entity.root.rotation.y = tr.rotY;
+    window.Entities.animateHarvesterTruck(tr.entity, actualSpd, dt);
+    syncCrateStackVisuals(tr.entity.cargoAnchor, tr.bag, tr.bagVisuals, {
+      cols: 1,
+      yStep: 0.21,
+      maxDraw: 14,
+    });
   }
 
-  function updateVFX(dt) {
-    // 1. Quadratic Bezier Curve Flying Items + 360-degree spin
-    for (var i = sceneObjs.flyingItems.length - 1; i >= 0; i--) {
-      var fi = sceneObjs.flyingItems[i];
-      fi.life += dt;
-      var t = Math.min(1, fi.life / fi.duration);
-      var oneMinusT = 1 - t;
-      var tx = fi.targetMode === "player" ? player.x : fi.tx;
-      var ty = fi.targetMode === "player" ? 1.15 : fi.ty;
-      var tz = fi.targetMode === "player" ? player.z : fi.tz;
+  function updateStepPads(dt) {
+    for (const sp of runtime.stepPads) {
+      const def = UPGRADE_DEFS[sp.id];
+      const isMax = isUpgradeMax(sp.id);
+      const cost = getUpgradeCost(sp.id);
+      const lv = getUpgradeLevel(sp.id);
+      const paid = state.padPaid[sp.id] || 0;
+      const remaining = Math.max(0, cost - paid);
 
-      var x = oneMinusT * oneMinusT * fi.sx + 2 * oneMinusT * t * fi.cx + t * t * tx;
-      var y = oneMinusT * oneMinusT * fi.sy + 2 * oneMinusT * t * fi.cy + t * t * ty;
-      var z = oneMinusT * oneMinusT * fi.sz + 2 * oneMinusT * t * fi.cz + t * t * tz;
+      const dx = Math.abs(player.x - sp.x);
+      const dz = Math.abs(player.z - sp.z);
+      const isStepped = dx < sp.w * 0.48 && dz < sp.d * 0.48;
 
-      fi.mesh.position.set(x, y, z);
-      fi.mesh.rotation.y = fi.startYaw + t * Math.PI * 2;
-      fi.mesh.rotation.x = Math.sin(t * Math.PI) * 0.45;
-
-      if (t >= 1) {
-        if (fi.mesh.parent) fi.mesh.parent.remove(fi.mesh);
-        var cb = fi.onArrive;
-        sceneObjs.flyingItems.splice(i, 1);
-        if (typeof cb === "function") cb();
+      if (isStepped && !isMax && state.gems > 0 && remaining > 0) {
+        const drainRate = Math.max(cost * 1.45, 72);
+        const take = Math.min(remaining, state.gems, Math.max(1, Math.ceil(drainRate * dt)));
+        if (take > 0) {
+          state.gems -= take;
+          state.padPaid[sp.id] = paid + take;
+          if (Math.floor(runtime.time * 16) !== Math.floor((runtime.time - dt) * 16)) {
+            playTone(720, 0.04, "sine", 0.03);
+          }
+          if (state.padPaid[sp.id] >= cost) {
+            applyUpgradeLevel(sp.id);
+          }
+        }
       }
-    }
 
-    // 2. Homing Magnet Gems (initial upward hop + accelerating pull into player)
-    for (var mg = sceneObjs.magnetGems.length - 1; mg >= 0; mg--) {
-      var gem = sceneObjs.magnetGems[mg];
-      gem.age += dt;
-      gem.vy -= 18.0 * dt;
+      const newRemaining = Math.max(0, cost - (state.padPaid[sp.id] || 0));
+      const ratio = isMax ? 1 : cost > 0 ? (state.padPaid[sp.id] || 0) / cost : 0;
 
-      var gdx = player.x - gem.x;
-      var gdy = 1.05 - gem.y;
-      var gdz = player.z - gem.z;
-      var gdist = Math.hypot(gdx, gdy, gdz);
-
-      // Pull strength grows rapidly with time^2 after initial 0.08s pop
-      var accel = 28 + Math.pow(gem.age, 1.5) * 320;
-      if (gdist > 0.001) {
-        gem.vx += (gdx / gdist) * accel * dt;
-        gem.vy += (gdy / gdist) * accel * dt;
-        gem.vz += (gdz / gdist) * accel * dt;
-      }
-      gem.vx *= 0.94;
-      gem.vz *= 0.94;
-
-      gem.x += gem.vx * dt;
-      gem.y += gem.vy * dt;
-      gem.z += gem.vz * dt;
-      gem.mesh.position.set(gem.x, Math.max(0.15, gem.y), gem.z);
-      gem.mesh.rotation.y += dt * 14;
-
-      if (gdist <= 0.65 || gem.age >= 0.45) {
-        if (gem.mesh.parent) gem.mesh.parent.remove(gem.mesh);
-        var mgCb = gem.onCollect;
-        var amt = gem.amount;
-        sceneObjs.magnetGems.splice(mg, 1);
-        if (typeof mgCb === "function") mgCb(amt);
-      }
-    }
-
-    // 3. Shockwave Rings
-    for (var r = sceneObjs.rings.length - 1; r >= 0; r--) {
-      var ring = sceneObjs.rings[r];
-      ring.life += dt;
-      var rt = Math.min(1, ring.life / ring.duration);
-      var sc = 0.25 + rt * ring.maxScale;
-      ring.mesh.scale.set(sc, sc, sc);
-      ring.mesh.material.opacity = 0.85 * (1 - rt);
-      if (rt >= 1) {
-        if (ring.mesh.parent) ring.mesh.parent.remove(ring.mesh);
-        sceneObjs.rings.splice(r, 1);
-      }
-    }
-
-    // 4. Slash Arcs
-    for (var slIdx = sceneObjs.slashes.length - 1; slIdx >= 0; slIdx--) {
-      var sa = sceneObjs.slashes[slIdx];
-      sa.life += dt;
-      var stNorm = Math.min(1, sa.life / sa.duration);
-      var saScale = sa.startScale + (sa.endScale - sa.startScale) * stNorm;
-      sa.mesh.scale.setScalar(saScale);
-      if (sa.outerMat) sa.outerMat.opacity = 0.92 * (1 - stNorm);
-      if (sa.innerMat) sa.innerMat.opacity = 0.98 * (1 - stNorm);
-      if (sa.life >= sa.duration) {
-        if (sa.mesh.parent) sa.mesh.parent.remove(sa.mesh);
-        sceneObjs.slashes.splice(slIdx, 1);
-      }
-    }
-
-    // 5. Additive Sparks
-    for (var s = sceneObjs.sparks.length - 1; s >= 0; s--) {
-      var sp = sceneObjs.sparks[s];
-      sp.life += dt;
-      sp.vy -= 14 * dt;
-      sp.mesh.position.x += sp.vx * dt;
-      sp.mesh.position.y += sp.vy * dt;
-      sp.mesh.position.z += sp.vz * dt;
-      if (Engine.camera) sp.mesh.lookAt(Engine.camera.position);
-      var st = 1 - sp.life / sp.duration;
-      sp.mesh.scale.setScalar(Math.max(0.01, st));
-      if (sp.life >= sp.duration) {
-        if (sp.mesh.parent) sp.mesh.parent.remove(sp.mesh);
-        sceneObjs.sparks.splice(s, 1);
-      }
-    }
-
-    // 6. 3D Tumbling & Bouncing Polyhedral Debris Particles
-    for (var db = sceneObjs.debris.length - 1; db >= 0; db--) {
-      var dObj = sceneObjs.debris[db];
-      dObj.life += dt;
-      dObj.vy -= 18 * dt;
-      dObj.x += dObj.vx * dt;
-      dObj.y += dObj.vy * dt;
-      dObj.z += dObj.vz * dt;
-      if (dObj.y <= 0.1) {
-        dObj.y = 0.1;
-        dObj.vy = Math.abs(dObj.vy) * 0.42;
-        dObj.vx *= 0.72;
-        dObj.vz *= 0.72;
-      }
-      dObj.mesh.position.set(dObj.x, dObj.y, dObj.z);
-      dObj.mesh.rotation.x += dObj.rx * dt;
-      dObj.mesh.rotation.y += dObj.ry * dt;
-      dObj.mesh.rotation.z += dObj.rz * dt;
-      var remScale = Math.max(0.01, dObj.baseScale * (1 - dObj.life / dObj.duration));
-      dObj.mesh.scale.setScalar(remScale);
-      if (dObj.life >= dObj.duration) {
-        if (dObj.mesh.parent) dObj.mesh.parent.remove(dObj.mesh);
-        sceneObjs.debris.splice(db, 1);
-      }
-    }
-
-    // 7. World-to-Screen DOM Popups
-    for (var p = sceneObjs.popups.length - 1; p >= 0; p--) {
-      var pop = sceneObjs.popups[p];
-      pop.life += dt;
-      var wy = pop.wy + pop.life * 1.45;
-      var screen = Engine.worldToScreen(new THREE.Vector3(pop.wx, wy, pop.wz));
-      pop.el.style.left = screen.x.toFixed(1) + "px";
-      pop.el.style.top = screen.y.toFixed(1) + "px";
-      pop.el.style.opacity = String(Math.max(0, 1 - Math.pow(pop.life / pop.duration, 2)));
-      if (pop.life >= pop.duration) {
-        if (pop.el.parentNode) pop.el.parentNode.removeChild(pop.el);
-        sceneObjs.popups.splice(p, 1);
-      }
+      window.Entities.updateStepPadTexture(sp.pad, {
+        icon: def.icon,
+        title: def.title,
+        price: isMax ? "MAX" : `💎 ${newRemaining}`,
+        levelText: isMax ? "MAX" : `Lv.${lv}`,
+        accentHex: def.accent,
+        paidRatio: ratio,
+        isMax,
+        unlocked: true,
+        canAfford: !isMax && state.gems >= newRemaining,
+        isStepped,
+      });
     }
   }
 
   function updateGuideArrow(dt) {
-    if (!sceneObjs.wizard || !sceneObjs.wizard.guideArrowGroup) return;
-    var tx = null;
-    var tz = null;
+    const hero = sceneObjs.hero;
+    if (!hero || !hero.guideArrowGroup) return;
 
-    for (var s = 0; s < sceneObjs.slimes.length; s++) {
-      var sl = sceneObjs.slimes[s];
-      if (sl.isKing && sl.alive) {
-        tx = sl.x;
-        tz = sl.z;
-        break;
-      }
-    }
-
-    if (tx === null && state.pedestalGems >= 15) {
-      tx = PEDESTAL_POS.x;
-      tz = PEDESTAL_POS.z;
-    }
-
-    if (tx === null && state.bag.length >= Math.max(12, Math.floor(getBackpackCap() * 0.8))) {
-      var hasRaw = false;
-      for (var b = state.bag.length - 1; b >= 0; b--) {
-        if (RESOURCE_INFO[state.bag[b].type] && RESOURCE_INFO[state.bag[b].type].raw) {
-          hasRaw = true;
-          break;
-        }
-      }
-      if (hasRaw) {
-        tx = -2.8;
-        tz = -3.8;
+    let tx = 25.0;
+    let tz = 0;
+    if (runtime.pedestalGems.length >= 3) {
+      tx = GEM_PEDESTAL_POS.x;
+      tz = GEM_PEDESTAL_POS.z;
+    } else if (player.bagItems.length >= Math.max(6, Math.floor(getHeroBagCap() * 0.55))) {
+      const m1 = runtime.machines[0];
+      if (m1 && m1.lv > 0 && m1.inQueue.length < 12 && player.bagItems.some((t) => t === "starlight_crystal" || t === "rainbow_berry")) {
+        tx = m1.cfg.inPos.x;
+        tz = m1.cfg.inPos.z;
       } else {
-        tx = -4.2;
-        tz = 3.2;
+        tx = SELL_PALLET_POS.x;
+        tz = SELL_PALLET_POS.z;
+      }
+    } else {
+      const nearestOut = runtime.machines.find((m) => m.outQueue.length >= 2);
+      if (nearestOut && player.bagItems.length < getHeroBagCap()) {
+        tx = nearestOut.cfg.outPos.x;
+        tz = nearestOut.cfg.outPos.z;
       }
     }
 
-    if (tx === null) {
-      var bestD = Infinity;
-      for (var n = 0; n < sceneObjs.nodes.length; n++) {
-        var nd = sceneObjs.nodes[n];
-        if (nd.respawnTimer > 0) continue;
-        var d = Math.hypot(nd.x - player.x, nd.z - player.z);
-        if (d < bestD) {
-          bestD = d;
-          tx = nd.x;
-          tz = nd.z;
-        }
-      }
-    }
-
-    if (tx === null) {
-      sceneObjs.wizard.guideArrowGroup.visible = false;
-      return;
-    }
-
-    var dx = tx - player.x;
-    var dz = tz - player.z;
-    var targetDist = Math.hypot(dx, dz);
-    if (targetDist <= 2.2) {
-      sceneObjs.wizard.guideArrowGroup.visible = false;
-      return;
-    }
-
-    sceneObjs.wizard.guideArrowGroup.visible = true;
-    var worldAng = Math.atan2(dx, dz);
-    var diff = worldAng - runtime.guideYaw;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    runtime.guideYaw += diff * Math.min(1, dt * 12);
-    sceneObjs.wizard.guideArrowGroup.rotation.y = runtime.guideYaw - player.yaw;
+    const ang = Math.atan2(tx - player.x, tz - player.z);
+    hero.guideArrowGroup.rotation.y = ang - player.rotY;
+    const pulse = 1 + Math.sin(runtime.time * 5.2) * 0.12;
+    hero.guideArrowGroup.scale.set(pulse, pulse, pulse);
   }
 
-  // =========================================================================
-  // HUD & Shop UI
-  // =========================================================================
-  function updateHUD() {
-    if (dom.uiLv) dom.uiLv.textContent = "Lv." + state.level;
-    if (dom.uiTitle) dom.uiTitle.textContent = TIER_TITLES[getWizardTier() - 1];
-    if (dom.uiXpFill) {
-      var xpPct = state.level >= 25 ? 100 : Math.min(100, (state.xp / xpNeeded(state.level)) * 100);
-      dom.uiXpFill.style.width = xpPct.toFixed(1) + "%";
-    }
-    var bagCap = getBackpackCap();
-    if (dom.uiBag) dom.uiBag.textContent = state.bag.length + " / " + bagCap;
-    if (dom.uiBagFill) {
-      dom.uiBagFill.style.width = Math.min(100, (state.bag.length / bagCap) * 100).toFixed(1) + "%";
-      if (state.bag.length >= bagCap) dom.uiBagFill.classList.add("full");
-      else dom.uiBagFill.classList.remove("full");
-    }
+  // ---------------------------------------------------------------------------
+  // HUD & Shop UI Sync
+  // ---------------------------------------------------------------------------
+  function syncHUD(force = false) {
+    if (typeof document === "undefined") return;
+    if (!force && runtime.time - runtime.lastHudSync < 0.08) return;
+    runtime.lastHudSync = runtime.time;
 
-    if (dom.uiGems) dom.uiGems.textContent = formatNum(state.gems);
-    if (dom.uiCrystals) dom.uiCrystals.textContent = formatNum(state.crystalsHarvested);
-    if (dom.uiPotions) dom.uiPotions.textContent = formatNum(state.potionsBrewed);
+    const rawCount = player.bagItems.filter(
+      (t) => t === "starlight_crystal" || t === "rainbow_berry"
+    ).length;
+    const craftedCount = player.bagItems.length - rawCount;
+    const bagCap = getHeroBagCap();
 
-    var king = null;
-    for (var i = 0; i < sceneObjs.slimes.length; i++) {
-      if (sceneObjs.slimes[i].isKing && sceneObjs.slimes[i].alive) {
-        king = sceneObjs.slimes[i];
-        break;
-      }
-    }
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el && el.textContent !== String(text)) el.textContent = String(text);
+    };
+    const setWidth = (id, pct) => {
+      const el = document.getElementById(id);
+      if (el) el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+    };
 
-    if (dom.uiBossTimer) {
-      dom.uiBossTimer.textContent = king ? "출현 중!" : Math.ceil(Math.max(0, state.bossTimer)) + "s";
-    }
-    if (dom.bossBarWrap) {
-      if (king) {
-        dom.bossBarWrap.classList.add("active");
-        if (dom.uiBossName) dom.uiBossName.textContent = "👑 대왕 보스 (Wave " + state.wave + ")";
-        if (dom.uiBossHp) dom.uiBossHp.textContent = Math.max(0, Math.ceil(king.hp)) + " / " + king.maxHp;
-        if (dom.uiBossFill) dom.uiBossFill.style.width = Math.max(0, (king.hp / king.maxHp) * 100).toFixed(1) + "%";
-      } else {
-        dom.bossBarWrap.classList.remove("active");
-      }
+    setText("ui-lv", `Lv.${state.level}`);
+    setText("ui-bag", `${player.bagItems.length} / ${bagCap}`);
+    setWidth("ui-bag-fill", (player.bagItems.length / bagCap) * 100);
+    setWidth("ui-xp-fill", (state.xp / state.xpMax) * 100);
+    setText("ui-gems", state.gems.toLocaleString());
+    setText("ui-crystals", rawCount);
+    setText("ui-potions", craftedCount);
+
+    const statsEl = document.getElementById("ui-shop-stats");
+    if (statsEl) {
+      const spdPct = Math.round((getHeroMoveSpeed() / 7.6) * 100);
+      statsEl.textContent = `이동 ${spdPct}% · 요정 ${state.fairyCount}/15 · ${Math.round(runtime.fpsSmooth)} FPS`;
     }
   }
 
-  function getShopCards(tab) {
-    if (tab === "wizard") {
-      return [
-        {
-          key: "wandLv",
-          title: "✨ 별빛 지팡이 마력",
-          lv: state.wandLv,
-          max: 25,
-          cost: Math.round(65 * Math.pow(1.34, state.wandLv - 1)),
-          desc: "마법탄 공격력 " + getWandDamage() + " · 다중 발사 " + getMultiShot() + "갈래",
-          action: function () { state.wandLv += 1; }
-        },
-        {
-          key: "harvestLv",
-          title: "🔮 수정 채집 파워",
-          lv: state.harvestLv,
-          max: 25,
-          cost: Math.round(55 * Math.pow(1.32, state.harvestLv - 1)),
-          desc: "채집 파워 " + getHarvestPower() + " · 채집 반경 " + getHarvestRange().toFixed(1) + "m",
-          action: function () { state.harvestLv += 1; }
-        },
-        {
-          key: "bagLv",
-          title: "🎒 마법 배낭 확장",
-          lv: state.bagLv,
-          max: 25,
-          cost: Math.round(50 * Math.pow(1.32, state.bagLv - 1)),
-          desc: "등 뒤 적재 한도 " + getBackpackCap() + "개",
-          action: function () { state.bagLv += 1; }
-        },
-        {
-          key: "speedLv",
-          title: "💨 요정 걸음 가속",
-          lv: state.speedLv,
-          max: 25,
-          cost: Math.round(55 * Math.pow(1.33, state.speedLv - 1)),
-          desc: "이동 속도 " + getMoveSpeed().toFixed(1) + "m/s",
-          action: function () { state.speedLv += 1; }
-        }
-      ];
-    }
-
-    if (tab === "automation") {
-      return [
-        {
-          key: "cauldronLv",
-          title: "🍯 황금 가마솥 승급",
-          lv: state.cauldronLv,
-          max: 15,
-          cost: Math.round(150 * Math.pow(1.5, state.cauldronLv - 1)),
-          desc: "무지개 포션 판매가 배율 " + getCauldronMult().toFixed(2) + "배",
-          action: function () { state.cauldronLv += 1; }
-        },
-        {
-          key: "fairies",
-          title: "🧚 요정 일꾼 길드",
-          lv: state.fairies,
-          max: 10,
-          cost: Math.round(80 * Math.pow(1.45, state.fairies)),
-          desc: "숲 자원을 자동 채집·납품하는 요정 고용",
-          action: function () {
-            state.fairies += 1;
-            syncFairyEntities();
-          }
-        },
-        {
-          key: "fairyLv",
-          title: "🌸 요정 날개·가방 훈련",
-          lv: state.fairyLv,
-          max: 15,
-          cost: Math.round(110 * Math.pow(1.42, state.fairyLv - 1)),
-          desc: "요정 비행 속도 및 일꾼 적재 용량 강화",
-          action: function () { state.fairyLv += 1; }
-        },
-        {
-          key: "cartLv",
-          title: "🛒 자동 수확 마법 수레",
-          lv: state.cartLv,
-          max: 10,
-          cost: state.cartLv === 0 ? 250 : Math.round(300 * Math.pow(1.5, state.cartLv - 1)),
-          desc: state.cartLv === 0 ? "숲 외곽을 순회하며 자원을 쓸어 담는 마법 수레 해금" : "수레 속도 및 적재량 (" + (12 + state.cartLv * 4) + "개) 강화",
-          action: function () {
-            state.cartLv += 1;
-            syncCartEntity();
-          }
-        }
-      ];
-    }
-    return [];
-  }
-
-  function renderShop() {
-    if (!dom.shopBody) return;
-    if (dom.uiShopStats) {
-      dom.uiShopStats.textContent = "💎 " + formatNum(state.gems) + " · 포션 배율 " + getCauldronMult().toFixed(2) + "배 · 요정 " + state.fairies + "마리";
-    }
-
-    var tabs = document.querySelectorAll(".shop-tab");
-    for (var t = 0; t < tabs.length; t++) {
-      if (tabs[t].getAttribute("data-tab") === state.shopTab) tabs[t].classList.add("active");
-      else tabs[t].classList.remove("active");
-    }
-
-    if (state.shopTab === "guide") {
-      dom.shopBody.innerHTML =
-        '<div class="guide-box">' +
-        "<b>1. 직관적 1:1 이동 & 빌딩 적재</b><br>WASD / 조이스틱 방향과 1:1로 일치하는 클로즈업 3D 시점으로 숲을 탐험하며 자원을 등 뒤에 적재합니다.<br><br>" +
-        "<b>2. 베지어 곡선 투입 & 3배 연성</b><br>원형 링 발판 위에 서면 등 뒤 아이템이 0.04초 간격으로 회전하며 포물선으로 투입되어 3배 가치 포션으로 정제됩니다.<br><br>" +
-        "<b>3. 2x2 마나 보석 타워 & 자석 수금</b><br>손님 구매 시 보석 상자에 쌓인 보석이 접근 시 위로 튕겨 오르며 마법사에게 가속 흡입됩니다.<br><br>" +
-        "<b>4. 대왕 보스 디펜스</b><br>마법탄 적중 시 히트스톱·넉백·3D 파편 연출과 함께 보스 웨이브 보상을 획득하세요." +
-        "</div>";
-      return;
-    }
-
-    var cards = getShopCards(state.shopTab);
-    var html = '<div class="shop-grid">';
-    for (var i = 0; i < cards.length; i++) {
-      var c = cards[i];
-      var isMax = c.lv >= c.max;
-      var canBuy = !isMax && state.gems >= c.cost;
-      html +=
-        '<div class="upg-card">' +
-        '<div class="upg-head"><span class="upg-title">' + c.title + '</span><span class="upg-lv">Lv.' + c.lv + "/" + c.max + "</span></div>" +
-        '<div class="upg-desc">' + c.desc + "</div>" +
-        '<button class="upg-buy-btn" data-upg="' + c.key + '"' + (canBuy ? "" : " disabled") + ">" +
-        (isMax ? "최고 레벨 달성" : "💎 " + formatNum(c.cost) + " 강화") +
-        "</button></div>";
-    }
-    html += "</div>";
-    dom.shopBody.innerHTML = html;
-
-    var btns = dom.shopBody.querySelectorAll(".upg-buy-btn");
-    for (var b = 0; b < btns.length; b++) {
-      btns[b].addEventListener("click", function (ev) {
-        var key = ev.currentTarget.getAttribute("data-upg");
-        var list = getShopCards(state.shopTab);
-        for (var j = 0; j < list.length; j++) {
-          if (list[j].key === key) {
-            var item = list[j];
-            if (item.lv < item.max && state.gems >= item.cost) {
-              state.gems -= item.cost;
-              item.action();
-              playBuildPop();
-              refreshAllPadTextures();
-              renderShop();
-              updateHUD();
-              saveGame();
-            }
-            break;
-          }
-        }
-      });
-    }
-  }
-
-  function openShop() {
+  function openShop(tab) {
+    if (tab) runtime.shopTab = tab;
     runtime.shopOpen = true;
-    if (dom.shopModal) dom.shopModal.classList.add("open");
     renderShop();
+    if (typeof document !== "undefined") {
+      const modal = document.getElementById("shop-modal");
+      if (modal) modal.classList.add("open");
+    }
   }
 
   function closeShop() {
     runtime.shopOpen = false;
-    if (dom.shopModal) dom.shopModal.classList.remove("open");
-  }
-
-  function summonBoss() {
-    for (var i = 0; i < sceneObjs.slimes.length; i++) {
-      if (sceneObjs.slimes[i].isKing && sceneObjs.slimes[i].alive) {
-        showToast("대왕 보스가 이미 숲에 출현해 있습니다!");
-        return false;
-      }
+    if (typeof document !== "undefined") {
+      const modal = document.getElementById("shop-modal");
+      if (modal) modal.classList.remove("open");
     }
-    var king = spawnSlimeEntity(true, 5.8, -14.8, 0);
-    state.bossTimer = BOSS_INTERVAL;
-    playBossFanfare();
-    Engine.addShake(0.35);
-    spawnShockwave(5.8, 0.2, -14.8, 0xffd26e, 4.0);
-    spawnPopup(5.8, 3.0, -14.8, "👑 대왕 보스 등장!", "#ffe66d");
-    showToast("👑 대왕 보스 (Wave " + state.wave + ") 출현!");
-    return king;
   }
 
-  // =========================================================================
-  // Save / Load / Reset & Input Wiring
-  // =========================================================================
+  function renderShop() {
+    if (typeof document === "undefined") return;
+    const body = document.getElementById("shop-body");
+    if (!body) return;
+
+    document.querySelectorAll(".shop-tab").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === runtime.shopTab);
+    });
+
+    if (runtime.shopTab === "guide") {
+      body.innerHTML = `
+        <div class="shop-item">
+          <div class="shop-item-info">
+            <div class="shop-item-title">🌱 1단계 · 동쪽 숲 농장 채집 & 판매</div>
+            <div class="shop-item-desc">동쪽 게이트 농장에서 별빛 수정과 열매를 등 뒤 지게에 묵직하게 쌓고 서쪽 판매대 SELL 팔레트에 납품하세요. 3×3 마나 보석 타워에서 0.025초 고속 흡입으로 수금합니다.</div>
+          </div>
+        </div>
+        <div class="shop-item">
+          <div class="shop-item-info">
+            <div class="shop-item-title">⚙️ 2단계 · 북쪽 3종 연금술 가공 라인</div>
+            <div class="shop-item-desc">1호기 가마솥(2× 포션), 2호기 크리스탈 커팅기(3× 보석), 3호기 무지개 증류기(5× 엘릭서)의 IN 나무 팔레트에 상자를 넣으면 컨베이어를 거쳐 고가치 상자가 생산됩니다!</div>
+          </div>
+        </div>
+        <div class="shop-item">
+          <div class="shop-item-info">
+            <div class="shop-item-title">🧚 3단계 · 요정 15명 · 수확 트럭 · 북쪽 확장 농장</div>
+            <div class="shop-item-desc">요정 일꾼(최대 15명)과 대형 수확 트럭, 북동/북서 48노드 확장 농장을 해금해 연금술 공방 제국을 자동화하세요!</div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const items = Object.values(UPGRADE_DEFS).filter((d) => d.tab === runtime.shopTab);
+    body.innerHTML = "";
+    for (const def of items) {
+      const lv = getUpgradeLevel(def.id);
+      const isMax = isUpgradeMax(def.id);
+      const cost = getUpgradeCost(def.id);
+      const afford = !isMax && state.gems >= cost;
+
+      const row = document.createElement("div");
+      row.className = "shop-item";
+      row.innerHTML = `
+        <div class="shop-item-info">
+          <div class="shop-item-title">${def.icon} ${def.title} <span class="lv-badge">${isMax ? "MAX" : `Lv.${lv}/${def.maxLv}`}</span></div>
+          <div class="shop-item-desc">${def.desc}</div>
+        </div>
+        <button class="fairy-btn ${afford ? "shop-btn" : "neutral-btn"}" data-upgrade-id="${def.id}" ${isMax || !afford ? "disabled" : ""}>
+          ${isMax ? "MAX" : `💎 ${cost}`}
+        </button>
+      `;
+      const btn = row.querySelector("button");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          purchaseUpgradeDirect(def.id);
+          syncHUD(true);
+        });
+      }
+      body.appendChild(row);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Save / Load / Reset & Input Binding
+  // ---------------------------------------------------------------------------
   function saveGame() {
+    if (typeof localStorage === "undefined") return;
     try {
-      var payload = {
-        gems: state.gems,
-        totalGemsEarned: state.totalGemsEarned,
-        crystalsHarvested: state.crystalsHarvested,
-        potionsBrewed: state.potionsBrewed,
-        slimesDefeated: state.slimesDefeated,
-        level: state.level,
-        xp: state.xp,
-        wave: state.wave,
-        wandLv: state.wandLv,
-        harvestLv: state.harvestLv,
-        bagLv: state.bagLv,
-        speedLv: state.speedLv,
-        cauldronLv: state.cauldronLv,
-        fairies: state.fairies,
-        fairyLv: state.fairyLv,
-        cartLv: state.cartLv,
-        wandUpgLv: state.wandUpgLv,
-        speedUpgLv: state.speedUpgLv,
-        pedestalGems: state.pedestalGems,
-        bag: state.bag.slice(0, 600),
-        counterStock: state.counterStock.slice(0, 200),
-        muted: state.muted
-      };
-      window.localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
-    } catch (e) {}
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // ignore quota error
+    }
   }
 
   function loadGame() {
+    if (typeof localStorage === "undefined") return;
     try {
-      var raw = window.localStorage.getItem(SAVE_KEY);
-      if (!raw) return false;
-      var data = JSON.parse(raw);
-      if (!data || typeof data !== "object") return false;
-      var keys = [
-        "gems", "totalGemsEarned", "crystalsHarvested", "potionsBrewed",
-        "slimesDefeated", "level", "xp", "wave", "wandLv", "harvestLv",
-        "bagLv", "speedLv", "cauldronLv", "fairies", "fairyLv", "cartLv",
-        "wandUpgLv", "speedUpgLv", "pedestalGems", "muted"
-      ];
-      for (var i = 0; i < keys.length; i++) {
-        var k = keys[i];
-        if (typeof data[k] !== "undefined") state[k] = data[k];
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        Object.assign(state, createDefaultState(), parsed);
       }
-      if (Array.isArray(data.bag)) state.bag = data.bag;
-      if (Array.isArray(data.counterStock)) state.counterStock = data.counterStock;
-      return true;
     } catch (e) {
-      return false;
-    }
-  }
-
-  function clearTransientSceneItems() {
-    var lists = [
-      sceneObjs.projectiles, sceneObjs.flyingItems, sceneObjs.magnetGems,
-      sceneObjs.drops, sceneObjs.rings, sceneObjs.slashes, sceneObjs.sparks, sceneObjs.debris
-    ];
-    for (var l = 0; l < lists.length; l++) {
-      var arr = lists[l];
-      for (var i = 0; i < arr.length; i++) {
-        if (arr[i].mesh && arr[i].mesh.parent) arr[i].mesh.parent.remove(arr[i].mesh);
-      }
-      arr.length = 0;
-    }
-    for (var k = sceneObjs.slimes.length - 1; k >= 0; k--) {
-      if (sceneObjs.slimes[k].isKing) {
-        if (sceneObjs.slimes[k].model.root.parent) sceneObjs.slimes[k].model.root.parent.remove(sceneObjs.slimes[k].model.root);
-        sceneObjs.slimes.splice(k, 1);
-      } else {
-        sceneObjs.slimes[k].alive = true;
-        sceneObjs.slimes[k].maxHp = 45;
-        sceneObjs.slimes[k].hp = 45;
-        sceneObjs.slimes[k].model.root.visible = true;
-      }
-    }
-    for (var n = 0; n < sceneObjs.nodes.length; n++) {
-      sceneObjs.nodes[n].respawnTimer = 0;
-      sceneObjs.nodes[n].hp = sceneObjs.nodes[n].maxHp;
-      sceneObjs.nodes[n].model.bodyGroup.visible = true;
+      // fallback default
     }
   }
 
   function resetGame() {
-    try {
-      window.localStorage.removeItem(SAVE_KEY);
-    } catch (e) {}
-    state = createDefaultState();
+    Object.assign(state, createDefaultState());
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.removeItem(SAVE_KEY);
+      } catch (e) {}
+    }
     player.x = 0;
     player.z = 2.0;
     player.vx = 0;
     player.vz = 0;
-    player.yaw = 0;
-    player.stackInertiaX = 0;
-    player.stackInertiaZ = 0;
-    player.stackVelX = 0;
-    player.stackVelZ = 0;
-    runtime.hitStopTimer = 0;
-    clearTransientSceneItems();
-    for (var i = 0; i < sceneObjs.pads.length; i++) {
-      sceneObjs.pads[i].paid = 0;
-      sceneObjs.pads[i].cooldown = 0;
-      sceneObjs.pads[i].activeGlow = false;
+    player.bagItems.length = 0;
+    runtime.sellPalletQueue.length = 0;
+    runtime.pedestalGems.length = 0;
+    for (const f of runtime.flyingBricks) {
+      if (window.Engine && window.Engine.vfxGroup && f.mesh) window.Engine.vfxGroup.remove(f.mesh);
     }
-    if (sceneObjs.wizard) {
-      runtime.lastTier = 1;
-      Entities.updateWizardTier(sceneObjs.wizard, 1);
+    runtime.flyingBricks.length = 0;
+    for (const p of runtime.particles) {
+      if (window.Engine && window.Engine.vfxGroup && p.mesh) window.Engine.vfxGroup.remove(p.mesh);
     }
-    syncFairyEntities();
-    syncCartEntity();
-    rebuildInitialBackStack();
-    rebuildInitialCounterStock();
-    rebuildInitialPedestalGems();
-    refreshAllPadTextures();
-    updateHUD();
-    showToast("모험 기록이 초기화되었습니다.");
+    runtime.particles.length = 0;
+    for (const m of runtime.machines) {
+      m.lv = 0;
+      m.inQueue.length = 0;
+      m.outQueue.length = 0;
+      m.craftProgress = 0;
+    }
+    for (const node of runtime.farmNodes) {
+      node.respawnTimer = 0;
+      node.hp = node.maxHp;
+    }
+    refreshFarmZoneVisibility();
+    syncFairiesCount();
+    ensureTruckSpawned();
+    if (sceneObjs.hero) {
+      window.Entities.updateHeroTier(sceneObjs.hero, 0);
+      syncCrateStackVisuals(sceneObjs.hero.backStackAnchor, player.bagItems, runtime.heroBackVisuals);
+    }
+    syncGemPedestalVisuals();
+    updateStepPads(0.016);
+    syncHUD(true);
+    showToast("🌱 새로운 연금술 공방이 시작되었습니다!");
+  }
+
+  function setInput(dx, dz) {
+    input.joyActive = Math.hypot(dx, dz) > 0.01;
+    input.joyX = dx;
+    input.joyY = dz;
   }
 
   function bindDOMandInputs() {
-    if (typeof document === "undefined") return;
+    if (_domBound || typeof document === "undefined") return;
+    _domBound = true;
 
-    dom.container = document.getElementById("webgl-container");
-    dom.fxOverlay = document.getElementById("fx-overlay");
-    dom.uiLv = document.getElementById("ui-lv");
-    dom.uiTitle = document.getElementById("ui-title");
-    dom.uiXpFill = document.getElementById("ui-xp-fill");
-    dom.uiBag = document.getElementById("ui-bag");
-    dom.uiBagFill = document.getElementById("ui-bag-fill");
-    dom.uiGems = document.getElementById("ui-gems");
-    dom.uiCrystals = document.getElementById("ui-crystals");
-    dom.uiPotions = document.getElementById("ui-potions");
-    dom.uiBossTimer = document.getElementById("ui-boss-timer");
-    dom.bossBarWrap = document.getElementById("boss-bar-wrap");
-    dom.uiBossName = document.getElementById("ui-boss-name");
-    dom.uiBossHp = document.getElementById("ui-boss-hp");
-    dom.uiBossFill = document.getElementById("ui-boss-fill");
-    dom.toastBanner = document.getElementById("toast-banner");
+    window.addEventListener("keydown", (e) => {
+      input.keys.add(e.code);
+    });
+    window.addEventListener("keyup", (e) => {
+      input.keys.delete(e.code);
+    });
+    window.addEventListener("resize", () => {
+      if (window.Engine) window.Engine.resize();
+    });
 
-    dom.joyZone = document.getElementById("joystick-zone");
-    dom.joyBase = document.getElementById("joystick-base");
-    dom.joyStick = document.getElementById("joystick-stick");
-    dom.joyHint = document.getElementById("joystick-hint");
-
-    dom.shopModal = document.getElementById("shop-modal");
-    dom.uiShopStats = document.getElementById("ui-shop-stats");
-    dom.shopBody = document.getElementById("shop-body");
-    dom.resetModal = document.getElementById("reset-modal");
-
-    if (dom.joyZone) {
-      var joyOriginX = 0;
-      var joyOriginY = 0;
-      var maxJoyR = 42;
-
-      var resetJoystick = function () {
-        runtime.activePointerId = null;
-        runtime.joyX = 0;
-        runtime.joyY = 0;
-        if (dom.joyBase) {
-          dom.joyBase.classList.remove("active");
-          dom.joyBase.style.left = "";
-          dom.joyBase.style.top = "";
-        }
-        if (dom.joyStick) {
-          dom.joyStick.style.transform = "";
-        }
+    const joyZone = document.getElementById("joystick-zone");
+    const joyBase = document.getElementById("joystick-base");
+    const joyStick = document.getElementById("joystick-stick");
+    if (joyZone) {
+      const endJoy = () => {
+        input.joyActive = false;
+        input.joyX = 0;
+        input.joyY = 0;
+        input.joyId = null;
+        if (joyBase) joyBase.classList.remove("active");
+        if (joyStick) joyStick.style.transform = "translate(0px, 0px)";
       };
-
-      dom.joyZone.addEventListener("pointerdown", function (e) {
-        unlockAudio();
-        runtime.activePointerId = e.pointerId;
-        if (typeof dom.joyZone.setPointerCapture === "function") {
-          try { dom.joyZone.setPointerCapture(e.pointerId); } catch (err) {}
-        }
-        var vw = window.innerWidth || 800;
-        var vh = window.innerHeight || 600;
-        joyOriginX = Math.max(66, Math.min(vw - 66, e.clientX));
-        joyOriginY = Math.max(76, Math.min(vh - 66, e.clientY));
-        if (dom.joyBase) {
-          dom.joyBase.classList.add("active");
-          dom.joyBase.style.left = joyOriginX + "px";
-          dom.joyBase.style.top = joyOriginY + "px";
-        }
-        if (dom.joyStick) {
-          dom.joyStick.style.transform = "translate(0px, 0px)";
-        }
-        if (dom.joyHint) {
-          dom.joyHint.classList.add("hidden");
+      joyZone.addEventListener("pointerdown", (e) => {
+        input.joyActive = true;
+        input.joyId = e.pointerId;
+        input.originX = e.clientX;
+        input.originY = e.clientY;
+        if (joyBase) {
+          joyBase.style.left = `${e.clientX}px`;
+          joyBase.style.top = `${e.clientY}px`;
+          joyBase.classList.add("active");
         }
       });
-
-      dom.joyZone.addEventListener("pointermove", function (e) {
-        if (runtime.activePointerId === null || e.pointerId !== runtime.activePointerId) return;
-        var dx = e.clientX - joyOriginX;
-        var dy = e.clientY - joyOriginY;
-        var dist = Math.hypot(dx, dy);
-        if (dist > maxJoyR) {
-          dx = (dx / dist) * maxJoyR;
-          dy = (dy / dist) * maxJoyR;
+      window.addEventListener("pointermove", (e) => {
+        if (!input.joyActive || e.pointerId !== input.joyId) return;
+        const maxR = 46;
+        let dx = e.clientX - input.originX;
+        let dy = e.clientY - input.originY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > maxR) {
+          dx = (dx / dist) * maxR;
+          dy = (dy / dist) * maxR;
         }
-        runtime.joyX = dx / maxJoyR;
-        runtime.joyY = dy / maxJoyR;
-        if (dom.joyStick) {
-          dom.joyStick.style.transform = "translate(" + dx.toFixed(1) + "px, " + dy.toFixed(1) + "px)";
-        }
+        input.joyX = dx / maxR;
+        input.joyY = dy / maxR;
+        if (joyStick) joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
       });
-
-      dom.joyZone.addEventListener("pointerup", function (e) {
-        if (e.pointerId === runtime.activePointerId) resetJoystick();
-      });
-      dom.joyZone.addEventListener("pointercancel", function (e) {
-        if (e.pointerId === runtime.activePointerId) resetJoystick();
-      });
+      window.addEventListener("pointerup", endJoy);
+      window.addEventListener("pointercancel", endJoy);
     }
 
-    if (typeof window !== "undefined") {
-      window.addEventListener("keydown", function (e) {
-        unlockAudio();
-        runtime.keys[e.code] = true;
-        if (dom.joyHint && (e.code === "KeyW" || e.code === "KeyA" || e.code === "KeyS" || e.code === "KeyD")) {
-          dom.joyHint.classList.add("hidden");
-        }
-        if (e.code === "Escape") {
-          closeShop();
-          if (dom.resetModal) dom.resetModal.classList.remove("open");
-        }
-      });
-      window.addEventListener("keyup", function (e) {
-        runtime.keys[e.code] = false;
-      });
-    }
-
-    var btnBoss = document.getElementById("btn-summon-boss");
-    if (btnBoss) btnBoss.addEventListener("click", function () { unlockAudio(); summonBoss(); });
-
-    var btnShop = document.getElementById("btn-open-shop");
-    if (btnShop) btnShop.addEventListener("click", function () { unlockAudio(); openShop(); });
-
-    var btnCloseShop = document.getElementById("btn-close-shop");
-    if (btnCloseShop) btnCloseShop.addEventListener("click", closeShop);
-
-    var shopTabs = document.querySelectorAll(".shop-tab");
-    for (var i = 0; i < shopTabs.length; i++) {
-      shopTabs[i].addEventListener("click", function (ev) {
-        state.shopTab = ev.currentTarget.getAttribute("data-tab") || "wizard";
-        renderShop();
-      });
-    }
-
-    var btnHome = document.getElementById("btn-home");
-    if (btnHome) {
-      btnHome.addEventListener("click", function () {
-        unlockAudio();
-        player.x = 0;
-        player.z = 2.0;
-        player.vx = 0;
-        player.vz = 0;
-        spawnShockwave(0, 0.2, 2.0, 0x6ae2ff, 2.0);
-        showToast("마을 광장으로 귀환했습니다.");
-      });
-    }
-
-    var btnMute = document.getElementById("btn-mute");
-    if (btnMute) {
-      btnMute.textContent = state.muted ? "🔇" : "🔊";
-      btnMute.addEventListener("click", function () {
-        state.muted = !state.muted;
-        btnMute.textContent = state.muted ? "🔇" : "🔊";
-        saveGame();
-      });
-    }
-
-    var btnSave = document.getElementById("btn-save");
-    if (btnSave) {
-      btnSave.addEventListener("click", function () {
-        saveGame();
-        showToast("진행 상황이 안전하게 저장되었습니다.");
-      });
-    }
-
-    var btnReset = document.getElementById("btn-reset");
-    if (btnReset) {
-      btnReset.addEventListener("click", function () {
-        if (dom.resetModal) dom.resetModal.classList.add("open");
-      });
-    }
-    var btnCancelReset = document.getElementById("btn-cancel-reset");
-    if (btnCancelReset) {
-      btnCancelReset.addEventListener("click", function () {
-        if (dom.resetModal) dom.resetModal.classList.remove("open");
-      });
-    }
-    var btnConfirmReset = document.getElementById("btn-confirm-reset");
-    if (btnConfirmReset) {
-      btnConfirmReset.addEventListener("click", function () {
-        if (dom.resetModal) dom.resetModal.classList.remove("open");
-        resetGame();
-      });
-    }
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("resize", function () {
-        Engine.resize();
-      });
-    }
-  }
-
-  // =========================================================================
-  // Frame Step & Async GLB Startup
-  // =========================================================================
-  function step(dt) {
-    if (!runtime.ready) return;
-    var rawDt = Math.min(0.05, Math.max(0.001, dt || 0.016));
-    runtime.time += rawDt;
-
-    // Update model flash, station squash-and-stretch, and floating labels even during hit-stop
-    Entities.updateStationSquash(sceneObjs.cauldron, rawDt);
-    Entities.updateStationSquash(sceneObjs.sales, rawDt);
-    Entities.updateStationSquash(sceneObjs.pedestal, rawDt);
-
-    for (var fi = 0; fi < sceneObjs.nodes.length; fi++) {
-      Entities.updateModelFlash(sceneObjs.nodes[fi].model, rawDt);
-    }
-    for (var si = 0; si < sceneObjs.slimes.length; si++) {
-      var slObj = sceneObjs.slimes[si];
-      Entities.updateModelFlash(slObj.model, rawDt);
-      if (slObj.isKing && slObj.alive && slObj.model.hpBarHolder && Engine.camera) {
-        slObj.model.hpBarHolder.lookAt(Engine.camera.position);
-      }
-    }
-    if (Engine.camera) {
-      for (var pi = 0; pi < sceneObjs.pads.length; pi++) {
-        var lbl = sceneObjs.pads[pi].model && sceneObjs.pads[pi].model.labelMesh;
-        if (lbl) lbl.lookAt(Engine.camera.position);
-      }
-    }
-
-    if (runtime.gemComboTimer > 0) {
-      runtime.gemComboTimer -= rawDt;
-      if (runtime.gemComboTimer <= 0) {
-        runtime.gemCombo = 0;
-        runtime.gemPopupAcc = 0;
-      }
-    }
-
-    if (runtime.toastTimer > 0) {
-      runtime.toastTimer -= rawDt;
-      if (runtime.toastTimer <= 0 && dom.toastBanner) {
-        dom.toastBanner.classList.remove("show");
-      }
-    }
-
-    if (runtime.hitStopTimer > 0) {
-      runtime.hitStopTimer = Math.max(0, runtime.hitStopTimer - rawDt);
-      updateVFX(rawDt);
-      Engine.update({ x: player.x, z: player.z, vx: player.vx, vz: player.vz, maxSpeed: getMoveSpeed() }, rawDt);
-      return;
-    }
-
-    updatePlayerMovement(rawDt);
-    updatePadsAndStations(rawDt);
-    updateResourceNodes(rawDt);
-    updateCustomers(rawDt);
-    updateFairies(rawDt);
-    updateHarvesterCart(rawDt);
-    updateSlimesAndCombat(rawDt);
-    updateVFX(rawDt);
-    updateGuideArrow(rawDt);
-
-    Engine.update({ x: player.x, z: player.z, vx: player.vx, vz: player.vz, maxSpeed: getMoveSpeed() }, rawDt);
-    updateHUD();
-
-    runtime.saveTimer += rawDt;
-    if (runtime.saveTimer >= 10) {
-      runtime.saveTimer = 0;
+    const clickBind = (id, fn) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("click", fn);
+    };
+    clickBind("btn-open-shop", () => openShop());
+    clickBind("btn-close-shop", () => closeShop());
+    clickBind("btn-home", () => {
+      player.x = 0;
+      player.z = 2.0;
+      player.vx = 0;
+      player.vz = 0;
+      showToast("🏡 중앙 광장으로 귀환했습니다!");
+    });
+    clickBind("btn-mute", () => {
+      state.muted = !state.muted;
+      const el = document.getElementById("btn-mute");
+      if (el) el.textContent = state.muted ? "🔇" : "🔊";
+    });
+    clickBind("btn-save", () => {
       saveGame();
-    }
-  }
-
-  function init() {
-    if (runtime.initialized) return Promise.resolve(true);
-    runtime.initialized = true;
-
-    loadGame();
-    bindDOMandInputs();
-    Engine.init(dom.container);
-    showToast("🌲 3D 모델 불러오는 중...");
-
-    return AssetLoader.loadAll(function (done, total) {
-      if (done === total) showToast("✨ 마법의 숲 3D 월드 준비 완료!");
-    }).then(function () {
-      Engine.populateGlbScenery();
-      buildWorldObjects();
-      runtime.ready = true;
-      Engine.update({ x: player.x, z: player.z, vx: 0, vz: 0, maxSpeed: getMoveSpeed() }, 0.016);
-      updateHUD();
-
-      var lastTime = typeof performance !== "undefined" ? performance.now() : Date.now();
-      var raf = (typeof window !== "undefined" && window.requestAnimationFrame)
-        ? window.requestAnimationFrame
-        : function (cb) { return setTimeout(function () { cb(Date.now()); }, 16); };
-
-      function loop(now) {
-        var dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
-        lastTime = now;
-        step(dt);
-        Engine.render();
-        raf(loop);
-      }
-
-      if (typeof window === "undefined" || !window.__NO_AUTO_RAF__) {
-        raf(loop);
-      }
-      return true;
-    }).catch(function (err) {
-      showToast("⚠️ GLB 모델 로드 실패: " + (err && err.message ? err.message : String(err)));
-      throw err;
+      showToast("💾 공방 진행 상황이 저장되었습니다!");
+    });
+    clickBind("btn-reset", () => {
+      const m = document.getElementById("reset-modal");
+      if (m) m.classList.add("open");
+    });
+    clickBind("btn-cancel-reset", () => {
+      const m = document.getElementById("reset-modal");
+      if (m) m.classList.remove("open");
+    });
+    clickBind("btn-confirm-reset", () => {
+      const m = document.getElementById("reset-modal");
+      if (m) m.classList.remove("open");
+      resetGame();
+    });
+    document.querySelectorAll(".shop-tab").forEach((btn) => {
+      btn.addEventListener("click", () => openShop(btn.dataset.tab));
     });
   }
 
-  if (typeof document !== "undefined") {
+  // ---------------------------------------------------------------------------
+  // Main Simulation Step & Initialization
+  // ---------------------------------------------------------------------------
+  function step(dt) {
+    if (!_initialized) return;
+    const stepDt = Math.min(0.05, Math.max(0.001, dt || 0.016));
+    runtime.time += stepDt;
+    if (stepDt > 0.001) {
+      runtime.fpsSmooth = runtime.fpsSmooth * 0.92 + (1 / stepDt) * 0.08;
+    }
+
+    updatePlayerMovement(stepDt);
+    updateNodesAndHeroHarvest(stepDt);
+    updatePalletsAndHeroTransfers(stepDt);
+    updateCustomersAndGemTower(stepDt);
+    updateFairies(stepDt);
+    updateHarvesterTruck(stepDt);
+    updateStepPads(stepDt);
+    updateVFX(stepDt);
+    updateGuideArrow(stepDt);
+
+    if (sceneObjs.hero && sceneObjs.hero.backStackAnchor) {
+      syncCrateStackVisuals(sceneObjs.hero.backStackAnchor, player.bagItems, runtime.heroBackVisuals);
+    }
+
+    if (runtime.toastTimer > 0) {
+      runtime.toastTimer -= stepDt;
+      if (runtime.toastTimer <= 0 && typeof document !== "undefined") {
+        const el = document.getElementById("toast-banner");
+        if (el) el.classList.remove("show");
+      }
+    }
+
+    if (window.Engine) {
+      window.Engine.update({ x: player.x, z: player.z }, { x: player.vx, z: player.vz }, stepDt);
+      window.Engine.render();
+    }
+    syncHUD(false);
+  }
+
+  function rafLoop(ts) {
+    if (!_lastRafTs) _lastRafTs = ts;
+    const dt = (ts - _lastRafTs) / 1000;
+    _lastRafTs = ts;
+    step(dt);
+    _rafId = window.requestAnimationFrame(rafLoop);
+  }
+
+  async function init() {
+    if (_initialized) return;
+    _initialized = true;
+
+    loadGame();
+    bindDOMandInputs();
+
+    const container = typeof document !== "undefined" ? document.getElementById("webgl-container") : null;
+    if (window.AssetLoader && typeof window.AssetLoader.loadAll === "function") {
+      try {
+        await window.AssetLoader.loadAll();
+      } catch (e) {
+        // Proceed cleanly with procedural toon fallbacks if GLB load errors
+      }
+    }
+
+    if (window.Engine) {
+      window.Engine.init(container);
+      window.Engine.populateGlbScenery();
+    }
+
+    sceneObjs.hero = window.Entities.createPlayerHero();
+    sceneObjs.hero.root.position.set(player.x, 0, player.z);
+    window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 2)));
+    if (window.Engine) window.Engine.unitGroup.add(sceneObjs.hero.root);
+
+    buildDenseFarmNodes();
+    buildProductionMachines();
+    buildMarketAndQueue();
+    buildStepPads();
+    syncFairiesCount();
+    ensureTruckSpawned();
+    updateStepPads(0.016);
+    syncHUD(true);
+
+    if (typeof window !== "undefined" && !window.__NO_AUTO_RAF__ && typeof window.requestAnimationFrame === "function") {
+      _rafId = window.requestAnimationFrame(rafLoop);
+    }
+  }
+
+  if (typeof window !== "undefined" && !window.__NO_AUTO_INIT__ && typeof document !== "undefined") {
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", function () { init(); });
+      document.addEventListener("DOMContentLoaded", () => {
+        init();
+      });
     } else {
       init();
     }
   }
 
-  if (typeof window !== "undefined") {
-    window.Gameplay = {
-      init: init,
-      step: step,
-      getState: function () { return state; },
-      getPlayer: function () { return player; },
-      getRuntime: function () { return runtime; },
-      getSceneObjs: function () { return sceneObjs; },
-      setInput: function (ix, iy) { runtime.joyX = ix; runtime.joyY = iy; },
-      openShop: openShop,
-      closeShop: closeShop,
-      renderShop: renderShop,
-      summonBoss: summonBoss,
-      saveGame: saveGame,
-      loadGame: loadGame,
-      resetGame: resetGame
-    };
-  }
+  window.Gameplay = {
+    UPGRADE_DEFS,
+    MACHINE_CONFIGS,
+    init,
+    step,
+    getState: () => state,
+    getPlayer: () => player,
+    getRuntime: () => runtime,
+    getSceneObjs: () => sceneObjs,
+    setInput,
+    openShop,
+    closeShop,
+    renderShop,
+    saveGame,
+    loadGame,
+    resetGame,
+  };
 })();
