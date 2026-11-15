@@ -256,7 +256,6 @@
     stall: null,
     sellPallet: null,
     gemPedestal: null,
-    guideWidgets: null,
   };
 
   let _initialized = false;
@@ -1575,62 +1574,16 @@
     const distToTarget = Math.hypot(dx, dz);
     const ang = Math.atan2(dx, dz);
 
+    hero.guideArrowGroup.visible = distToTarget > 1.6;
     hero.guideArrowGroup.rotation.y = ang - player.rotY;
-    const pulse = 1.12 + Math.sin(runtime.time * 6.5) * 0.14;
-    hero.guideArrowGroup.scale.set(pulse, pulse, pulse);
+    hero.guideArrowGroup.scale.set(1, 1, 1);
+
+    if (hero.guideArrowGroup.userData && hero.guideArrowGroup.userData.arrowMesh) {
+      hero.guideArrowGroup.userData.arrowMesh.position.z = 1.80 + Math.sin(runtime.time * 6.0) * 0.22;
+    }
     if (hero.guideArrowMat && hero.guideArrowMat.color) {
       hero.guideArrowMat.color.setHex(colorHex);
-    }
-
-    // Marching chevrons inside hero directional ring
-    const chevrons = hero.guideArrowGroup.userData && hero.guideArrowGroup.userData.chevrons;
-    if (chevrons && chevrons.length) {
-      for (let i = 0; i < chevrons.length; i++) {
-        const wave = ((runtime.time * 2.8 + i * 0.33) % 1);
-        chevrons[i].position.z = 1.1 + wave * 1.45;
-        const sc = 0.85 + Math.sin(wave * Math.PI) * 0.32;
-        chevrons[i].scale.set(sc, sc, sc);
-      }
-    }
-
-    // World marching chevron ground highway trail & giant floating target beacon
-    const gw = sceneObjs.guideWidgets;
-    if (gw) {
-      if (gw.trailMat && gw.trailMat.color) gw.trailMat.color.setHex(colorHex);
-      if (gw.beaconRingMat && gw.beaconRingMat.color) gw.beaconRingMat.color.setHex(colorHex);
-
-      if (gw.beaconGroup) {
-        gw.beaconGroup.position.set(tx, 0, tz);
-      }
-      if (gw.beaconArrow) {
-        gw.beaconArrow.position.y = 2.75 + Math.sin(runtime.time * 5.5) * 0.42;
-        gw.beaconArrow.rotation.y += (dt || 0.016) * 2.1;
-      }
-      if (gw.beaconRing) {
-        const rp = 1 + Math.sin(runtime.time * 4.5) * 0.14;
-        gw.beaconRing.scale.set(rp, rp, 1);
-      }
-
-      if (gw.trailNodes && gw.trailNodes.length) {
-        const spacing = 2.2;
-        const marchOffset = ((runtime.time * 2.8) % 1) * spacing;
-        const ux = distToTarget > 0.01 ? dx / distToTarget : 1;
-        const uz = distToTarget > 0.01 ? dz / distToTarget : 0;
-
-        for (let i = 0; i < gw.trailNodes.length; i++) {
-          const node = gw.trailNodes[i];
-          const dAlong = 3.5 + i * spacing + marchOffset;
-          if (distToTarget < 1.6 || dAlong > distToTarget - 1.2) {
-            node.visible = false;
-          } else {
-            node.visible = true;
-            node.position.set(player.x + ux * dAlong, 0.04, player.z + uz * dAlong);
-            node.rotation.y = ang;
-            const sc = 0.96 + Math.sin(runtime.time * 7 - i * 0.8) * 0.12;
-            node.scale.set(sc, 1, sc);
-          }
-        }
-      }
+      if (hero.guideArrowMat.emissive) hero.guideArrowMat.emissive.setHex(colorHex);
     }
 
     if (typeof document !== "undefined") {
@@ -2009,13 +1962,6 @@
     sceneObjs.hero.root.position.set(player.x, 0, player.z);
     window.Entities.updateHeroTier(sceneObjs.hero, Math.min(4, Math.floor(state.toolLv / 2)));
     if (window.Engine) window.Engine.unitGroup.add(sceneObjs.hero.root);
-
-    if (window.ChibiCharacters && typeof window.ChibiCharacters.createWorldGuideWidgets === "function") {
-      sceneObjs.guideWidgets = window.ChibiCharacters.createWorldGuideWidgets();
-      if (window.Engine && window.Engine.vfxGroup) {
-        window.Engine.vfxGroup.add(sceneObjs.guideWidgets.root);
-      }
-    }
 
     buildDenseFarmNodes();
     buildProductionMachines();

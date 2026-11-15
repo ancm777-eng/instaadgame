@@ -201,58 +201,6 @@
     });
   }
 
-  function makeVerticalDownArrowGeometry(headW = 1.28, headL = 0.88, shaftW = 0.54, shaftL = 0.78, depth = 0.22) {
-    return cachedGeo(`varrow_${headW}_${headL}_${shaftW}_${shaftL}_${depth}`, () => {
-      if (typeof THREE.Shape !== "function" || typeof THREE.ExtrudeGeometry !== "function") {
-        const g = new THREE.ConeGeometry(headW * 0.5, headL + shaftL, 6);
-        g.rotateX(Math.PI);
-        return g;
-      }
-      const hw = headW * 0.5;
-      const sw = shaftW * 0.5;
-      const topY = shaftL * 0.5 + headL * 0.45;
-      const neckY = -shaftL * 0.5;
-      const tipY = neckY - headL;
-
-      const shape = new THREE.Shape();
-      shape.moveTo(0, tipY);
-      shape.lineTo(hw, neckY);
-      shape.lineTo(sw, neckY);
-      shape.lineTo(sw, topY);
-      shape.lineTo(-sw, topY);
-      shape.lineTo(-sw, neckY);
-      shape.lineTo(-hw, neckY);
-      shape.closePath();
-
-      const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
-      geo.center();
-      return geo;
-    });
-  }
-
-  function makeChevronGeometry(w = 1.15, l = 0.75, thickness = 0.34, depth = 0.08) {
-    return cachedGeo(`chev_${w}_${l}_${thickness}_${depth}`, () => {
-      if (typeof THREE.Shape !== "function" || typeof THREE.ExtrudeGeometry !== "function") {
-        return new THREE.BoxGeometry(w, depth, l * 0.5);
-      }
-      const hw = w * 0.5;
-      const hl = l * 0.5;
-      const shape = new THREE.Shape();
-      shape.moveTo(0, hl);
-      shape.lineTo(hw, -hl);
-      shape.lineTo(hw - thickness, -hl);
-      shape.lineTo(0, hl - thickness * 1.18);
-      shape.lineTo(-hw + thickness, -hl);
-      shape.lineTo(-hw, -hl);
-      shape.closePath();
-
-      const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
-      geo.center();
-      geo.rotateX(Math.PI * 0.5);
-      return geo;
-    });
-  }
-
   // ===========================================================================
   // 1. 2-Head-Tall Alchemist Hero (꼬마 연금술사 주인공)
   // ===========================================================================
@@ -283,42 +231,22 @@
     auraMesh.position.y = 0.032;
     root.add(auraMesh);
 
-    // Giant Playable-Ad 3D Guide Arrow + Marching Chevrons around Hero feet
+    // Single Large Clean 3D Guide Arrow in front of Hero feet
     const guideArrowGroup = new THREE.Group();
-    guideArrowGroup.position.y = 0.09;
-    const guideArrowMat = new THREE.MeshBasicMaterial({
-      color: 0xffe629,
+    guideArrowGroup.position.y = 0.12;
+    const guideArrowMat = makeToonMat(0xffe629, {
+      emissive: 0xffb800,
+      emissiveIntensity: 0.32,
+      uncached: true,
     });
-    const whiteRimMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-    });
-
-    // Crisp white backing rim slightly below golden 3D arrow head
-    const arrowGeo = makeArrowShapeGeometry(1.26, 1.02, 0.56, 1.10, 0.12);
-    const arrowRim = new THREE.Mesh(arrowGeo, whiteRimMat);
-    arrowRim.position.set(0, 0.03, 2.55);
-    arrowRim.scale.set(1.13, 0.65, 1.10);
-    guideArrowGroup.add(arrowRim);
-
-    addOutlinedMesh(
+    const arrowGeo = makeArrowShapeGeometry(1.10, 0.88, 0.44, 0.90, 0.14);
+    const arrowMesh = addOutlinedMesh(
       guideArrowGroup,
       arrowGeo,
       guideArrowMat,
-      { pos: [0, 0.09, 2.55], castShadow: false, receiveShadow: false, outlineScale: 1.09 }
+      { pos: [0, 0.08, 1.85], castShadow: false, receiveShadow: false, outlineScale: 1.07 }
     );
-
-    const chevGeo = makeChevronGeometry(1.04, 0.66, 0.30, 0.07);
-    const chevrons = [];
-    for (let i = 0; i < 3; i++) {
-      const ch = addOutlinedMesh(
-        guideArrowGroup,
-        chevGeo,
-        guideArrowMat,
-        { pos: [0, 0.06, 1.25 + i * 0.72], castShadow: false, receiveShadow: false, outlineScale: 1.08 }
-      );
-      chevrons.push(ch);
-    }
-    guideArrowGroup.userData.chevrons = chevrons;
+    guideArrowGroup.userData.arrowMesh = arrowMesh;
     root.add(guideArrowGroup);
 
     const bodyPivot = new THREE.Group();
@@ -1377,71 +1305,6 @@
     }
   }
 
-  // ===========================================================================
-  // 7. World Marching Ground Chevron Trail & Overhead 3D Target Beacon (▼)
-  // ===========================================================================
-  function createWorldGuideWidgets() {
-    const root = new THREE.Group();
-    const trailMat = new THREE.MeshBasicMaterial({ color: 0xffe629 });
-    const trailNodes = [];
-    const chevGeo = makeChevronGeometry(1.18, 0.78, 0.35, 0.08);
-    const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-
-    for (let i = 0; i < 8; i++) {
-      const node = new THREE.Group();
-      const rim = new THREE.Mesh(chevGeo, whiteMat);
-      rim.scale.set(1.14, 0.7, 1.14);
-      rim.position.y = 0.04;
-      node.add(rim);
-
-      addOutlinedMesh(node, chevGeo, trailMat, {
-        pos: [0, 0.08, 0],
-        castShadow: false,
-        receiveShadow: false,
-        outlineScale: 1.08,
-      });
-      node.visible = false;
-      root.add(node);
-      trailNodes.push(node);
-    }
-
-    const beaconGroup = new THREE.Group();
-    const beaconRingMat = new THREE.MeshBasicMaterial({
-      color: 0xffe629,
-      transparent: true,
-      opacity: 0.78,
-      depthWrite: false,
-    });
-    const beaconRing = new THREE.Mesh(
-      cachedGeo("guide_beacon_ring", () => new THREE.RingGeometry(1.35, 1.82, 32)),
-      beaconRingMat
-    );
-    beaconRing.rotation.x = -Math.PI * 0.5;
-    beaconRing.position.y = 0.055;
-    beaconGroup.add(beaconRing);
-
-    const beaconArrow = new THREE.Group();
-    beaconArrow.position.y = 2.8;
-    const vArrowGeo = makeVerticalDownArrowGeometry(1.32, 0.92, 0.56, 0.82, 0.24);
-    addOutlinedMesh(beaconArrow, vArrowGeo, trailMat, {
-      castShadow: false,
-      receiveShadow: false,
-      outlineScale: 1.08,
-    });
-    beaconGroup.add(beaconArrow);
-    root.add(beaconGroup);
-
-    return {
-      root,
-      trailNodes,
-      trailMat,
-      beaconGroup,
-      beaconArrow,
-      beaconRing,
-      beaconRingMat,
-    };
-  }
-
   window.ChibiCharacters = {
     CRATE_W,
     CRATE_H,
@@ -1460,6 +1323,5 @@
     animateProductionMachine,
     createHarvesterTruck,
     animateHarvesterTruck,
-    createWorldGuideWidgets,
   };
 })();
