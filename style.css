@@ -1550,7 +1550,7 @@ html, body {
 
   /* 2. 상단 중앙 배너: 1줄 콤팩트 배치로 3D 시야 확보 */
   .wave-hud {
-    top: calc(88px + var(--safe-top)) !important;
+    top: calc(118px + var(--safe-top)) !important;
     width: calc(100vw - 16px);
     max-width: 500px;
     flex-wrap: nowrap;
@@ -1575,7 +1575,7 @@ html, body {
   }
 
   .guide-banner {
-    top: calc(122px + var(--safe-top)) !important;
+    top: calc(150px + var(--safe-top)) !important;
     width: calc(100vw - 16px);
     max-width: 500px;
     font-size: 11.5px !important;
@@ -1588,7 +1588,7 @@ html, body {
   }
 
   #toast-banner {
-    top: calc(156px + var(--safe-top)) !important;
+    top: calc(184px + var(--safe-top)) !important;
     font-size: 12px !important;
     padding: 6px 14px !important;
   }
