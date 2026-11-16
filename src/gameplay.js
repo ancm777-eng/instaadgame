@@ -146,11 +146,11 @@
       dirLabel: "▼ 남쪽",
       icon: "⚙️",
       title: "1호기 크리스탈 세공기",
-      desc: "광석→세공보석(💵 45) 자동 가공·판매! 제2연구소 시 4호기 자동 연결.",
+      desc: "광석→세공보석(💵 45) 자동 가공·판매! 제2연구소 시 4호기 자동 연결 (1회 완공).",
       accent: "#d67aff",
-      baseCost: 50,
-      mult: 1.85,
-      maxLv: 8,
+      baseCost: 120,
+      mult: 1.0,
+      maxLv: 1,
     },
     m2: {
       id: "m2",
@@ -160,9 +160,9 @@
       title: "2호기 무지개 포션 양조기",
       desc: "무지개 약초 해금 & 포션(💵 140) 자동 판매! 제2연구소 시 6호기 자동 연결.",
       accent: "#52ff9b",
-      baseCost: 140,
-      mult: 1.85,
-      maxLv: 8,
+      baseCost: 280,
+      mult: 1.0,
+      maxLv: 1,
     },
     m3: {
       id: "m3",
@@ -172,9 +172,9 @@
       title: "3호기 엘릭서 증류솥",
       desc: "광석+약초→황실 엘릭서(💵 360) · 왕실 무역 마차 납품!",
       accent: "#ff8c42",
-      baseCost: 380,
-      mult: 1.85,
-      maxLv: 8,
+      baseCost: 650,
+      mult: 1.0,
+      maxLv: 1,
     },
     m4: {
       id: "m4",
@@ -184,9 +184,9 @@
       title: "4호기 마나 룬 프레스",
       desc: "[Era 2] 세공보석+화염마나석→화염 룬스톤(💵 750) · 마법 길드 열기구 항공 납품!",
       accent: "#fb7185",
-      baseCost: 900,
-      mult: 1.9,
-      maxLv: 8,
+      baseCost: 1500,
+      mult: 1.0,
+      maxLv: 1,
       unlockEra: 2,
     },
     m5: {
@@ -197,9 +197,9 @@
       title: "5호기 정령 오르골 조립기",
       desc: "[Era 2] 약초+정령이슬→오르골(💵 1,800) · 전 일꾼·트럭 이속 +30% 오라 부여!",
       accent: "#2dd4bf",
-      baseCost: 2200,
-      mult: 1.9,
-      maxLv: 8,
+      baseCost: 3500,
+      mult: 1.0,
+      maxLv: 1,
       unlockEra: 2,
     },
     m6: {
@@ -210,9 +210,9 @@
       title: "6호기 번개 마도핵 충전소",
       desc: "[Era 3] 포션+번개수정→번개 마도핵(💵 4,500) · 드워프 장갑열차 대량 수송!",
       accent: "#facc15",
-      baseCost: 6500,
-      mult: 1.95,
-      maxLv: 8,
+      baseCost: 9500,
+      mult: 1.0,
+      maxLv: 1,
       unlockEra: 3,
     },
     m7: {
@@ -223,9 +223,9 @@
       title: "7호기 달빛 향수 증류탑",
       desc: "[Era 3] 달빛버섯+이슬→달빛 향수(💵 11,000) · 왕실 특사 가판대 초고속 판매!",
       accent: "#e879f9",
-      baseCost: 14000,
-      mult: 1.95,
-      maxLv: 8,
+      baseCost: 20000,
+      mult: 1.0,
+      maxLv: 1,
       unlockEra: 3,
     },
     m8: {
@@ -236,9 +236,9 @@
       title: "8호기 현자의 돌 융합로",
       desc: "[Era 4] 운석+비늘꽃+마도핵→현자의 돌(💵 30,000) 연성!",
       accent: "#f43f5e",
-      baseCost: 35000,
-      mult: 2.0,
-      maxLv: 8,
+      baseCost: 48000,
+      mult: 1.0,
+      maxLv: 1,
       unlockEra: 4,
     },
     m9: {
@@ -249,9 +249,9 @@
       title: "9호기 하늘 비공정 무역 부두",
       desc: "[Era 4] 현자의 돌 항공 무역! 거대 황금 비공정(💵 30,000 · 4연구소 2배 💵 60,000)!",
       accent: "#fbbf24",
-      baseCost: 68000,
-      mult: 2.0,
-      maxLv: 8,
+      baseCost: 90000,
+      mult: 1.0,
+      maxLv: 1,
       unlockEra: 4,
     },
     fairy: {
@@ -365,56 +365,14 @@
       inPos: LAB_CONFIGS[3].inPos,
       padPos: LAB_CONFIGS[3].padPos,
     },
-    // Defense R&D Tech Systems (건물 위쪽 배치 금지 -> 모두 건물 아래쪽/좌우 배치)
-    turret_flame: {
-      id: "turret_flame",
-      tab: "defense",
-      dirLabel: "▼ 남서쪽",
-      icon: "🔥",
-      title: "화염 연금 포탑",
-      desc: "차원 에너지 R&D (최대 Lv.20)! 사거리 9m 내 적에게 고폭 화염 포격.",
-      accent: "#ff6b4a",
-      baseCost: 20,
-      mult: 1.45,
-      maxLv: 20,
-      turretPos: { x: 23.2, z: -5.0 },
-      padPos: { x: 11.4, z: 5.1 },
-    },
-    turret_frost: {
-      id: "turret_frost",
-      tab: "defense",
-      dirLabel: "▼ 남동쪽",
-      icon: "❄️",
-      title: "빙결 수정 탑",
-      desc: "차원 에너지 R&D (최대 Lv.20)! 사거리 9m 내 적을 감속·타격.",
-      accent: "#38bdf8",
-      baseCost: 24,
-      mult: 1.45,
-      maxLv: 20,
-      turretPos: { x: 23.2, z: 5.0 },
-      padPos: { x: 15.6, z: 5.1 },
-    },
-    turret_thunder: {
-      id: "turret_thunder",
-      tab: "defense",
-      dirLabel: "▶ 동쪽",
-      icon: "⚡",
-      title: "뇌전 오벨리스크",
-      desc: "차원 에너지 R&D (최대 Lv.20)! 다수 적을 연쇄 번개로 타격.",
-      accent: "#c084fc",
-      baseCost: 30,
-      mult: 1.48,
-      maxLv: 20,
-      turretPos: { x: 23.2, z: -2.4 },
-      padPos: { x: 19.1, z: 0.0 },
-    },
+    // Gate Fortification (성문 증축·수호 결계)
     shrine_aegis: {
       id: "shrine_aegis",
-      tab: "defense",
+      tab: "wizard",
       dirLabel: "◀ 서쪽",
       icon: "🏰",
       title: "성문 증축·강화",
-      desc: "차원 에너지 3단 성채 진화! 성문 최대 HP(500→1,000→1,800→3,000)를 강화합니다.",
+      desc: "차원 에너지 3단 성채 진화! 성문 최대 HP(500→1,000→1,800→3,000)와 수호 결계를 강화합니다.",
       accent: "#4ade80",
       baseCost: 25,
       mult: 1.4,
@@ -491,7 +449,7 @@
   };
 
   const SKILL_IDS = ["s1", "s2", "s3", "s4", "s5"];
-  const DEFENSE_IDS = ["turret_flame", "turret_frost", "turret_thunder", "shrine_aegis"];
+  const DEFENSE_IDS = ["shrine_aegis"];
 
   const MACHINE_CONFIGS = [
     {
@@ -726,7 +684,7 @@
     return {
       gems: 45,
       totalEarnedGems: 0,
-      dim1: 25,
+      dim1: 0,
       dim2: 0,
       dim3: 0,
       alchemyLabLv: 0,
@@ -1899,7 +1857,7 @@
     if (typeof Entities.createZoneHeaderBanner === "function") {
       const headers = [
         { era: 1, title: "🔮 연금술 연구 단지", sub: "자원 → 차원 에너지 연성", x: -6.2, y: 5.5, z: -2.5, acc: "#e9d5ff", brd: "#9b59b6" },
-        { era: 1, title: "🛡️ 디펜스 기술 단지", sub: "성문 강화 & 자동 방어 포탑", x: 13.5, y: 5.5, z: 0.0, acc: "#cffafe", brd: "#00e5ff" },
+        { era: 1, title: "🛡️ 디펜스 기술 단지", sub: "성문 증축 & 수호 결계", x: 13.5, y: 5.5, z: 0.0, acc: "#cffafe", brd: "#00e5ff" },
         { era: 1, title: "⚡ 마법사 수련장", sub: "Lv.20 마일스톤 장비 수련", x: -12.5, y: 5.5, z: 13.0, acc: "#dcfce7", brd: "#2ecc71" },
         { era: 1, title: "🧚 자동화·채집 길드", sub: "요정·메가트럭·심층 광산", x: 11.5, y: 5.5, z: 13.0, acc: "#fef3c7", brd: "#1abc9c" },
         { era: 1, title: "⚙️ 마법 자동화 공장 (1~3호기)", sub: "원석·약초 가공 & 왕실 마차", x: -1.2, y: 5.5, z: -14.2, acc: "#ffedd5", brd: "#e67e22" },
@@ -2218,9 +2176,6 @@
       { id: "farm2", x: 9.4, z: 18.1 },
       { id: "farm3", x: 13.6, z: 18.1 },
       // East Defense Bastion
-      { id: "turret_flame", x: UPGRADE_DEFS.turret_flame.padPos.x, z: UPGRADE_DEFS.turret_flame.padPos.z },
-      { id: "turret_frost", x: UPGRADE_DEFS.turret_frost.padPos.x, z: UPGRADE_DEFS.turret_frost.padPos.z },
-      { id: "turret_thunder", x: UPGRADE_DEFS.turret_thunder.padPos.x, z: UPGRADE_DEFS.turret_thunder.padPos.z },
       { id: "shrine_aegis", x: UPGRADE_DEFS.shrine_aegis.padPos.x, z: UPGRADE_DEFS.shrine_aegis.padPos.z },
     ];
 
@@ -2762,7 +2717,7 @@
       const desc = document.getElementById("gameover-desc");
       if (badge) badge.textContent = "💥 GATE DESTROYED";
       if (title) title.textContent = "💔 마을 출입구 성문이 무너졌습니다!";
-      if (desc) desc.textContent = `WAVE ${state.wave} 공세를 성문이 버티지 못했습니다. 동쪽 디펜스 기술 연구소에서 포탑과 ★1~★5 원소 스킬을 강화한 뒤 재도전하세요!`;
+      if (desc) desc.textContent = `WAVE ${state.wave} 공세를 성문이 버티지 못했습니다. 성문 증축과 ★1~★5 원소 스킬을 강화한 뒤 재도전하세요!`;
       const modal = document.getElementById("gameover-modal");
       if (modal) modal.classList.add("open");
     }
@@ -4358,7 +4313,7 @@
       const spdPct = Math.round((getHeroMoveSpeed() / 7.6) * 100);
       statsEl.textContent = `이동 ${spdPct}% · 요정 ${state.fairyCount}/20 · WAVE ${state.wave}/${TOTAL_WAVES} · ${Math.round(runtime.fpsSmooth)} FPS`;
     }
-    setText("ui-shop-era", `🗺️ ${eInfo.name} (스킬/포탑 상한 Lv.${eInfo.maxCap})`);
+    setText("ui-shop-era", `🗺️ ${eInfo.name} (최대 Lv.3 스킬 · 성문 강화)`);
   }
 
   function openShop(tab) {
@@ -4740,7 +4695,7 @@
       if (kind === "cash") {
         popEl.innerHTML = "<b>💵 캐시 (돈) 안내</b><br>• <b>획득:</b> 광석·약초·포션 판매 및 몬스터 처치<br>• <b>사용:</b> 🎒가방·⛏️곡괭이(최대 2회) 및 1~9호기·연구소 건설";
       } else {
-        popEl.innerHTML = "<b>🔮💠🌟 차원 에너지 안내</b><br>• <b>🔮 1차:</b> 제1연구소(광석 투입) · Wave 1~6<br>• <b>💠 2차:</b> 제1연구소(Lv.1+ 소량/Lv.2 대량) · 제2연구소 · Wave 7~12<br>• <b>🌟 3차:</b> 제1연구소(Lv.2+ 소량/Lv.3 대량) · 제3·4연구소 · Wave 13~20<br>• <b>사용:</b> 🧚요정(최대 3) · ⚡스킬(최대 Lv.3) · 🔥포탑 강화";
+        popEl.innerHTML = "<b>🔮💠🌟 차원 에너지 안내</b><br>• <b>🔮 1차:</b> 제1연구소(광석 투입) · Wave 1~6<br>• <b>💠 2차:</b> 제1연구소(Lv.1+ 소량/Lv.2 대량) · 제2연구소 · Wave 7~12<br>• <b>🌟 3차:</b> 제1연구소(Lv.2+ 소량/Lv.3 대량) · 제3·4연구소 · Wave 13~20<br>• <b>사용:</b> 🧚요정(최대 3) · ⚡스킬(최대 Lv.3) · 🏰성문 강화";
       }
       popEl.classList.add("open");
     };
