@@ -109,12 +109,12 @@
       tab: "wizard",
       dirLabel: "◀ 서쪽",
       icon: "⛏️",
-      title: "채집 곡괭이 (마일스톤)",
-      desc: "Lv.5 범위확장 · Lv.10 다중채집+자석2배 · Lv.15 30% 2배드롭 · Lv.20 대현자 오라(자동채집+1.5x판매)!",
+      title: "채집 곡괭이 (생산 능력)",
+      desc: "초반 캐시(💵)로 강화 (최대 2회)! Lv.1 채집 속도·범위↑ · Lv.2 2개씩 채집+자석 범위 확대.",
       accent: "#52efff",
-      baseCost: 15,
-      mult: 1.42,
-      maxLv: 20,
+      baseCost: 35,
+      mult: 2.2,
+      maxLv: 2,
     },
     bag: {
       id: "bag",
@@ -122,11 +122,11 @@
       dirLabel: "▼ 남쪽",
       icon: "🎒",
       title: "배낭 적재",
-      desc: "차원 에너지 기술 개발! 등 뒤 지게 적재 칸을 늘립니다(Era별 Lv.5~20 해금).",
+      desc: "초반 캐시(💵)로 강화 (최대 2회)! 등 뒤 지게 적재 칸을 늘립니다 (16→24→34).",
       accent: "#ffd24c",
-      baseCost: 18,
-      mult: 1.42,
-      maxLv: 20,
+      baseCost: 30,
+      mult: 2.0,
+      maxLv: 2,
     },
     speed: {
       id: "speed",
@@ -134,11 +134,11 @@
       dirLabel: "▶ 동쪽",
       icon: "👢",
       title: "신속 부츠",
-      desc: "차원 에너지 기술 개발! 이동 속도를 높입니다(Era별 Lv.5~20 해금).",
+      desc: "초반 캐시(💵)로 강화 (최대 2회)! 이동 속도를 높입니다.",
       accent: "#7effa2",
-      baseCost: 20,
-      mult: 1.42,
-      maxLv: 20,
+      baseCost: 30,
+      mult: 2.0,
+      maxLv: 2,
     },
     m1: {
       id: "m1",
@@ -260,11 +260,11 @@
       dirLabel: "◀ 서쪽",
       icon: "🧚",
       title: "요정 일꾼",
-      desc: "해금된 전 자원(광석~운석)을 자동 채집·배달합니다(최대 20).",
+      desc: "차원 에너지(🔮/💠/🌟)로 소환 (최대 3마리)! 남쪽 출입구로 이동해 자원을 자동 채집·배달합니다.",
       accent: "#ff88c2",
-      baseCost: 60,
-      mult: 1.48,
-      maxLv: 20,
+      baseCost: 40,
+      mult: 1.0,
+      maxLv: 3,
     },
     truck: {
       id: "truck",
@@ -308,7 +308,7 @@
       dirLabel: "▼ 남쪽",
       icon: "🔮",
       title: "제1연금술 연구소",
-      desc: "Lv.1~3: 광석을 1~3차 차원 에너지로 변환 & 연구 기틀 마련.",
+      desc: "광석 투입 시 🔮1차(Lv.1+) · 💠2차(Lv.1+ 소량/Lv.2 대량) · 🌟3차(Lv.2+ 소량/Lv.3 대량) 차원 에너지를 연성합니다.",
       accent: "#c084fc",
       baseCost: 40,
       mult: 4.0,
@@ -429,11 +429,11 @@
       stars: 1,
       icon: "🔥",
       title: "화염구 연사",
-      desc: "초고속 화염구(최대 Lv.20)! Lv.5/10/15/20 돌파 시 초대형 폭염 연사로 진화.",
+      desc: "초고속 화염구(최대 Lv.3)! 레벨업 시 데미지만 강화됩니다.",
       accent: "#ff7849",
-      baseCost: 16,
-      mult: 1.38,
-      maxLv: 20,
+      baseCost: 20,
+      mult: 1.0,
+      maxLv: 3,
       cooldown: 0.85,
     },
     s2: {
@@ -442,11 +442,11 @@
       stars: 2,
       icon: "❄️",
       title: "혹한의 눈보라",
-      desc: "넓은 빙결 회오리(최대 Lv.20)! 50% 감속과 함께 강력한 범위 빙결 타격.",
+      desc: "빙결 회오리(최대 Lv.3)! 50% 감속 + 레벨업 시 데미지만 강화됩니다.",
       accent: "#38bdf8",
       baseCost: 24,
-      mult: 1.4,
-      maxLv: 20,
+      mult: 1.0,
+      maxLv: 3,
       cooldown: 4.2,
     },
     s3: {
@@ -455,11 +455,11 @@
       stars: 3,
       icon: "⚡",
       title: "천둥 연쇄 낙뢰",
-      desc: "다수 목표(최대 Lv.20) 번개 기둥 & 광역 기절.",
+      desc: "연쇄 번개 기둥 & 기절(최대 Lv.3)! 레벨업 시 데미지만 강화됩니다.",
       accent: "#facc15",
       baseCost: 30,
-      mult: 1.42,
-      maxLv: 20,
+      mult: 1.0,
+      maxLv: 3,
       cooldown: 6.8,
     },
     s4: {
@@ -468,11 +468,11 @@
       stars: 4,
       icon: "☄️",
       title: "대지의 운석 폭풍",
-      desc: "거대 마그마 운석 다연발 투하(최대 Lv.20) & 초대형 폭발.",
+      desc: "마그마 운석 폭격(최대 Lv.3)! 레벨업 시 데미지만 강화됩니다.",
       accent: "#fb7185",
-      baseCost: 36,
-      mult: 1.44,
-      maxLv: 20,
+      baseCost: 28,
+      mult: 1.0,
+      maxLv: 3,
       cooldown: 10.5,
     },
     s5: {
@@ -481,11 +481,11 @@
       stars: 5,
       icon: "🌈",
       title: "에테르 초신성",
-      desc: "전장 초신성 폭발 + 성문 30% 즉시 수복(최대 Lv.20).",
+      desc: "전장 초신성 폭발 + 성문 30% 수복(최대 Lv.3)! 레벨업 시 데미지만 강화됩니다.",
       accent: "#e879f9",
-      baseCost: 40,
-      mult: 1.4,
-      maxLv: 20,
+      baseCost: 30,
+      mult: 1.0,
+      maxLv: 3,
       cooldown: 15.0,
     },
   };
@@ -1043,7 +1043,7 @@
   function getEffectiveMaxLv(id) {
     const def = UPGRADE_DEFS[id];
     if (!def) return 0;
-    if (["tool", "bag", "speed", "s1", "s2", "s3", "s4", "s5", "turret_flame", "turret_frost", "turret_thunder"].includes(id)) {
+    if (["turret_flame", "turret_frost", "turret_thunder"].includes(id)) {
       return Math.min(def.maxLv, getEraSkillCap());
     }
     return def.maxLv;
@@ -1068,9 +1068,27 @@
       return { mode: "locked", cash: 0, energyTier: 0, energy: 0, text: `🔒 W${unlockWave} 해금` };
     }
 
-    if (["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "fairy", "truck", "farm2", "farm3"].includes(id)) {
+    if (["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "truck", "farm2", "farm3", "tool", "bag", "speed"].includes(id)) {
       const cash = Math.round(def.baseCost * Math.pow(def.mult, lv));
       return { mode: "cash", cash, energyTier: 0, energy: 0, text: `💵 ${cash.toLocaleString()}` };
+    }
+
+    if (id === "fairy") {
+      const tier = Math.min(3, lv + 1);
+      const energy = lv === 0 ? 40 : lv === 1 ? 35 : 30;
+      return { mode: "energy", cash: 0, energyTier: tier, energy, text: `${ENERGY_META[tier].icon} ${energy}` };
+    }
+
+    if (["s1", "s2", "s3", "s4", "s5"].includes(id)) {
+      const skillCostTable = {
+        s1: [{ tier: 1, energy: 20 }, { tier: 1, energy: 20 }, { tier: 2, energy: 20 }],
+        s2: [{ tier: 1, energy: 24 }, { tier: 2, energy: 20 }, { tier: 3, energy: 18 }],
+        s3: [{ tier: 1, energy: 30 }, { tier: 2, energy: 25 }, { tier: 3, energy: 22 }],
+        s4: [{ tier: 2, energy: 28 }, { tier: 2, energy: 40 }, { tier: 3, energy: 28 }],
+        s5: [{ tier: 3, energy: 30 }, { tier: 3, energy: 45 }, { tier: 3, energy: 65 }],
+      };
+      const entry = (skillCostTable[id] && skillCostTable[id][Math.min(2, lv)]) || { tier: 1, energy: 25 };
+      return { mode: "energy", cash: 0, energyTier: entry.tier, energy: entry.energy, text: `${ENERGY_META[entry.tier].icon} ${entry.energy}` };
     }
 
     if (id === "alchemy_lab") {
@@ -1323,40 +1341,39 @@
   }
 
   function getHeroBagCap() {
-    return 16 + state.bagLv * 6;
+    return 16 + (state.bagLv >= 2 ? 18 : state.bagLv === 1 ? 8 : 0);
   }
 
   function getHeroMoveSpeed() {
-    return 7.6 + state.speedLv * 0.55;
+    return 7.6 + Math.min(2, state.speedLv) * 1.4;
   }
 
   function getHeroHarvestInterval() {
-    if (state.toolLv >= 20) return 0;
-    return Math.max(0.08, 0.34 - state.toolLv * 0.015);
+    return Math.max(0.14, 0.34 - Math.min(2, state.toolLv) * 0.08);
   }
 
   function getHeroPickRadius() {
-    return state.toolLv >= 5 ? 4.0 : 2.65;
+    return state.toolLv >= 1 ? 3.8 : 2.65;
   }
 
   function getHeroMultiHit() {
-    return state.toolLv >= 10 ? 2 : 1;
+    return state.toolLv >= 2 ? 2 : 1;
   }
 
   function getCashMagnetRadius() {
-    return state.toolLv >= 10 ? 5.6 : 2.8;
+    return state.toolLv >= 2 ? 5.2 : 2.8;
   }
 
   function getHeroDoubleDropChance() {
-    return state.toolLv >= 15 ? 0.30 : 0;
+    return state.toolLv >= 2 ? 0.25 : 0;
   }
 
   function getPriceMultiplier() {
-    return state.toolLv >= 20 ? 1.5 : 1.0;
+    return 1.0;
   }
 
   function getHeroHarvestYield() {
-    return 1 + Math.floor(state.toolLv / 4);
+    return 1 + (state.toolLv >= 2 ? 1 : 0);
   }
 
   function syncHeroArchmageAura() {
@@ -2596,10 +2613,12 @@
       (m) => m.hp > 0 && Math.hypot(m.x - player.x, m.z - player.z) <= HERO_ATTACK_RANGE
     );
 
+    const dmgMult = lv >= 3 ? 2.5 : lv === 2 ? 1.65 : 1.0;
+
     if (skillId === "s1") {
-      const bolts = 1 + Math.floor(lv / 3);
-      const dmg = 34 * (1 + 0.35 * (lv - 1));
-      const aoeRad = 1.8 + lv * 0.22;
+      const bolts = 1;
+      const dmg = 38 * dmgMult;
+      const aoeRad = 2.1;
       const dirX = Math.sin(player.rotY);
       const dirZ = Math.cos(player.rotY);
       for (let i = 0; i < bolts; i++) {
@@ -2614,8 +2633,8 @@
       }
       spawnShockwaveRing(player.x, 0.12, player.z, 0xff7849, 2.0, 0.24);
     } else if (skillId === "s2") {
-      const dmg = 58 * (1 + 0.38 * (lv - 1));
-      const aoeRad = 3.8 + lv * 0.28;
+      const dmg = 65 * dmgMult;
+      const aoeRad = 4.2;
       const tx = target.x;
       const tz = target.z;
       applyAoEDamage(tx, tz, aoeRad, dmg, 1.8, 3.8, 0);
@@ -2623,9 +2642,9 @@
       spawnShockwaveRing(tx, 0.18, tz, 0xe0f2fe, aoeRad * 0.65, 0.38);
       spawnBurstVfx(tx, 1.4, tz, 0x93e2ff, 14);
     } else if (skillId === "s3") {
-      const maxTargets = Math.min(inRangeMonsters.length, 4 + lv);
-      const dmg = 78 * (1 + 0.40 * (lv - 1));
-      const shockRad = 2.4 + lv * 0.18;
+      const maxTargets = Math.min(inRangeMonsters.length, 5);
+      const dmg = 88 * dmgMult;
+      const shockRad = 2.6;
       for (let i = 0; i < maxTargets; i++) {
         const m = inRangeMonsters[i];
         spawnLightningPillar(m.x, m.z, 0xfef08a, 0.32);
@@ -2633,9 +2652,9 @@
         applyAoEDamage(m.x, m.z, shockRad, dmg, 0.8, 0, 0.7);
       }
     } else if (skillId === "s4") {
-      const count = 3 + Math.floor(lv / 2);
-      const dmg = 135 * (1 + 0.42 * (lv - 1));
-      const meteorRad = 3.8 + lv * 0.24;
+      const count = 4;
+      const dmg = 150 * dmgMult;
+      const meteorRad = 4.2;
       for (let i = 0; i < count; i++) {
         const m = inRangeMonsters.length > 0 ? inRangeMonsters[i % inRangeMonsters.length] : target;
         const ox = (Math.random() - 0.5) * 2.2;
@@ -2643,8 +2662,8 @@
         spawnMeteorStrike(m.x + ox, m.z + oz, dmg, meteorRad);
       }
     } else if (skillId === "s5") {
-      const dmg = 230 * (1 + 0.45 * (lv - 1));
-      const novaRad = 9.0 + lv * 0.25;
+      const dmg = 260 * dmgMult;
+      const novaRad = 9.5;
       applyAoEDamage(player.x, player.z, novaRad, dmg, 5.5, 2.5, 0.9);
       applyAoEDamage(GATE_POS.x + 4.0, GATE_POS.z, novaRad, dmg * 0.85, 5.5, 2.5, 0.9);
       spawnShockwaveRing(player.x, 0.16, player.z, 0xe879f9, novaRad, 0.60);
@@ -3367,8 +3386,8 @@
             labObj.queue.pop();
             const tierMult = cfg.era;
             const d1 = (lv >= 3 ? 28 : lv === 2 ? 22 : 18) * tierMult;
-            const d2 = (lv >= 2 || cfg.era >= 2 ? 16 + lv * 4 : 0) * tierMult;
-            const d3 = (lv >= 3 || cfg.era >= 3 ? 12 + lv * 3 : 0) * tierMult;
+            const d2 = (lv >= 2 || cfg.era >= 2 ? 16 + lv * 4 : 4) * tierMult;
+            const d3 = (lv >= 3 || cfg.era >= 3 ? 12 + lv * 3 : lv >= 2 ? 3 : 0) * tierMult;
             addEnergyAmount(1, d1);
             if (d2 > 0) addEnergyAmount(2, d2);
             if (d3 > 0) addEnergyAmount(3, d3);
@@ -3815,13 +3834,39 @@
         }
       }
 
-      const dx = tx - f.x;
-      const dz = tz - f.z;
+      let navX = tx;
+      let navZ = tz;
+      if (!hasTeleport) {
+        const fInsideSouth = f.z <= 19.4;
+        const tOutsideSouth = tz > 20.4;
+        const fOutsideSouth = f.z >= 20.6;
+        const tInsideSouth = tz < 19.6;
+        if ((fInsideSouth && tOutsideSouth) || (fOutsideSouth && tInsideSouth)) {
+          if (Math.hypot(f.x - SOUTH_GATE_POS.x, f.z - SOUTH_GATE_POS.z) > 1.8) {
+            navX = SOUTH_GATE_POS.x;
+            navZ = SOUTH_GATE_POS.z;
+          }
+        }
+      }
+
+      const dx = navX - f.x;
+      const dz = navZ - f.z;
       const dist = Math.hypot(dx, dz);
       if (dist > 0.15) {
         const spd = (6.4 + state.speedLv * 0.35) * m5AuraMult;
-        f.x += (dx / dist) * Math.min(dist, spd * dt);
-        f.z += (dz / dist) * Math.min(dist, spd * dt);
+        let nextX = f.x + (dx / dist) * Math.min(dist, spd * dt);
+        let nextZ = f.z + (dz / dist) * Math.min(dist, spd * dt);
+        if (!hasTeleport) {
+          // Keep fairies inside side walls and only cross z=20 through the south gate opening
+          if (nextZ < 20.4 && nextZ > 19.2 && Math.abs(nextX) > 2.4) {
+            nextZ = f.z <= 19.8 ? 19.2 : 20.4;
+          }
+          if (nextZ <= 19.8) {
+            nextX = Math.max(-23.0, Math.min(23.0, nextX));
+          }
+        }
+        f.x = nextX;
+        f.z = nextZ;
         f.entity.root.rotation.y = Math.atan2(dx, dz);
       }
       f.entity.root.position.set(f.x, 0, f.z);
@@ -4090,6 +4135,24 @@
         stepLabel = `🏰 WAVE ${state.wave} 성문 수호`;
         guideText = "⚔️ 동쪽 성문 앞으로 이동해 몬스터 공세를 막아내세요!";
         colorHex = 0xff5b77;
+      } else if (state.alchemyLabLv === 0 && state.gems >= getUpgradeCost("alchemy_lab")) {
+        tx = ALCHEMY_LAB_PAD_POS.x;
+        tz = ALCHEMY_LAB_PAD_POS.z;
+        stepLabel = "4단계 · 제1연구소";
+        guideText = "🔮 남쪽 [제1연금술 연구소] 발판을 밟아 건설하고 차원 에너지를 얻으세요!";
+        colorHex = 0xc084fc;
+      } else if (state.alchemyLabLv >= 1 && state.dim1 < 40 && state.fairyCount === 0 && hasOre) {
+        tx = ALCHEMY_LAB_IN_POS.x;
+        tz = ALCHEMY_LAB_IN_POS.z;
+        stepLabel = "차원 에너지 연성";
+        guideText = "🔮 [제1연구소] 투입구에 광석을 넣으면 차원 에너지(🔮/💠)가 생성됩니다!";
+        colorHex = 0xc084fc;
+      } else if (state.m2Lv === 0 && state.gems >= getUpgradeCost("m2")) {
+        tx = MACHINE_CONFIGS[1].padPos.x;
+        tz = MACHINE_CONFIGS[1].padPos.z;
+        stepLabel = "약초 숲 해금";
+        guideText = "⚗️ [2호기 포션 양조기]를 건설하면 남동쪽 약초 숲(🌿)이 열립니다!";
+        colorHex = 0x52ff9b;
       } else if (nearestCashPed) {
         tx = nearestCashPed.x;
         tz = nearestCashPed.z;
@@ -4356,7 +4419,7 @@
           <div class="shop-item-prog-wrap">
             <div class="shop-item-prog-fill" style="width:${pct}%"></div>
           </div>
-          <button class="shop-buy-btn ${afford ? "afford" : "locked"}" data-upgrade-id="${def.id}" ${isGlobalMax || isLocked || !afford ? "disabled" : ""}>
+          <button class="shop-buy-btn ${afford ? "afford" : "locked"}" data-upgrade-id="${def.id}" ${isGlobalMax || isLocked ? "disabled" : ""}>
             ${isGlobalMax ? "MAX" : isLocked ? spec.text : lv === 0 && (def.tab === "skills" || def.tab === "defense") ? `해금 ${spec.text}` : spec.text}
           </button>
         </div>
@@ -4364,7 +4427,17 @@
       const btn = card.querySelector("button");
       if (btn) {
         btn.addEventListener("click", () => {
-          purchaseUpgradeDirect(def.id);
+          if (!purchaseUpgradeDirect(def.id)) {
+            if (spec.mode === "cash" || (spec.mode === "hybrid" && state.gems < spec.cash)) {
+              showToast(`💵 캐시(${spec.cash.toLocaleString()})가 부족합니다! 광석·약초를 캐서 교역소·공장에 판매하세요.`);
+            } else if (spec.energyTier === 1) {
+              showToast(`🔮 1차 에너지(${spec.energy})가 부족합니다! [제1연구소]에 광석을 넣거나 Wave 1~6을 막으세요.`);
+            } else if (spec.energyTier === 2) {
+              showToast(`💠 2차 에너지(${spec.energy})가 부족합니다! [제1연구소] 광석 연성 또는 Wave 7~12 처치로 얻으세요.`);
+            } else if (spec.energyTier === 3) {
+              showToast(`🌟 3차 에너지(${spec.energy})가 부족합니다! [제1연구소 Lv.2+] 광석 연성 또는 Wave 13+ 처치로 얻으세요.`);
+            }
+          }
           syncHUD(true);
         });
       }
@@ -4654,6 +4727,27 @@
       btn.addEventListener("click", () => {
         if (btn.dataset.skillId) castSkill(btn.dataset.skillId);
       });
+    });
+
+    const popEl = document.getElementById("currency-guide-popover");
+    const showCurrencyGuide = (kind) => {
+      if (!popEl) return;
+      if (popEl.classList.contains("open") && popEl.dataset.kind === kind) {
+        popEl.classList.remove("open");
+        return;
+      }
+      popEl.dataset.kind = kind;
+      if (kind === "cash") {
+        popEl.innerHTML = "<b>💵 캐시 (돈) 안내</b><br>• <b>획득:</b> 광석·약초·포션 판매 및 몬스터 처치<br>• <b>사용:</b> 🎒가방·⛏️곡괭이(최대 2회) 및 1~9호기·연구소 건설";
+      } else {
+        popEl.innerHTML = "<b>🔮💠🌟 차원 에너지 안내</b><br>• <b>🔮 1차:</b> 제1연구소(광석 투입) · Wave 1~6<br>• <b>💠 2차:</b> 제1연구소(Lv.1+ 소량/Lv.2 대량) · 제2연구소 · Wave 7~12<br>• <b>🌟 3차:</b> 제1연구소(Lv.2+ 소량/Lv.3 대량) · 제3·4연구소 · Wave 13~20<br>• <b>사용:</b> 🧚요정(최대 3) · ⚡스킬(최대 Lv.3) · 🔥포탑 강화";
+      }
+      popEl.classList.add("open");
+    };
+    clickBind("btn-cash-info", (e) => { e.stopPropagation(); showCurrencyGuide("cash"); });
+    clickBind("hud-dim-bar", (e) => { e.stopPropagation(); showCurrencyGuide("dim"); });
+    document.addEventListener("click", () => {
+      if (popEl) popEl.classList.remove("open");
     });
   }
 
