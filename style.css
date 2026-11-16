@@ -1436,131 +1436,138 @@ html, body {
 }
 
 /* =========================================================================
- * 모바일 세로(Portrait) & 터치 기기(최대 1024px) 가독성 확대 레이아웃
+ * 모바일 세로(Portrait) & 터치 기기(최대 1024px) 최적화 밸런스 레이아웃
  * ========================================================================= */
 @media (max-width: 768px), (max-width: 1024px) and (pointer: coarse), (orientation: portrait) and (max-width: 1024px) {
-  /* 0. 오프닝 모달 가독성 대폭 확대 */
+  /* 0. 오프닝 모달 적정 크기 */
   .opening-card {
-    padding: 20px 16px 18px;
+    padding: 16px 14px 14px;
   }
   .opening-badge {
-    font-size: 13.5px;
-    padding: 5px 14px;
+    font-size: 12px;
+    padding: 4px 12px;
   }
   .opening-title {
-    font-size: 22px;
+    font-size: 19px;
     line-height: 1.3;
   }
   .opening-lead {
-    font-size: 14.5px;
-    line-height: 1.55;
+    font-size: 13px;
+    line-height: 1.5;
   }
   .os-num {
-    font-size: 13px;
+    font-size: 11.5px;
   }
   .os-title {
-    font-size: 16px;
+    font-size: 14px;
   }
   .os-desc {
-    font-size: 13.5px;
-    line-height: 1.48;
+    font-size: 12px;
+    line-height: 1.42;
   }
   .opening-start-btn {
-    font-size: 17px;
-    padding: 13px 24px;
+    font-size: 15px;
+    padding: 11px 20px;
     width: 100%;
   }
 
-  /* 1. 상단 좌/우 HUD 겹침 방지 & 글자 크기 확대 */
+  /* 1. 상단 좌/우 HUD: 공간 절약 + 1줄 정렬(버튼 줄바꿈·가림 방지) */
   #hud-top-left {
     max-width: 47vw;
-    gap: 5px;
+    gap: 4px;
   }
 
   #hud-top-right {
-    max-width: 49vw;
-    gap: 5px;
+    max-width: 50vw;
+    gap: 4px;
   }
 
   .title-pill {
-    font-size: 12.5px !important;
-    padding: 4px 10px !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    display: none !important;
   }
 
   .stat-card, .bag-card {
     min-width: 0 !important;
     width: 100% !important;
-    padding: 6px 10px !important;
-    border-radius: 16px !important;
+    padding: 4px 9px !important;
+    border-radius: 14px !important;
   }
 
   .lv-badge {
-    font-size: 12px !important;
-    padding: 2px 8px !important;
+    font-size: 10px !important;
+    padding: 1px 6px !important;
     flex-shrink: 0;
   }
 
   .hero-role, .bag-label, .bag-value, .hp-label, .hp-val {
-    font-size: 12.5px !important;
+    font-size: 10.5px !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .currency-row, .dim-energy-bar, .control-row {
-    flex-wrap: wrap;
+  .currency-row, .dim-energy-bar {
+    flex-wrap: nowrap;
     justify-content: flex-end;
-    gap: 4px;
+    gap: 3px;
+  }
+
+  .control-row {
+    flex-wrap: nowrap !important;
+    justify-content: flex-end;
+    gap: 3px;
   }
 
   .currency-pill {
-    padding: 5px 11px !important;
-    gap: 5px !important;
+    padding: 3px 9px !important;
+    gap: 4px !important;
   }
 
   .cur-name {
-    font-size: 12.5px !important;
+    font-size: 10.5px !important;
   }
 
   .cur-val {
-    font-size: 15px !important;
+    font-size: 12.5px !important;
   }
 
   .dim-pill {
-    padding: 4px 8px !important;
-    font-size: 12.5px !important;
+    padding: 2px 6px !important;
+    font-size: 11px !important;
   }
 
   .fairy-btn {
-    padding: 6px 11px !important;
-    font-size: 13px !important;
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    white-space: nowrap;
   }
 
   .icon-btn {
-    width: 34px !important;
-    height: 34px !important;
-    font-size: 16px !important;
-  }
-
-  /* 2. 상단 중앙 배너 세로 스택 정리 & 글자 확대 */
-  .wave-hud {
-    top: calc(152px + var(--safe-top)) !important;
-    width: calc(100vw - 16px);
-    max-width: 520px;
-    flex-wrap: wrap;
-    justify-content: center;
-    border-radius: 16px;
-    padding: 7px 12px;
-    gap: 6px;
-    font-size: 13px !important;
-  }
-
-  .wave-badge, .wave-monsters, .wave-exp-badge, .wave-now-btn {
+    width: 26px !important;
+    height: 26px !important;
     font-size: 12.5px !important;
+  }
+
+  /* 2. 상단 중앙 배너: 1줄 콤팩트 배치로 3D 시야 확보 */
+  .wave-hud {
+    top: calc(88px + var(--safe-top)) !important;
+    width: calc(100vw - 16px);
+    max-width: 500px;
+    flex-wrap: nowrap;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    gap: 5px;
+    font-size: 11px !important;
+  }
+
+  .wave-exp-badge {
+    display: none !important;
+  }
+
+  .wave-badge, .wave-monsters, .wave-now-btn {
+    font-size: 11px !important;
+    padding: 2px 7px !important;
   }
 
   .mission-banner {
@@ -1568,58 +1575,62 @@ html, body {
   }
 
   .guide-banner {
-    top: calc(222px + var(--safe-top)) !important;
+    top: calc(122px + var(--safe-top)) !important;
     width: calc(100vw - 16px);
-    max-width: 520px;
-    font-size: 13px !important;
-    padding: 6px 12px;
-    gap: 7px;
+    max-width: 500px;
+    font-size: 11.5px !important;
+    padding: 4px 10px;
+    gap: 6px;
   }
 
   .guide-step-badge, .guide-dist {
-    font-size: 12.5px !important;
+    font-size: 10.5px !important;
   }
 
   #toast-banner {
-    top: calc(266px + var(--safe-top)) !important;
-    font-size: 13.5px !important;
-    padding: 8px 16px !important;
+    top: calc(156px + var(--safe-top)) !important;
+    font-size: 12px !important;
+    padding: 6px 14px !important;
   }
 
-  /* 3. 캐릭터 머리 위 가방 게이지 & 플로팅 텍스트 가독성 */
+  /* 3. 캐릭터 머리 위 가방 게이지 & 플로팅 텍스트 */
   #hero-bag-float, .float-popup {
-    font-size: 15.5px !important;
+    font-size: 13px !important;
   }
 
-  /* 4. 하단 스킬 핫바(좌측 3x2)와 조이스틱(우측) 완전 분리 */
+  /* 4. 하단 스킬 핫바(좌측 3x2 슬림)와 조이스틱(우측) 균형 배치 */
   .skill-hotbar {
     left: calc(10px + var(--safe-left)) !important;
     right: auto !important;
-    bottom: calc(16px + var(--safe-bottom)) !important;
+    bottom: calc(12px + var(--safe-bottom)) !important;
     transform: none !important;
     display: grid !important;
-    grid-template-columns: repeat(3, 56px);
-    gap: 6px;
-    padding: 7px 8px;
-    border-radius: 18px;
+    grid-template-columns: repeat(3, 44px);
+    gap: 5px;
+    padding: 5px 6px;
+    border-radius: 14px;
   }
 
   .skill-slot {
-    width: 56px !important;
-    height: 60px !important;
-    border-radius: 12px;
+    width: 44px !important;
+    height: 46px !important;
+    border-radius: 10px;
+  }
+
+  .skill-stars {
+    font-size: 8px !important;
   }
 
   .skill-ico {
-    font-size: 20px !important;
+    font-size: 16px !important;
   }
 
   .skill-name {
-    font-size: 11px !important;
+    font-size: 9.5px !important;
   }
 
   .skill-lv {
-    font-size: 10.5px !important;
+    font-size: 9px !important;
   }
 
   .skill-key {
@@ -1627,80 +1638,80 @@ html, body {
   }
 
   .auto-skill-btn {
-    width: 56px !important;
-    height: 60px !important;
-    font-size: 11.5px !important;
+    width: 44px !important;
+    height: 46px !important;
+    font-size: 9.5px !important;
     padding: 2px !important;
+    border-radius: 10px;
   }
 
   #joystick-base {
     left: auto !important;
     top: auto !important;
     right: calc(16px + var(--safe-right)) !important;
-    bottom: calc(22px + var(--safe-bottom)) !important;
+    bottom: calc(14px + var(--safe-bottom)) !important;
     margin-left: 0 !important;
     margin-top: 0 !important;
-    width: 118px !important;
-    height: 118px !important;
-    opacity: 0.9 !important;
+    width: 96px !important;
+    height: 96px !important;
+    opacity: 0.86 !important;
   }
 
   #joystick-stick {
-    width: 48px !important;
-    height: 48px !important;
-    margin-left: -24px !important;
-    margin-top: -24px !important;
+    width: 40px !important;
+    height: 40px !important;
+    margin-left: -20px !important;
+    margin-top: -20px !important;
   }
 
   #joystick-hint {
     left: auto !important;
-    right: calc(14px + var(--safe-right)) !important;
-    bottom: calc(148px + var(--safe-bottom)) !important;
+    right: calc(10px + var(--safe-right)) !important;
+    bottom: calc(116px + var(--safe-bottom)) !important;
     transform: none !important;
-    font-size: 12.5px !important;
-    padding: 5px 11px;
+    font-size: 10px !important;
+    padding: 3px 8px;
   }
 
-  /* 5. 상점 모달 모바일 가독성 확대 */
+  /* 5. 상점 모달 적정 크기 */
   .modal-sheet {
-    width: 96vw;
-    max-height: 86dvh;
-    border-radius: 20px;
+    width: 95vw;
+    max-height: 85dvh;
+    border-radius: 18px;
   }
 
   .sheet-header {
     flex-wrap: wrap;
-    padding: 14px 14px 10px;
-    gap: 8px;
-  }
-
-  .sheet-header h2 {
-    font-size: 18px;
-  }
-
-  .sheet-sub {
-    font-size: 13px;
-  }
-
-  .shop-tabs {
-    padding: 9px 12px;
+    padding: 11px 13px 9px;
     gap: 6px;
   }
 
+  .sheet-header h2 {
+    font-size: 15.5px;
+  }
+
+  .sheet-sub {
+    font-size: 11.5px;
+  }
+
+  .shop-tabs {
+    padding: 7px 10px;
+    gap: 5px;
+  }
+
   .shop-tab {
-    padding: 8px 12px;
-    font-size: 13.5px;
+    padding: 6px 10px;
+    font-size: 12px;
   }
 
   .shop-body {
-    padding: 12px;
+    padding: 10px;
   }
 
   .shop-grid {
     grid-template-columns: 1fr;
   }
 }
-
 
 .cash-pill, .dim-energy-bar {
   pointer-events: auto;
