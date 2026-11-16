@@ -74,7 +74,7 @@
 
     <div class="dim-energy-bar" id="hud-dim-bar" title="수급처: 🔮1차(제1연구소·W1~6) / 💠2차(제1연구소Lv.1+·제2연구소·W7~12) / 🌟3차(제1연구소Lv.2+·제3·4연구소·W13~20)">
       <div class="dim-pill dim-pill--1" title="1단계 차원 에너지">
-        <span>🔮</span><span class="dim-lbl">1차</span><b class="num" id="ui-dim1">25</b>
+        <span>🔮</span><span class="dim-lbl">1차</span><b class="num" id="ui-dim1">0</b>
       </div>
       <div class="dim-pill dim-pill--2" title="2단계 차원 에너지">
         <span>💠</span><span class="dim-lbl">2차</span><b class="num" id="ui-dim2">0</b>
@@ -181,16 +181,15 @@
           <p class="sheet-sub" id="ui-shop-era" style="color:#fbbf24;font-weight:700;">🗺️ Era 1 · 기본 공방 타운 (상한 Lv.5)</p>
         </div>
         <div class="sheet-header-right">
-          <span class="modal-dim-chip num" id="ui-shop-dim">🔮 25 · 💠 0 · 🌟 0</span>
+          <span class="modal-dim-chip num" id="ui-shop-dim">🔮 0 · 💠 0 · 🌟 0</span>
           <span class="modal-cash-chip num" id="ui-shop-cash">💵 45</span>
           <button class="fairy-btn icon-btn modal-close-x" id="btn-close-shop" title="닫기">✕</button>
         </div>
       </div>
       <div class="shop-tabs">
-        <button class="shop-tab active" data-tab="wizard">⚒️ 장비 기술(에너지)</button>
+        <button class="shop-tab active" data-tab="wizard">⚒️ 장비·성문</button>
         <button class="shop-tab" data-tab="automation">🔮 연구소·설비(캐시)</button>
         <button class="shop-tab" data-tab="skills">✨ 원소 스킬 (★1~5)</button>
-        <button class="shop-tab" data-tab="defense">🛡️ 성문·포탑(에너지)</button>
       </div>
       <div id="shop-body" class="shop-body"></div>
     </div>
@@ -231,7 +230,7 @@
     <div class="modal-confirm glass-panel gameover-card">
       <div class="gameover-badge" id="gameover-badge">💥 DEFEAT</div>
       <h3 id="gameover-title">💔 마을 출입구 성문이 무너졌습니다!</h3>
-      <p id="gameover-desc">동쪽 디펜스 기술 연구소에서 수호 포탑과 방벽, 원소 스킬(★1~★5)을 강화해 성문을 지켜내세요!</p>
+      <p id="gameover-desc">동쪽 디펜스 기술 연구소에서 성문 강화와 원소 스킬(★1~★5)을 강화해 성문을 지켜내세요!</p>
       <div class="confirm-actions">
         <button class="fairy-btn shop-btn" id="btn-retry-wave">🔄 현재 웨이브 재도전</button>
         <button class="fairy-btn danger-btn" id="btn-gameover-reset">🗑️ 처음부터 새로 시작</button>
