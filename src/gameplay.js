@@ -6,7 +6,7 @@
 (function () {
   "use strict";
 
-  const SAVE_KEY = "fairy_alchemy_tycoon_v10";
+  const SAVE_KEY = "fairy_alchemy_tycoon_v11";
   const TOTAL_WAVES = 20;
   const FIRST_WAVE_DELAY = 600; // 10 minutes before Wave 1!
   const WAVE_INTERVAL = 180; // 3 minutes between subsequent waves
@@ -4416,6 +4416,7 @@
   function loadGame() {
     if (typeof localStorage === "undefined") return;
     try {
+      localStorage.removeItem("fairy_alchemy_tycoon_v10");
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw);
