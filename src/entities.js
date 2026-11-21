@@ -1154,45 +1154,64 @@
     const root = new THREE.Group();
     root.position.set(x, 0, z);
 
-    // Exact 1-tile (2.0m x 2.0m) luxury brass-trimmed obsidian storage
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(2.0, 0.16, 2.0),
-      new THREE.MeshLambertMaterial({ color: 0x1e2540 })
-    );
-    base.position.y = 0.08;
+    // 1-tile (2.0m x 2.0m) Storybook Arcane Timber & Brass Depot
+    const rimColor = new THREE.Color(accentHex);
+    const woodMat = new THREE.MeshLambertMaterial({ color: 0x4a3525 });
+    const slateMat = new THREE.MeshLambertMaterial({ color: 0x1c2340 });
+    const brassMat = new THREE.MeshLambertMaterial({ color: 0xd9ae5e });
+    const glowMat = new THREE.MeshBasicMaterial({ color: rimColor, side: THREE.DoubleSide, transparent: true, opacity: 0.55 });
+
+    const base = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.22, 2.02), slateMat);
+    base.position.y = 0.11;
     base.receiveShadow = true;
     root.add(base);
 
-    const rimColor = new THREE.Color(accentHex);
-    const rim = new THREE.Mesh(
-      new THREE.BoxGeometry(2.08, 0.08, 2.08),
-      new THREE.MeshLambertMaterial({ color: rimColor })
-    );
-    rim.position.y = 0.04;
+    const rim = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.08, 2.12), brassMat);
+    rim.position.y = 0.05;
     root.add(rim);
 
-    // 4 Corner Brass Pillars so 1-tile storage reads clearly in 3D
-    const postGeo = new THREE.BoxGeometry(0.16, 0.72, 0.16);
-    const postMat = new THREE.MeshLambertMaterial({ color: rimColor });
-    for (const [px, pz] of [[-0.88, -0.88], [0.88, -0.88], [-0.88, 0.88], [0.88, 0.88]]) {
-      const post = new THREE.Mesh(postGeo, postMat);
-      post.position.set(px, 0.42, pz);
+    // Glowing arcane floor rune ring
+    const runeRing = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.78, 20), glowMat);
+    runeRing.rotation.x = -Math.PI * 0.5;
+    runeRing.position.y = 0.23;
+    root.add(runeRing);
+
+    // Chunky timber corner posts + wooden side rails + brass caps
+    const postGeo = new THREE.BoxGeometry(0.22, 0.85, 0.22);
+    const capGeo = new THREE.OctahedronGeometry(0.14, 0);
+    const capMat = new THREE.MeshLambertMaterial({ color: rimColor, emissive: rimColor, emissiveIntensity: 0.45 });
+    for (const [px, pz] of [[-0.86, -0.86], [0.86, -0.86], [-0.86, 0.86], [0.86, 0.86]]) {
+      const post = new THREE.Mesh(postGeo, woodMat);
+      post.position.set(px, 0.54, pz);
       post.castShadow = true;
       root.add(post);
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.set(px, 1.04, pz);
+      root.add(cap);
+    }
+    // Side wooden rail slats (open front for visual clarity)
+    const railBack = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.14, 0.10), woodMat);
+    railBack.position.set(0, 0.62, -0.86);
+    root.add(railBack);
+    for (const sx of [-0.86, 0.86]) {
+      const railSide = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.14, 1.72), woodMat);
+      railSide.position.set(sx, 0.62, 0);
+      root.add(railSide);
     }
 
     const stackAnchor = new THREE.Group();
-    stackAnchor.position.set(0, 0.18, 0);
+    stackAnchor.position.set(0, 0.24, 0);
     root.add(stackAnchor);
 
+    // Compact, non-cluttered overhead badge
     const bannerSprite = createOverheadBannerSprite({
       text: `${title} · 0`,
       accentColor: accentHex,
       borderColor: accentHex,
-      scaleX: 2.8,
-      scaleY: 0.72,
+      scaleX: 2.15,
+      scaleY: 0.54,
     });
-    bannerSprite.position.set(0, 2.15, 0);
+    bannerSprite.position.set(0, 1.92, 0);
     root.add(bannerSprite);
 
     return { root, stackAnchor, bannerSprite, x, z, accent: accentHex, title };

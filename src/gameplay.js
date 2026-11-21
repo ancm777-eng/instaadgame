@@ -208,6 +208,9 @@
     projectiles: [],
     fxMeshes: [],
     flyingBricks: [],
+    heroBackVisuals: [],
+    popAnims: [],
+    dustTimer: 0,
     skillCooldown: 0,
     stageActive: false,
     stageTimer: FIRST_STAGE_DELAY,
@@ -595,6 +598,46 @@
     }
   }
 
+  function spawnFlyingItem(itemType, sx, sy, sz, tx, ty, tz, onArrive) {
+    const Engine = window.Engine;
+    const Entities = window.Entities;
+    if (!Engine || !Engine.vfxGroup || !Entities) {
+      if (onArrive) onArrive();
+      return;
+    }
+    const mesh = Entities.createItemBlock(itemType);
+    mesh.scale.setScalar(0.68);
+    mesh.position.set(sx, sy, sz);
+    Engine.vfxGroup.add(mesh);
+    runtime.flyingBricks.push({ mesh, sx, sy, sz, tx, ty, tz, t: 0, dur: 0.22, onArrive });
+  }
+
+  function triggerBuildingPopIn(rootObj) {
+    if (!rootObj) return;
+    rootObj.scale.set(0.05, 0.05, 0.05);
+    runtime.popAnims.push({ obj: rootObj, t: 0, dur: 0.42 });
+    spawnBurstVfx(rootObj.position.x, 1.2, rootObj.position.z, 0xf7dca1, 14);
+  }
+
+  function syncCrateStack(anchor, itemList, poolList, maxDraw = 12, cols = 1) {
+    if (!anchor || !window.Entities) return;
+    const count = Math.min(itemList.length, maxDraw);
+    while (poolList.length < count) {
+      const m = window.Entities.createItemBlock(itemList[poolList.length] || "ore");
+      m.scale.setScalar(0.75);
+      anchor.add(m);
+      poolList.push(m);
+    }
+    while (poolList.length > count) {
+      anchor.remove(poolList.pop());
+    }
+    for (let i = 0; i < count; i++) {
+      const col = cols > 1 ? i % cols : 0;
+      const layer = Math.floor(i / cols);
+      poolList[i].position.set(cols > 1 ? (col - 0.5) * 0.72 : 0, layer * 0.19, 0);
+    }
+  }
+
   function spawnShockwaveRing(x, y, z, color, maxScale, dur = 0.4) {
     const Engine = window.Engine;
     if (!Engine || !Engine.vfxGroup) return;
@@ -834,7 +877,7 @@
   }
 
   function updateHarvestAndLogistics(dt) {
-    // 1. Node respawn & hero harvest
+    // 1. Node respawn, hit wobble & hero harvest with parabolic flying item juice
     for (const node of runtime.farmNodes) {
       if (node.respawnTimer > 0) {
         node.respawnTimer -= dt;
@@ -842,6 +885,12 @@
           node.respawnTimer = 0;
           node.hp = node.maxHp;
           if (node.entity && node.entity.visualRoot) node.entity.visualRoot.scale.set(1, 1, 1);
+        }
+      } else if (node.hitAnim > 0) {
+        node.hitAnim = Math.max(0, node.hitAnim - dt);
+        if (node.entity && node.entity.visualRoot) {
+          const wob = 1 + Math.sin(node.hitAnim * 36) * 0.18;
+          node.entity.visualRoot.scale.set(wob, 2 - wob, wob);
         }
       }
     }
@@ -860,14 +909,17 @@
         player.harvestCooldown = 0.28;
         player.swingTimer = player.swingDuration;
         best.hp -= 1;
+        best.hitAnim = 0.22;
+        const meta = ITEM_META[best.kind];
+        spawnBurstVfx(best.x, 0.85, best.z, meta.color, 5);
         if (best.hp <= 0) {
           best.respawnTimer = 4.0;
           if (best.entity && best.entity.visualRoot) best.entity.visualRoot.scale.set(0.01, 0.01, 0.01);
         }
         player.bagItems.push(best.kind);
-        const meta = ITEM_META[best.kind];
+        spawnFlyingItem(best.kind, best.x, 0.9, best.z, player.x, 1.4, player.z);
         spawnFloatingText(best.x, 1.5, best.z, `+1 ${meta.icon}`, "#bae6fd");
-        playTone(580, 0.05, "sine", 0.03);
+        playTone(540 + Math.min(260, player.bagItems.length * 14), 0.05, "sine", 0.06);
       }
     }
 
@@ -1072,11 +1124,15 @@
       }
     }
 
-    // 5. Update 1-Tile Storage Counts
+    // 5. Update 1-Tile Storage Counts & Visible 3D Stacked Crates
     for (const id of Object.keys(runtime.storages)) {
       const st = runtime.storages[id];
-      const cnt = state.storages[id].length;
-      window.Entities.updateOverheadBannerSprite(st.entity.bannerSprite, `${st.title} · ${cnt}`, st.accent);
+      const arr = state.storages[id];
+      window.Entities.updateOverheadBannerSprite(st.entity.bannerSprite, `${st.title} · ${arr.length}`, st.accent);
+      syncCrateStack(st.entity.stackAnchor, arr, st.visuals, 12, 2);
+    }
+    if (sceneObjs.hero && sceneObjs.hero.backStackAnchor) {
+      syncCrateStack(sceneObjs.hero.backStackAnchor, player.bagItems, runtime.heroBackVisuals, 10, 1);
     }
   }
 
@@ -1251,6 +1307,46 @@
         genEl.classList.remove("active");
       }
     }
+
+    // Animate parabolic flying item blocks
+    for (let i = runtime.flyingBricks.length - 1; i >= 0; i--) {
+      const fb = runtime.flyingBricks[i];
+      fb.t += dt;
+      const p = Math.min(1, fb.t / fb.dur);
+      fb.mesh.position.set(
+        fb.sx + (fb.tx - fb.sx) * p,
+        fb.sy + (fb.ty - fb.sy) * p + Math.sin(p * Math.PI) * 1.45,
+        fb.sz + (fb.tz - fb.sz) * p
+      );
+      fb.mesh.rotation.y += dt * 7;
+      if (p >= 1) {
+        if (Engine && Engine.vfxGroup) Engine.vfxGroup.remove(fb.mesh);
+        if (fb.onArrive) fb.onArrive();
+        runtime.flyingBricks.splice(i, 1);
+      }
+    }
+
+    // Animate elastic building pop-in bounce
+    for (let i = runtime.popAnims.length - 1; i >= 0; i--) {
+      const pa = runtime.popAnims[i];
+      pa.t += dt;
+      const p = Math.min(1, pa.t / pa.dur);
+      const ease = p < 0.65 ? (p / 0.65) * 1.15 : 1.15 - ((p - 0.65) / 0.35) * 0.15;
+      pa.obj.scale.setScalar(Math.max(0.05, ease));
+      if (p >= 1) {
+        pa.obj.scale.setScalar(1);
+        runtime.popAnims.splice(i, 1);
+      }
+    }
+
+    // Subtle footstep starlight dust while hero runs
+    if (Math.hypot(player.vx, player.vz) > 1.5) {
+      runtime.dustTimer += dt;
+      if (runtime.dustTimer >= 0.16) {
+        runtime.dustTimer = 0;
+        spawnBurstVfx(player.x, 0.15, player.z, 0xd8b4fe, 1);
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1296,7 +1392,7 @@
     setText("ui-dim3", state.dim3.toLocaleString());
 
     const cap = getHeroBagCap();
-    setText("ui-bag", `🎒 ${player.bagItems.length}/${cap}`);
+    setText("ui-bag", `${player.bagItems.length}/${cap}`);
 
     const invEl = document.getElementById("invasion-banner");
     if (invEl) {
@@ -1312,18 +1408,22 @@
     const cdEl = document.getElementById("ui-skill-cd");
     if (cdEl) cdEl.style.height = `${Math.max(0, Math.min(100, (runtime.skillCooldown / curSkill.cooldown) * 100))}%`;
 
-    // Hero floating bag
+    // Minimal Hero floating bag pill (only visible while carrying items)
     const hbf = document.getElementById("hero-bag-float");
     if (hbf && window.Engine) {
-      const p = window.Engine.worldToScreen({ x: player.x, y: 3.1, z: player.z });
-      hbf.style.display = "block";
-      hbf.style.left = `${p.x}px`;
-      hbf.style.top = `${p.y}px`;
-      setText("hbf-cap", `${player.bagItems.length} / ${cap}`);
-      const fill = document.getElementById("hbf-bar-fill");
-      if (fill) fill.style.width = `${Math.min(100, (player.bagItems.length / cap) * 100)}%`;
-      const maxBadge = document.getElementById("hbf-max-badge");
-      if (maxBadge) maxBadge.style.display = player.bagItems.length >= cap ? "block" : "none";
+      if (player.bagItems.length === 0) {
+        hbf.style.display = "none";
+      } else {
+        const p = window.Engine.worldToScreen({ x: player.x, y: 2.95, z: player.z });
+        hbf.style.display = "block";
+        hbf.style.left = `${p.x}px`;
+        hbf.style.top = `${p.y}px`;
+        setText("hbf-cap", `${player.bagItems.length} / ${cap}`);
+        const fill = document.getElementById("hbf-bar-fill");
+        if (fill) fill.style.width = `${Math.min(100, (player.bagItems.length / cap) * 100)}%`;
+        const maxBadge = document.getElementById("hbf-max-badge");
+        if (maxBadge) maxBadge.style.display = player.bagItems.length >= cap ? "block" : "none";
+      }
     }
 
     // Skill ready dot
@@ -1604,17 +1704,30 @@
       btn.addEventListener("click", () => openShop(btn.dataset.tab));
     });
 
+    const settingsPop = document.getElementById("settings-popover");
+    document.getElementById("btn-settings-toggle")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      settingsPop?.classList.toggle("open");
+    });
+
     document.getElementById("btn-home")?.addEventListener("click", () => {
       player.x = HERO_SPAWN.x; player.z = HERO_SPAWN.z;
+      settingsPop?.classList.remove("open");
       showToast("🏡 중앙 광장으로 귀환했습니다.");
     });
     document.getElementById("btn-mute")?.addEventListener("click", (e) => {
       state.muted = !state.muted;
-      e.currentTarget.textContent = state.muted ? "🔇" : "🔊";
+      e.currentTarget.textContent = state.muted ? "🔇 사운드 OFF" : "🔊 사운드 ON";
       if (window.ClassicalBGM) window.ClassicalBGM.setMuted(state.muted);
     });
-    document.getElementById("btn-save")?.addEventListener("click", () => saveGame(true));
-    document.getElementById("btn-reset")?.addEventListener("click", () => document.getElementById("reset-modal")?.classList.add("open"));
+    document.getElementById("btn-save")?.addEventListener("click", () => {
+      settingsPop?.classList.remove("open");
+      saveGame(true);
+    });
+    document.getElementById("btn-reset")?.addEventListener("click", () => {
+      settingsPop?.classList.remove("open");
+      document.getElementById("reset-modal")?.classList.add("open");
+    });
     document.getElementById("btn-cancel-reset")?.addEventListener("click", () => document.getElementById("reset-modal")?.classList.remove("open"));
     document.getElementById("btn-confirm-reset")?.addEventListener("click", () => {
       localStorage.removeItem(SAVE_KEY);
@@ -1846,6 +1959,7 @@
             state.gems -= chk.next.cost;
             state.labLv++;
             syncBuildingVisibility();
+            triggerBuildingPopIn(runtime.buildings.energy_lab.entity.root);
             showToast(`🔮 몽글몽글 연구실 Lv.${state.labLv} 완공!`);
             playTone(880, 0.14, "triangle", 0.12);
           };
@@ -1859,6 +1973,7 @@
           state.gems -= 1000;
           state.goldKilnBuilt = true;
           syncBuildingVisibility();
+          triggerBuildingPopIn(runtime.buildings.gold_kiln.entity.root);
           showToast("🔥 금 나와라 뚝딱 가마 완공!");
           playTone(880, 0.14, "triangle", 0.12);
         };
@@ -1871,6 +1986,7 @@
           state.gems -= 1000;
           state.starWorkshopBuilt = true;
           syncBuildingVisibility();
+          triggerBuildingPopIn(runtime.buildings.star_crystal_workshop.entity.root);
           showToast("✨ 별가루 뭉치기 공방 완공!");
           playTone(880, 0.14, "triangle", 0.12);
         };
@@ -1883,6 +1999,7 @@
           state.gems -= 10000;
           state.mixerBuilt = true;
           syncBuildingVisibility();
+          triggerBuildingPopIn(runtime.buildings.star_gold_mixer.entity.root);
           showToast("💎 우주최강 금별 믹서기 완공!");
           playTone(880, 0.14, "triangle", 0.12);
         };

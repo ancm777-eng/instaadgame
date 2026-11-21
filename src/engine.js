@@ -43,6 +43,8 @@
   let _glowTex = null;
   let _sceneryPopulated = false;
   const camPan = { active: false, tx: 0, tz: 0, timer: 0, duration: 1.4 };
+  const fireflies = [];
+  let ambientTime = 0;
 
   function makeRadialCanvasTexture(innerRgba, midRgba, outerRgba, size = 128) {
     if (typeof document === "undefined") return null;
@@ -84,13 +86,21 @@
     canvas.height = 512;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#1c3336";
+    ctx.fillStyle = "#142636";
     ctx.fillRect(0, 0, 512, 512);
-    const patches = ["#234043", "#182b2e", "#2b4d4f", "#20393b"];
-    for (let i = 0; i < 140; i++) {
+    const patches = ["#1a3245", "#112030", "#1f3a4d", "#182d40"];
+    for (let i = 0; i < 160; i++) {
       ctx.fillStyle = patches[i % patches.length];
       ctx.beginPath();
-      ctx.arc((i * 73) % 512, (i * 139) % 512, 16 + (i % 24), 0, Math.PI * 2);
+      ctx.arc((i * 73) % 512, (i * 139) % 512, 14 + (i % 24), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Tiny glowing twilight wildflowers & starlight moss dots
+    const flowers = ["rgba(192,132,252,0.55)", "rgba(125,211,252,0.5)", "rgba(253,224,71,0.5)"];
+    for (let i = 0; i < 80; i++) {
+      ctx.fillStyle = flowers[i % flowers.length];
+      ctx.beginPath();
+      ctx.arc((i * 97 + 19) % 512, (i * 163 + 41) % 512, 2 + (i % 3), 0, Math.PI * 2);
       ctx.fill();
     }
     const tex = new THREE.CanvasTexture(canvas);
@@ -112,23 +122,28 @@
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    // Luxury Dark Slate Stone & Subtle Gold Inlay Grid
-    ctx.fillStyle = "#1c2238";
+    // Hand-painted style Moonlit Twilight Cobblestone Floor
+    ctx.fillStyle = "#161b30";
     ctx.fillRect(0, 0, W, H);
 
-    ctx.strokeStyle = "rgba(230, 194, 122, 0.08)";
-    ctx.lineWidth = 2;
-    for (let x = 0; x <= W; x += 64) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, H);
-      ctx.stroke();
-    }
-    for (let y = 0; y <= H; y += 64) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
+    const tileW = 48;
+    const tileH = 36;
+    const stoneTones = ["#1e2542", "#232b4a", "#1b213b", "#263052", "#1f2744"];
+    for (let row = 0; row * tileH < H; row++) {
+      const offset = (row % 2) * (tileW * 0.5);
+      for (let col = -1; col * tileW < W + tileW; col++) {
+        const x = col * tileW + offset;
+        const y = row * tileH;
+        const hash = Math.abs((row * 31 + col * 17) % stoneTones.length);
+        ctx.fillStyle = stoneTones[hash];
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x + 2, y + 2, tileW - 4, tileH - 4, 6);
+        else ctx.rect(x + 2, y + 2, tileW - 4, tileH - 4);
+        ctx.fill();
+        // Subtle moonlight top bevel highlight
+        ctx.fillStyle = "rgba(186, 230, 253, 0.05)";
+        ctx.fillRect(x + 5, y + 4, tileW - 10, 3);
+      }
     }
 
     const wx = (x) => ((x - TOWN_BOUNDS.minX) / (TOWN_BOUNDS.maxX - TOWN_BOUNDS.minX)) * W;
@@ -153,26 +168,31 @@
       ctx.restore();
     }
 
-    // Main Cross Pathways (Champagne Stone)
-    fillZone(-16.5, -1.5, 18.0, 2.5, "#2b3352", "rgba(230, 194, 122, 0.35)", 10);
-    fillZone(-2.5, -15.0, 2.5, 12.0, "#2b3352", "rgba(230, 194, 122, 0.35)", 10);
+    // Main Cross Boulevards (Warm Lantern-lit Stone)
+    fillZone(-16.5, -1.5, 18.0, 2.5, "rgba(48, 56, 92, 0.72)", "rgba(247, 220, 161, 0.45)", 12);
+    fillZone(-2.5, -15.0, 2.5, 12.0, "rgba(48, 56, 92, 0.72)", "rgba(247, 220, 161, 0.45)", 12);
 
-    // North Arcane Energy Lab Zone
-    fillZone(-8.5, -15.2, 8.5, -8.2, "#241d42", "rgba(192, 132, 252, 0.45)", 18);
+    // North Arcane Lab Sanctuary + Glowing Rune Circle
+    fillZone(-8.5, -15.2, 8.5, -8.2, "rgba(44, 28, 86, 0.78)", "rgba(192, 132, 252, 0.65)", 20);
+    ctx.save();
+    ctx.translate(wx(0), wz(-11.7));
+    ctx.strokeStyle = "rgba(216, 180, 254, 0.42)";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 0, 72, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 52, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
 
-    // Central-West/East Crafting & Market Strip
-    fillZone(-16.2, -7.2, 13.8, -0.5, "#222944", "rgba(230, 194, 122, 0.42)", 18);
+    // Central Atelier Crafting Deck
+    fillZone(-16.2, -7.2, 14.2, -0.5, "rgba(32, 40, 72, 0.74)", "rgba(247, 220, 161, 0.52)", 20);
 
-    // Central Spawn Medallion
+    // Ornate Central Arcane Medallion around Spawn (0, 4.5)
     ctx.save();
     ctx.translate(wx(0), wz(4.5));
-    ctx.beginPath();
-    ctx.arc(0, 0, 56, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(230, 194, 122, 0.14)";
-    ctx.fill();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "rgba(230, 194, 122, 0.55)";
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 58, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(247, 220, 161, 0.10)"; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(247, 220, 161, 0.62)"; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 42, 0, Math.PI * 2);
+    ctx.lineWidth = 2; ctx.strokeStyle = "rgba(192, 132, 252, 0.5)"; ctx.stroke();
     ctx.restore();
 
     const tex = new THREE.CanvasTexture(canvas);
@@ -257,6 +277,60 @@
     topMesh.position.set(0, 0.04, (TOWN_BOUNDS.minZ + TOWN_BOUNDS.maxZ) * 0.5);
     topMesh.receiveShadow = true;
     envGroup.add(topMesh);
+
+    // Warm Golden Arcane Street Lanterns (Warm-vs-Cool Contrast!)
+    const lanternSpots = [
+      [-14.5, 2.2], [-4.2, 2.2], [4.2, 2.2], [14.5, 2.2],
+      [-7.5, -8.6], [7.5, -8.6],
+    ];
+    const postMat = new THREE.MeshLambertMaterial({ color: 0x2a2d44 });
+    const glassMat = new THREE.MeshBasicMaterial({ color: 0xffd27d });
+    const glowTex = getGlowTexture();
+    for (const [lx, lz] of lanternSpots) {
+      const g = new THREE.Group();
+      g.position.set(lx, 0, lz);
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 2.6, 8), postMat);
+      post.position.y = 1.3;
+      g.add(post);
+      const lamp = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), glassMat);
+      lamp.position.y = 2.7;
+      g.add(lamp);
+      if (glowTex) {
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: glowTex, color: 0xffb84d, transparent: true, opacity: 0.72,
+          blending: THREE.AdditiveBlending, depthWrite: false,
+        }));
+        sp.position.y = 2.7;
+        sp.scale.set(2.4, 2.4, 1);
+        g.add(sp);
+      }
+      const pl = new THREE.PointLight(0xffb85c, 1.15, 13, 1.6);
+      pl.position.set(0, 2.8, 0);
+      g.add(pl);
+      envGroup.add(g);
+    }
+
+    // Floating Starlight Fireflies (Atmospheric Magic Depth)
+    if (glowTex) {
+      const ffColors = [0xfef08a, 0xd8b4fe, 0x7dd3fc];
+      for (let i = 0; i < 40; i++) {
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: glowTex,
+          color: ffColors[i % ffColors.length],
+          transparent: true,
+          opacity: 0.75,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        }));
+        const bx = (Math.random() - 0.5) * 34;
+        const bz = -14 + Math.random() * 34;
+        const by = 0.8 + Math.random() * 2.6;
+        sp.position.set(bx, by, bz);
+        sp.scale.setScalar(0.32 + Math.random() * 0.28);
+        envGroup.add(sp);
+        fireflies.push({ sp, bx, by, bz, phase: Math.random() * 6.28, spd: 0.8 + Math.random() * 1.1 });
+      }
+    }
   }
 
   function populateGlbScenery() {
@@ -468,6 +542,18 @@
     if (dirLight) {
       dirLight.position.set(camTarget.x - 14, 34, camTarget.z + 18);
       if (dirLight.target) dirLight.target.position.set(camTarget.x, 0, camTarget.z);
+    }
+
+    // Animate ambient starlight fireflies
+    ambientTime += step;
+    for (const f of fireflies) {
+      const t = ambientTime * f.spd + f.phase;
+      f.sp.position.set(
+        f.bx + Math.sin(t * 0.7) * 0.9,
+        f.by + Math.sin(t * 1.3) * 0.45,
+        f.bz + Math.cos(t * 0.6) * 0.9
+      );
+      f.sp.material.opacity = 0.35 + 0.5 * Math.abs(Math.sin(t * 1.6));
     }
   }
 
