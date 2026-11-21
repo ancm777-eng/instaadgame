@@ -354,6 +354,7 @@
     // Hero
     sceneObjs.hero = Entities.createPlayerHero();
     sceneObjs.hero.root.position.set(player.x, 0, player.z);
+    if (sceneObjs.hero.guideArrowGroup) sceneObjs.hero.guideArrowGroup.visible = false;
     Engine.unitGroup.add(sceneObjs.hero.root);
 
     // East Gate
@@ -1210,7 +1211,7 @@
     // Hero floating bag
     const hbf = document.getElementById("hero-bag-float");
     if (hbf && window.Engine) {
-      const p = window.Engine.worldToScreen({ x: player.x, y: 2.35, z: player.z });
+      const p = window.Engine.worldToScreen({ x: player.x, y: 3.1, z: player.z });
       hbf.style.display = "block";
       hbf.style.left = `${p.x}px`;
       hbf.style.top = `${p.y}px`;

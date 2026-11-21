@@ -6,8 +6,8 @@
 (function () {
   "use strict";
 
-  const CAM_FOV = 46;
-  const CAM_OFFSET = new THREE.Vector3(0, 22, 17);
+  const CAM_FOV = 44;
+  const CAM_OFFSET = new THREE.Vector3(0, 17, 16);
   const CAM_LOOK_AHEAD = 1.2;
   const SHADOW_FRUSTUM_HALF = 36;
 
@@ -194,7 +194,7 @@
         new THREE.BoxGeometry(w + 0.7, 0.1, d + 0.7),
         new THREE.MeshLambertMaterial({ color: borderColor })
       );
-      border.position.set(cx, -0.02, cz);
+      border.position.set(cx, -0.05, cz);
       border.receiveShadow = true;
       envGroup.add(border);
 
@@ -203,7 +203,7 @@
         new THREE.MeshLambertMaterial({ color: soilColor })
       );
       soil.rotation.x = -Math.PI * 0.5;
-      soil.position.set(cx, 0.035, cz);
+      soil.position.set(cx, 0.03, cz);
       soil.receiveShadow = true;
       envGroup.add(soil);
     }
@@ -217,7 +217,7 @@
       new THREE.BoxGeometry(3.8, 0.04, 13.0),
       new THREE.MeshLambertMaterial({ color: 0x333c5c })
     );
-    southPath.position.set(0, 0.01, 16.5);
+    southPath.position.set(0, 0.015, 16.5);
     southPath.receiveShadow = true;
     envGroup.add(southPath);
 
@@ -234,27 +234,27 @@
       new THREE.BoxGeometry(21.0, 0.045, 3.6),
       new THREE.MeshLambertMaterial({ color: 0x2c324a })
     );
-    roadTrim.position.set(29.0, 0.012, 0);
+    roadTrim.position.set(29.0, 0.018, 0);
     roadTrim.receiveShadow = true;
     envGroup.add(roadTrim);
 
-    // Compound Deck
+    // Compound Deck (curb strictly below topMesh to prevent Z-fighting)
     const compTex = makeCompoundFloorTexture();
     const deckMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: compTex });
     const w = TOWN_BOUNDS.maxX - TOWN_BOUNDS.minX;
     const d = TOWN_BOUNDS.maxZ - TOWN_BOUNDS.minZ;
 
     const curb = new THREE.Mesh(
-      new THREE.BoxGeometry(w + 0.6, 0.24, d + 0.6),
+      new THREE.BoxGeometry(w + 0.8, 0.24, d + 0.8),
       new THREE.MeshLambertMaterial({ color: 0xb88a44 })
     );
-    curb.position.set(0, -0.1, (TOWN_BOUNDS.minZ + TOWN_BOUNDS.maxZ) * 0.5);
+    curb.position.set(0, -0.15, (TOWN_BOUNDS.minZ + TOWN_BOUNDS.maxZ) * 0.5);
     curb.receiveShadow = true;
     envGroup.add(curb);
 
     const topMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), deckMat);
     topMesh.rotation.x = -Math.PI * 0.5;
-    topMesh.position.set(0, 0.02, (TOWN_BOUNDS.minZ + TOWN_BOUNDS.maxZ) * 0.5);
+    topMesh.position.set(0, 0.04, (TOWN_BOUNDS.minZ + TOWN_BOUNDS.maxZ) * 0.5);
     topMesh.receiveShadow = true;
     envGroup.add(topMesh);
   }

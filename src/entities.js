@@ -1171,6 +1171,16 @@
     rim.position.y = 0.04;
     root.add(rim);
 
+    // 4 Corner Brass Pillars so 1-tile storage reads clearly in 3D
+    const postGeo = new THREE.BoxGeometry(0.16, 0.72, 0.16);
+    const postMat = new THREE.MeshLambertMaterial({ color: rimColor });
+    for (const [px, pz] of [[-0.88, -0.88], [0.88, -0.88], [-0.88, 0.88], [0.88, 0.88]]) {
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(px, 0.42, pz);
+      post.castShadow = true;
+      root.add(post);
+    }
+
     const stackAnchor = new THREE.Group();
     stackAnchor.position.set(0, 0.18, 0);
     root.add(stackAnchor);
