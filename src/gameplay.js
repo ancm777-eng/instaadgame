@@ -235,7 +235,7 @@
   // Audio Helper
   // ---------------------------------------------------------------------------
   let _audioCtx = null;
-  function playTone(freq, dur = 0.08, type = "sine", gainVal = 0.05) {
+  function playTone(freq, dur = 0.08, type = "sine", gainVal = 0.10) {
     if (state.muted || typeof window === "undefined") return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
@@ -247,7 +247,7 @@
       const gain = _audioCtx.createGain();
       osc.type = type;
       osc.frequency.setValueAtTime(freq, now);
-      gain.gain.setValueAtTime(Math.max(0.001, gainVal), now);
+      gain.gain.setValueAtTime(Math.max(0.001, gainVal * 2.0), now);
       gain.gain.exponentialRampToValueAtTime(0.0004, now + dur);
       osc.connect(gain);
       gain.connect(_audioCtx.destination);
@@ -680,6 +680,7 @@
     runtime.stageActive = true;
     runtime.battleElapsed = 0;
     runtime.spawnTickTimer = 0;
+    if (window.ClassicalBGM) window.ClassicalBGM.setMode("battle");
 
     if (isEarlyBonus) {
       const bonus = s * 30;
@@ -1071,6 +1072,7 @@
       } else if (runtime.monsters.length === 0) {
         // Stage Clear!
         runtime.stageActive = false;
+        if (window.ClassicalBGM) window.ClassicalBGM.setMode("peace");
         const cleared = state.stage;
         const bonus = cleared * 150 * (cleared % 5 === 0 ? 3 : 1);
         state.gems += bonus;
@@ -1541,6 +1543,7 @@
       runtime.monsters = [];
       runtime.stageActive = false;
       runtime.stageTimer = 10;
+      if (window.ClassicalBGM) window.ClassicalBGM.setMode("peace");
       state.gateHp = getWallMaxHp();
       syncHUD(true);
     });
