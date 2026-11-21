@@ -203,6 +203,7 @@
     labInputVisuals: [],
     labProgress: 0,
     fairies: [],
+    stepPads: [],
     monsters: [],
     projectiles: [],
     fxMeshes: [],
@@ -433,13 +434,15 @@
       runtime.storages[sp.id] = { ...sp, x: p.x, z: p.z, entity: stEnt, visuals: [] };
     }
 
-    // 1) Ore Market
+    // 1) Ore Market + Dedicated Ore Drop-off Pallet + Non-Overlapping Cash Pedestal
     const omPos = BUILDING_POS.ore_market;
     const omEnt = Entities.createSalesStall(omPos.x, omPos.z, "🏛️ 원석 교역소 (10💵)");
     Engine.stationGroup.add(omEnt.root);
-    const omPed = Entities.createGemPedestal(omPos.x, omPos.z + 2.4, "💵 교역소 수익");
+    const omPallet = Entities.createWoodenPalletZone({ x: omPos.x, z: omPos.z + 2.3, accent: "#60a5fa", badgeText: "⛏️ 광석 놓는 곳" });
+    Engine.stationGroup.add(omPallet.root);
+    const omPed = Entities.createGemPedestal(omPos.x - 2.5, omPos.z + 2.3, "💵 교역소 수익");
     Engine.stationGroup.add(omPed.root);
-    runtime.buildings.ore_market = { x: omPos.x, z: omPos.z, entity: omEnt, pedestal: omPed, cash: 0, queue: [], cooldown: 0 };
+    runtime.buildings.ore_market = { x: omPos.x, z: omPos.z, sellX: omPos.x, sellZ: omPos.z + 2.3, cashX: omPos.x - 2.5, cashZ: omPos.z + 2.3, entity: omEnt, sellPallet: omPallet, pedestal: omPed, cash: 0, queue: [], cooldown: 0 };
 
     // 2) Gold Kiln
     const gkPos = BUILDING_POS.gold_kiln;
@@ -489,6 +492,19 @@
       const tile = Entities.createEnergyTile({ x: tp.x, z: tp.z, accent: ENERGY_META[t].accent });
       Engine.stationGroup.add(tile.root);
       runtime.labTiles[t] = tile;
+    }
+
+    // Build / Upgrade 3D Step Pads on the floor
+    const padConfigs = [
+      { id: "energy_lab", x: 0.0, z: -10.8, icon: "🔮", title: "몽글몽글 연구실", accent: "#c084fc" },
+      { id: "gold_kiln", x: BUILDING_POS.gold_kiln.x, z: BUILDING_POS.gold_kiln.z + 2.3, icon: "🔥", title: "금 나와라 뚝딱 가마", accent: "#f5b942" },
+      { id: "star_crystal_workshop", x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z + 2.3, icon: "✨", title: "별가루 뭉치기 공방", accent: "#38bdf8" },
+      { id: "star_gold_mixer", x: BUILDING_POS.star_gold_mixer.x, z: BUILDING_POS.star_gold_mixer.z + 2.3, icon: "💎", title: "우주최강 금별 믹서기", accent: "#f43f5e" },
+    ];
+    for (const pc of padConfigs) {
+      const padEnt = Entities.createStepPad({ id: pc.id, x: pc.x, z: pc.z, icon: pc.icon, title: pc.title, accent: pc.accent, priceText: "건설", canAfford: false });
+      Engine.stationGroup.add(padEnt.root);
+      runtime.stepPads.push({ ...pc, entity: padEnt, progress: 0 });
     }
 
     // Hero Skill 4 Floating Philosopher's Stone Halo & Stage 1~6 Aura Ring
@@ -772,6 +788,25 @@
     player.x = Math.max(-16.5, Math.min(maxX, player.x + player.vx * dt));
     player.z = Math.max(-15.0, Math.min(20.5, player.z + player.vz * dt));
 
+    // Prevent hero from clipping through solid buildings
+    const blockers = [
+      { x: BUILDING_POS.ore_market.x, z: BUILDING_POS.ore_market.z, rx: 1.85, rz: 1.25 },
+    ];
+    if (state.goldKilnBuilt) blockers.push({ x: BUILDING_POS.gold_kiln.x, z: BUILDING_POS.gold_kiln.z, rx: 1.6, rz: 1.3 });
+    if (state.starWorkshopBuilt) blockers.push({ x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z, rx: 1.6, rz: 1.3 });
+    if (state.mixerBuilt) blockers.push({ x: BUILDING_POS.star_gold_mixer.x, z: BUILDING_POS.star_gold_mixer.z, rx: 1.6, rz: 1.3 });
+    if (state.labLv > 0) blockers.push({ x: BUILDING_POS.energy_lab.x, z: BUILDING_POS.energy_lab.z, rx: 2.2, rz: 1.6 });
+    for (const b of blockers) {
+      const dx = player.x - b.x;
+      const dz = player.z - b.z;
+      if (Math.abs(dx) < b.rx && Math.abs(dz) < b.rz) {
+        const ox = b.rx - Math.abs(dx);
+        const oz = b.rz - Math.abs(dz);
+        if (ox < oz) player.x = b.x + Math.sign(dx || 1) * b.rx;
+        else player.z = b.z + Math.sign(dz || 1) * b.rz;
+      }
+    }
+
     if (Math.hypot(player.vx, player.vz) > 0.3) {
       player.rotY = Math.atan2(player.vx, player.vz);
     }
@@ -863,14 +898,18 @@
         return true;
       };
 
-      // Ore Market: sell ore (10)
+      // Ore Market: sell ore (10) at dedicated front pallet
       const om = runtime.buildings.ore_market;
-      if (om && Math.hypot(player.x - om.x, player.z - om.z) < 2.3) {
-        if (takeFromBag("ore")) {
-          om.cash += 10;
-          spawnFloatingText(om.x, 2.0, om.z, "+💵 10", "#4ade80");
-        } else if (om.cash <= 0) {
-          showMissingResourcePopup("ore");
+      if (om) {
+        const onPallet = Math.hypot(player.x - om.sellX, player.z - om.sellZ) < 1.8;
+        if (window.Entities && om.sellPallet) window.Entities.updateWoodenPalletZone(om.sellPallet, onPallet ? 1 : 0, runtime.time);
+        if (onPallet) {
+          if (takeFromBag("ore")) {
+            om.cash += 10;
+            spawnFloatingText(om.sellX, 2.0, om.sellZ, "+💵 10", "#4ade80");
+          } else if (om.cash <= 0) {
+            showMissingResourcePopup("ore");
+          }
         }
       }
 
@@ -927,9 +966,9 @@
     for (const key of ["ore_market", "gold_kiln", "star_gold_mixer"]) {
       const b = runtime.buildings[key];
       if (!b || !b.pedestal || b.cash <= 0) continue;
-      const px = b.x;
-      const pz = b.z + 2.4;
-      if (Math.hypot(player.x - px, player.z - pz) < 2.4) {
+      const px = b.cashX !== undefined ? b.cashX : b.x;
+      const pz = b.cashZ !== undefined ? b.cashZ : b.z + 2.4;
+      if (Math.hypot(player.x - px, player.z - pz) < 2.1) {
         const amt = b.cash;
         b.cash = 0;
         state.gems += amt;
@@ -1662,11 +1701,11 @@
         return;
       }
       if (om && om.cash > 0) {
-        target = { x: om.x, z: om.z + 2.4 };
-        msg = "교역소 앞 초록 캐시 받침대를 밟아 돈을 수거하세요!";
+        target = { x: om.cashX, z: om.cashZ };
+        msg = "교역소 왼쪽 초록 캐시 받침대를 밟아 돈을 수거하세요!";
       } else if (oreCount > 0) {
-        target = { x: om.x, z: om.z };
-        msg = `원석 교역소로 가서 광석(${oreCount}개)을 판매하세요!`;
+        target = { x: om.sellX, z: om.sellZ };
+        msg = `원석 교역소 앞 [⛏️ 광석 놓는 곳] 타일에 광석(${oreCount}개)을 올리세요!`;
       } else {
         target = { x: -7.2, z: 16.5 };
         msg = "화살표를 따라 남서쪽 광산에서 광석을 캐세요!";
@@ -1678,14 +1717,14 @@
         return;
       }
       if (state.gems >= 500) {
-        target = { x: BUILDING_POS.energy_lab.x, z: BUILDING_POS.energy_lab.z + 2.0 };
-        msg = "💵 500 확보! [🏛️ 공방·성벽 → 연구실·요정]에서 연구실 Lv.1을 지으세요!";
+        target = { x: 0.0, z: -10.8 };
+        msg = "💵 500 확보! 북쪽 [🔮 몽글몽글 연구실] 건설 타일 위로 올라가세요!";
       } else if (om && om.cash > 0) {
-        target = { x: om.x, z: om.z + 2.4 };
+        target = { x: om.cashX, z: om.cashZ };
         msg = `교역소 수익을 수거하세요! (💵 ${state.gems}/500)`;
       } else if (oreCount > 0) {
-        target = { x: om.x, z: om.z };
-        msg = `광석을 교역소에 팔아 💵 500을 모으세요! (${state.gems}/500)`;
+        target = { x: om.sellX, z: om.sellZ };
+        msg = `광석을 [⛏️ 광석 놓는 곳]에 팔아 💵 500을 모으세요! (${state.gems}/500)`;
       } else {
         target = { x: -7.2, z: 16.5 };
         msg = `광석을 캐서 💵 500원을 모으세요! (${state.gems}/500)`;
@@ -1735,13 +1774,13 @@
         return;
       }
       if (state.gems >= 1000) {
-        target = { x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z };
-        msg = "💵 1,000 확보! [🏛️ 공방·성벽]에서 ✨ 별가루 뭉치기 공방을 지으세요!";
+        target = { x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z + 2.3 };
+        msg = "💵 1,000 확보! [✨ 별가루 뭉치기 공방] 건설 타일 위로 올라가세요!";
       } else if (om && om.cash > 0) {
-        target = { x: om.x, z: om.z + 2.4 };
+        target = { x: om.cashX, z: om.cashZ };
         msg = `교역소 수익을 수거하세요! (💵 ${state.gems}/1,000)`;
       } else if (oreCount > 0) {
-        target = { x: om.x, z: om.z };
+        target = { x: om.sellX, z: om.sellZ };
         msg = `광석을 팔아 💵 1,000원을 모으세요! (${state.gems}/1,000)`;
       } else {
         target = { x: -7.2, z: 16.5 };
@@ -1785,6 +1824,97 @@
     }
   }
 
+  function updateStepPads(dt) {
+    if (!window.Entities || !window.Entities.updateStepPadTexture) return;
+    for (const pad of runtime.stepPads) {
+      let lvTxt = "미건설";
+      let priceTxt = "MAX";
+      let canAfford = false;
+      let isMax = false;
+      let onBuy = null;
+
+      if (pad.id === "energy_lab") {
+        lvTxt = `Lv.${state.labLv}/5`;
+        if (state.labLv >= 5) {
+          isMax = true;
+          priceTxt = "MAX";
+        } else {
+          const chk = canUpgradeLab();
+          canAfford = chk.ok;
+          priceTxt = chk.ok ? `💵 ${chk.next.cost.toLocaleString()}` : chk.reason;
+          onBuy = () => {
+            state.gems -= chk.next.cost;
+            state.labLv++;
+            syncBuildingVisibility();
+            showToast(`🔮 몽글몽글 연구실 Lv.${state.labLv} 완공!`);
+            playTone(880, 0.14, "triangle", 0.12);
+          };
+        }
+      } else if (pad.id === "gold_kiln") {
+        isMax = state.goldKilnBuilt;
+        lvTxt = isMax ? "가동 중" : "미건설";
+        priceTxt = isMax ? "완공" : "💵 1,000";
+        canAfford = !isMax && state.gems >= 1000;
+        onBuy = () => {
+          state.gems -= 1000;
+          state.goldKilnBuilt = true;
+          syncBuildingVisibility();
+          showToast("🔥 금 나와라 뚝딱 가마 완공!");
+          playTone(880, 0.14, "triangle", 0.12);
+        };
+      } else if (pad.id === "star_crystal_workshop") {
+        isMax = state.starWorkshopBuilt;
+        lvTxt = isMax ? "가동 중" : "미건설";
+        priceTxt = isMax ? "완공" : "💵 1,000";
+        canAfford = !isMax && state.gems >= 1000;
+        onBuy = () => {
+          state.gems -= 1000;
+          state.starWorkshopBuilt = true;
+          syncBuildingVisibility();
+          showToast("✨ 별가루 뭉치기 공방 완공!");
+          playTone(880, 0.14, "triangle", 0.12);
+        };
+      } else if (pad.id === "star_gold_mixer") {
+        isMax = state.mixerBuilt;
+        lvTxt = isMax ? "가동 중" : "미건설";
+        priceTxt = isMax ? "완공" : "💵 10,000";
+        canAfford = !isMax && state.gems >= 10000;
+        onBuy = () => {
+          state.gems -= 10000;
+          state.mixerBuilt = true;
+          syncBuildingVisibility();
+          showToast("💎 우주최강 금별 믹서기 완공!");
+          playTone(880, 0.14, "triangle", 0.12);
+        };
+      }
+
+      // Hide production pads once built (keep energy_lab pad visible until Lv.5 MAX)
+      pad.entity.root.visible = pad.id === "energy_lab" ? !isMax : !isMax;
+
+      const onPad = pad.entity.root.visible && Math.abs(player.x - pad.x) < 1.65 && Math.abs(player.z - pad.z) < 1.35;
+      if (onPad && canAfford && onBuy) {
+        pad.progress = Math.min(1, pad.progress + dt / 0.45);
+        if (pad.progress >= 1) {
+          pad.progress = 0;
+          onBuy();
+        }
+      } else {
+        pad.progress = Math.max(0, pad.progress - dt * 2.5);
+      }
+
+      window.Entities.updateStepPadTexture(pad.entity, {
+        title: pad.title,
+        icon: pad.icon,
+        accent: pad.accent,
+        levelText: lvTxt,
+        priceText: priceTxt,
+        canAfford,
+        isMax,
+        progress: pad.progress,
+      });
+    }
+  }
+
   function step(dt) {
     if (runtime.gameOver) return;
     runtime.time += dt;
@@ -1799,6 +1929,7 @@
     }
     updatePlayer(dt);
     updateHarvestAndLogistics(dt);
+    updateStepPads(dt);
     updateFairies(dt);
     updateCombatAndStages(dt);
     updateVfx(dt);

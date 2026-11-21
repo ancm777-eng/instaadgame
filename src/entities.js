@@ -1085,7 +1085,7 @@
     });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat);
     mesh.rotation.x = -Math.PI * 0.5;
-    mesh.position.y = 0.032;
+    mesh.position.y = 0.06;
     root.add(mesh);
 
     const pad = {
