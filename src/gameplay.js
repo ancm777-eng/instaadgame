@@ -18,7 +18,7 @@
   const SPAWN_TICK_INTERVAL = 10; // every 10 seconds
   const NORMAL_SPAWN_COUNT = 5;
 
-  const HERO_SPAWN = { x: 0.0, z: 4.5 };
+  const HERO_SPAWN = { x: 0.0, z: 2.5 };
   const GATE_POS = { x: 18.0, z: 0.0 };
   const HERO_COMBAT_X_MIN = 5.0;
 
@@ -37,17 +37,21 @@
     3: { key: "dim3", icon: "🌟", name: "3차 차원 에너지", accent: "#facc15", hex: 0xfacc15 },
   };
 
-  // Guide 02: 4 Buildings + 4x 1-Tile Storages + Monggle Energy Lab
+  // West Cluster (Resource Sales & Crafting) + North Cluster (All Tech / R&D Facilities)
   const BUILDING_POS = {
-    ore_market: { x: -11.8, z: -3.8 },
-    storage_ore: { x: -7.8, z: -3.8 },
-    gold_kiln: { x: -3.8, z: -3.8 },
-    storage_gold: { x: 0.2, z: -3.8 },
-    star_crystal_workshop: { x: 4.2, z: -3.8 },
-    storage_star_crystal: { x: 7.8, z: -3.8 },
-    star_gold_mixer: { x: 11.8, z: -3.8 },
-    storage_stardust: { x: 4.2, z: 0.2 },
+    // West Crafting & Market Strip (Directly above South Resources)
+    ore_market: { x: -12.5, z: 3.5 },
+    storage_ore: { x: -9.0, z: 3.5 },
+    gold_kiln: { x: -12.5, z: -2.2 },
+    storage_gold: { x: -9.0, z: -2.2 },
+    star_crystal_workshop: { x: -4.5, z: 3.5 },
+    storage_stardust: { x: -1.5, z: 3.5 },
+    storage_star_crystal: { x: -4.5, z: 0.6 },
+    star_gold_mixer: { x: -4.5, z: -2.6 },
+    // North Tech & R&D District
+    bag_station: { x: -7.0, z: -12.6 },
     energy_lab: { x: 0.0, z: -12.6 },
+    fairy_shrine: { x: 7.0, z: -12.6 },
   };
 
   const LAB_LEVELS = [
@@ -406,17 +410,17 @@
     Engine.stationGroup.add(sceneObjs.gate.root);
     Entities.updateVillageGateTier(sceneObjs.gate, Math.min(3, state.wallLv - 1));
 
-    // South Resource Nodes: 18 Ore (SW) & 18 Stardust (SE)
+    // South Resource Nodes: 18 Ore (SW) & 18 Stardust (SE) — positioned close to West Crafting Cluster
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 6; c++) {
         const ox = -11.4 + c * 1.7;
-        const oz = 14.5 + r * 2.2;
+        const oz = 11.8 + r * 2.0;
         const oreEnt = Entities.createResourceNode("ore", ox, oz);
         Engine.nodeGroup.add(oreEnt.root);
         runtime.farmNodes.push({ kind: "ore", x: ox, z: oz, hp: 2, maxHp: 2, respawnTimer: 0, entity: oreEnt });
 
-        const sx = 2.9 + c * 1.7;
-        const sz = 14.5 + r * 2.2;
+        const sx = 2.4 + c * 1.7;
+        const sz = 11.8 + r * 2.0;
         const starEnt = Entities.createResourceNode("stardust", sx, sz);
         Engine.nodeGroup.add(starEnt.root);
         runtime.farmNodes.push({ kind: "stardust", x: sx, z: sz, hp: 2, maxHp: 2, respawnTimer: 0, entity: starEnt });
@@ -447,49 +451,59 @@
     Engine.stationGroup.add(omPed.root);
     runtime.buildings.ore_market = { x: omPos.x, z: omPos.z, sellX: omPos.x, sellZ: omPos.z + 2.3, cashX: omPos.x - 2.5, cashZ: omPos.z + 2.3, entity: omEnt, sellPallet: omPallet, pedestal: omPed, cash: 0, queue: [], cooldown: 0 };
 
-    // 2) Gold Kiln
+    // 2) Gold Kiln (West)
     const gkPos = BUILDING_POS.gold_kiln;
     const gkEnt = Entities.createProductionMachine("cutter");
     gkEnt.root.position.set(gkPos.x, 0, gkPos.z);
-    const gkBanner = Entities.createOverheadBannerSprite({ text: "🔥 금 나와라 뚝딱 가마", accentColor: "#f5b942", borderColor: "#f5b942", scaleX: 3.6, scaleY: 0.8 });
-    gkBanner.position.set(0, 3.8, 0);
+    const gkBanner = Entities.createOverheadBannerSprite({ text: "🔥 금 나와라 뚝딱 가마", accentColor: "#f5b942", borderColor: "#f5b942", scaleX: 3.2, scaleY: 0.72 });
+    gkBanner.position.set(0, 3.6, 0);
     gkEnt.root.add(gkBanner);
     Engine.stationGroup.add(gkEnt.root);
-    const gkPed = Entities.createGemPedestal(gkPos.x, gkPos.z + 2.4, "🪙 금 판매 (200💵)");
+    const gkPed = Entities.createGemPedestal(gkPos.x - 2.3, gkPos.z, "🪙 금 판매 (200💵)");
     Engine.stationGroup.add(gkPed.root);
-    runtime.buildings.gold_kiln = { x: gkPos.x, z: gkPos.z, entity: gkEnt, pedestal: gkPed, cash: 0, inQueue: [], progress: 0 };
+    runtime.buildings.gold_kiln = { x: gkPos.x, z: gkPos.z, cashX: gkPos.x - 2.3, cashZ: gkPos.z, entity: gkEnt, pedestal: gkPed, cash: 0, inQueue: [], progress: 0 };
 
-    // 3) Star Crystal Workshop
+    // 3) Star Crystal Workshop (West)
     const swPos = BUILDING_POS.star_crystal_workshop;
     const swEnt = Entities.createProductionMachine("cauldron");
     swEnt.root.position.set(swPos.x, 0, swPos.z);
-    const swBanner = Entities.createOverheadBannerSprite({ text: "✨ 별가루 뭉치기 공방", accentColor: "#38bdf8", borderColor: "#38bdf8", scaleX: 3.6, scaleY: 0.8 });
-    swBanner.position.set(0, 3.8, 0);
+    const swBanner = Entities.createOverheadBannerSprite({ text: "✨ 별가루 뭉치기 공방", accentColor: "#38bdf8", borderColor: "#38bdf8", scaleX: 3.2, scaleY: 0.72 });
+    swBanner.position.set(0, 3.6, 0);
     swEnt.root.add(swBanner);
     Engine.stationGroup.add(swEnt.root);
     runtime.buildings.star_crystal_workshop = { x: swPos.x, z: swPos.z, entity: swEnt, inQueue: [], progress: 0 };
 
-    // 4) Star Gold Mixer
+    // 4) Star Gold Mixer (West)
     const mxPos = BUILDING_POS.star_gold_mixer;
     const mxEnt = Entities.createProductionMachine("distillery");
     mxEnt.root.position.set(mxPos.x, 0, mxPos.z);
-    const mxBanner = Entities.createOverheadBannerSprite({ text: "💎 우주최강 금별 믹서기", accentColor: "#f43f5e", borderColor: "#f43f5e", scaleX: 3.8, scaleY: 0.85 });
-    mxBanner.position.set(0, 3.9, 0);
+    const mxBanner = Entities.createOverheadBannerSprite({ text: "💎 우주최강 금별 믹서기", accentColor: "#f43f5e", borderColor: "#f43f5e", scaleX: 3.4, scaleY: 0.76 });
+    mxBanner.position.set(0, 3.7, 0);
     mxEnt.root.add(mxBanner);
     Engine.stationGroup.add(mxEnt.root);
-    const mxPed = Entities.createGemPedestal(mxPos.x, mxPos.z + 2.4, "💎 현자의 돌 (5,000💵)");
+    const mxPed = Entities.createGemPedestal(mxPos.x - 2.3, mxPos.z, "💎 현자의 돌 (5,000💵)");
     Engine.stationGroup.add(mxPed.root);
-    runtime.buildings.star_gold_mixer = { x: mxPos.x, z: mxPos.z, entity: mxEnt, pedestal: mxPed, cash: 0, inGold: [], inCrystal: [], progress: 0 };
+    runtime.buildings.star_gold_mixer = { x: mxPos.x, z: mxPos.z, cashX: mxPos.x - 2.3, cashZ: mxPos.z, entity: mxEnt, pedestal: mxPed, cash: 0, inGold: [], inCrystal: [], progress: 0 };
 
-    // 5) Monggle Dimensional Energy Lab + 3 Dynamic Energy Tiles
+    // 5) North Tech District: Bag Station, Monggle Energy Lab, Fairy Shrine
+    const bagPos = BUILDING_POS.bag_station;
+    const bagEnt = Entities.createCategoryBuilding("equipment_forge", bagPos.x, bagPos.z, "🎒 가방 강화소", "#ffd24c");
+    Engine.stationGroup.add(bagEnt.root);
+    runtime.buildings.bag_station = { x: bagPos.x, z: bagPos.z, entity: bagEnt };
+
+    const fairyPos = BUILDING_POS.fairy_shrine;
+    const fairyEnt = Entities.createCategoryBuilding("automation_guild", fairyPos.x, fairyPos.z, "🧚 요정 소환소", "#ff88c2");
+    Engine.stationGroup.add(fairyEnt.root);
+    runtime.buildings.fairy_shrine = { x: fairyPos.x, z: fairyPos.z, entity: fairyEnt };
+
     const labPos = BUILDING_POS.energy_lab;
     const labEnt = Entities.createCategoryBuilding("alchemy_lab", labPos.x, labPos.z, "🔮 몽글몽글 차원 에너지 연구실", "#c084fc");
     Engine.stationGroup.add(labEnt.root);
-    const labPallet = Entities.createWoodenPalletZone({ x: labPos.x - 4.2, z: labPos.z + 1.8, accent: "#d8b4fe", badgeText: "✨ 연구 재료 투입" });
+    const labPallet = Entities.createWoodenPalletZone({ x: labPos.x - 3.6, z: labPos.z + 2.0, accent: "#d8b4fe", badgeText: "✨ 연구 재료 투입" });
     Engine.stationGroup.add(labPallet.root);
     runtime.buildings.energy_lab = { x: labPos.x, z: labPos.z, entity: labEnt, pallet: labPallet };
 
-    const tilePositions = { 1: { x: -3.2, z: -9.4 }, 2: { x: 0.0, z: -9.4 }, 3: { x: 3.2, z: -9.4 } };
+    const tilePositions = { 1: { x: -2.6, z: -7.8 }, 2: { x: 0.0, z: -7.8 }, 3: { x: 2.6, z: -7.8 } };
     for (const t of [1, 2, 3]) {
       const tp = tilePositions[t];
       const tile = Entities.createEnergyTile({ x: tp.x, z: tp.z, accent: ENERGY_META[t].accent });
@@ -499,10 +513,12 @@
 
     // Build / Upgrade 3D Step Pads on the floor
     const padConfigs = [
-      { id: "energy_lab", x: 0.0, z: -10.8, icon: "🔮", title: "몽글몽글 연구실", accent: "#c084fc" },
-      { id: "gold_kiln", x: BUILDING_POS.gold_kiln.x, z: BUILDING_POS.gold_kiln.z + 2.3, icon: "🔥", title: "금 나와라 뚝딱 가마", accent: "#f5b942" },
-      { id: "star_crystal_workshop", x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z + 2.3, icon: "✨", title: "별가루 뭉치기 공방", accent: "#38bdf8" },
-      { id: "star_gold_mixer", x: BUILDING_POS.star_gold_mixer.x, z: BUILDING_POS.star_gold_mixer.z + 2.3, icon: "💎", title: "우주최강 금별 믹서기", accent: "#f43f5e" },
+      { id: "bag_station", x: bagPos.x, z: bagPos.z + 2.4, icon: "🎒", title: "가방 강화", accent: "#ffd24c" },
+      { id: "energy_lab", x: labPos.x, z: labPos.z + 2.4, icon: "🔮", title: "몽글몽글 연구실", accent: "#c084fc" },
+      { id: "fairy_shrine", x: fairyPos.x, z: fairyPos.z + 2.4, icon: "🧚", title: "요정 소환", accent: "#ff88c2" },
+      { id: "gold_kiln", x: gkPos.x, z: gkPos.z + 2.4, icon: "🔥", title: "금 나와라 뚝딱 가마", accent: "#f5b942" },
+      { id: "star_crystal_workshop", x: swPos.x, z: swPos.z + 2.3, icon: "✨", title: "별가루 뭉치기 공방", accent: "#38bdf8" },
+      { id: "star_gold_mixer", x: mxPos.x, z: mxPos.z - 2.2, icon: "💎", title: "우주최강 금별 믹서기", accent: "#f43f5e" },
     ];
     for (const pc of padConfigs) {
       const padEnt = Entities.createStepPad({ id: pc.id, x: pc.x, z: pc.z, icon: pc.icon, title: pc.title, accent: pc.accent, priceText: "건설", canAfford: false });
@@ -834,6 +850,8 @@
     // Prevent hero from clipping through solid buildings
     const blockers = [
       { x: BUILDING_POS.ore_market.x, z: BUILDING_POS.ore_market.z, rx: 1.85, rz: 1.25 },
+      { x: BUILDING_POS.bag_station.x, z: BUILDING_POS.bag_station.z, rx: 1.9, rz: 1.5 },
+      { x: BUILDING_POS.fairy_shrine.x, z: BUILDING_POS.fairy_shrine.z, rx: 1.9, rz: 1.5 },
     ];
     if (state.goldKilnBuilt) blockers.push({ x: BUILDING_POS.gold_kiln.x, z: BUILDING_POS.gold_kiln.z, rx: 1.6, rz: 1.3 });
     if (state.starWorkshopBuilt) blockers.push({ x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z, rx: 1.6, rz: 1.3 });
@@ -972,10 +990,10 @@
         else gk.inQueue.push("ore");
       }
       // Gold Kiln front pedestal: sell gold (200) or collect cash
-      if (gk && state.goldKilnBuilt && Math.hypot(player.x - gk.x, player.z - (gk.z + 2.4)) < 2.1) {
+      if (gk && state.goldKilnBuilt && Math.hypot(player.x - gk.cashX, player.z - gk.cashZ) < 2.1) {
         if (takeFromBag("gold")) {
           gk.cash += 200;
-          spawnFloatingText(gk.x, 2.0, gk.z + 2.4, "+💵 200", "#facc15");
+          spawnFloatingText(gk.cashX, 2.0, gk.cashZ, "+💵 200", "#facc15");
         } else if (gk.cash <= 0) {
           showMissingResourcePopup("gold");
         }
@@ -1005,7 +1023,7 @@
 
       // Energy Lab input pallet
       const lab = runtime.buildings.energy_lab;
-      if (lab && state.labLv > 0 && Math.hypot(player.x - (lab.x - 4.2), player.z - (lab.z + 1.8)) < 2.3) {
+      if (lab && state.labLv > 0 && Math.hypot(player.x - (lab.x - 3.6), player.z - (lab.z + 2.0)) < 2.2) {
         const reqType = LAB_LEVELS[state.labLv].inputType;
         if (runtime.labInputQueue.length < 60) {
           if (!takeFromBag(reqType)) showMissingResourcePopup(reqType);
@@ -1761,11 +1779,11 @@
   }
 
   const TUTORIAL_STEPS = {
-    1: { title: "1. 광석 캐서 돈으로 받아보기", desc: "화살표를 따라 남서쪽 광산에서 광석을 캐고, 원석 교역소에 팔아 수익을 수거하세요!" },
-    2: { title: "2. 연구실 Lv.1 지어보기", desc: "💵 500원을 모아 우측 하단 [🏛️ 공방·성벽] → [🔮 연구실·요정]에서 연구실을 지으세요!" },
+    1: { title: "1. 광석 캐서 가방 업그레이드", desc: "광석을 캐서 원석 교역소에 팔아 💵 500원을 모은 뒤, 북쪽 [🎒 가방 강화소] 타일로 가세요!" },
+    2: { title: "2. 연구실 Lv.1 지어보기", desc: "💵 500원을 모아 북쪽 [🔮 몽글몽글 연구실] 건설 타일 위로 올라가세요!" },
     3: { title: "3. 별가루 캐서 1차 에너지 만들기", desc: "남동쪽에서 별가루 10개를 캐서 북쪽 연구실 투입구에 넣고 🔮 1차 에너지를 수거하세요!" },
     4: { title: "4. 스킬 레벨업 해보기", desc: "🔮 1차 에너지 50개를 모아 [✨ 스킬 진화] 버튼에서 1단계 Lv.2로 강화하세요!" },
-    5: { title: "5. 별가루 뭉치기 공방 만들기", desc: "💵 1,000원을 모아 [🏛️ 공방·성벽]에서 ✨ 별가루 뭉치기 공방을 건설하세요!" },
+    5: { title: "5. 별가루 뭉치기 공방 만들기", desc: "💵 1,000원을 모아 서쪽 [✨ 별가루 뭉치기 공방] 건설 타일 위로 올라가세요!" },
     6: { title: "6. 별가루 캐서 별빛결정 만들기", desc: "별가루 10개를 캐서 별가루 뭉치기 공방에 투입해 💠 별빛 결정을 완성하세요!" },
   };
 
@@ -1813,24 +1831,27 @@
     const oreCount = player.bagItems.filter((x) => x === "ore").length;
     const starCount = player.bagItems.filter((x) => x === "stardust").length;
     const om = runtime.buildings.ore_market;
-    let target = { x: -7.2, z: 16.5 };
+    let target = { x: -7.2, z: 13.8 };
     let msg = "";
 
     if (stepNum === 1) {
-      if (state.tutSoldOre) {
+      if (state.bagLv >= 1) {
         state.tutStep = 2;
         triggerTutorialStepPopup(2);
         return;
       }
-      if (om && om.cash > 0) {
+      if (state.gems >= 500) {
+        target = { x: BUILDING_POS.bag_station.x, z: BUILDING_POS.bag_station.z + 2.4 };
+        msg = "💵 500 확보! 북쪽 [🎒 가방 강화] 타일 위로 올라가세요!";
+      } else if (om && om.cash > 0) {
         target = { x: om.cashX, z: om.cashZ };
-        msg = "교역소 왼쪽 초록 캐시 받침대를 밟아 돈을 수거하세요!";
+        msg = `교역소 수익을 수거하세요! (💵 ${state.gems}/500)`;
       } else if (oreCount > 0) {
         target = { x: om.sellX, z: om.sellZ };
-        msg = `원석 교역소 앞 [⛏️ 광석 놓는 곳] 타일에 광석(${oreCount}개)을 올리세요!`;
+        msg = `원석 교역소 [⛏️ 광석 놓는 곳]에 팔아 💵 500 모으기 (${state.gems}/500)`;
       } else {
-        target = { x: -7.2, z: 16.5 };
-        msg = "화살표를 따라 남서쪽 광산에서 광석을 캐세요!";
+        target = { x: -7.2, z: 13.8 };
+        msg = `남서쪽 광산에서 광석을 캐서 💵 500을 모으세요! (${state.gems}/500)`;
       }
     } else if (stepNum === 2) {
       if (state.labLv >= 1) {
@@ -1839,7 +1860,7 @@
         return;
       }
       if (state.gems >= 500) {
-        target = { x: 0.0, z: -10.8 };
+        target = { x: BUILDING_POS.energy_lab.x, z: BUILDING_POS.energy_lab.z + 2.4 };
         msg = "💵 500 확보! 북쪽 [🔮 몽글몽글 연구실] 건설 타일 위로 올라가세요!";
       } else if (om && om.cash > 0) {
         target = { x: om.cashX, z: om.cashZ };
@@ -1848,7 +1869,7 @@
         target = { x: om.sellX, z: om.sellZ };
         msg = `광석을 [⛏️ 광석 놓는 곳]에 팔아 💵 500을 모으세요! (${state.gems}/500)`;
       } else {
-        target = { x: -7.2, z: 16.5 };
+        target = { x: -7.2, z: 13.8 };
         msg = `광석을 캐서 💵 500원을 모으세요! (${state.gems}/500)`;
       }
     } else if (stepNum === 3) {
@@ -1858,16 +1879,16 @@
         return;
       }
       if (state.labStored[1] > 0) {
-        target = { x: -3.2, z: -9.4 };
+        target = { x: -2.6, z: -7.8 };
         msg = "🔮 1차 에너지 타일 위로 걸어가 에너지를 수거하세요!";
       } else if (runtime.labInputQueue.length >= 10) {
-        target = { x: -3.2, z: -9.4 };
+        target = { x: -2.6, z: -7.8 };
         msg = "연구실 연성 중... 1차 타일 앞에서 에너지를 기다리세요!";
       } else if (starCount > 0) {
-        target = { x: BUILDING_POS.energy_lab.x - 4.2, z: BUILDING_POS.energy_lab.z + 1.8 };
+        target = { x: BUILDING_POS.energy_lab.x - 3.6, z: BUILDING_POS.energy_lab.z + 2.0 };
         msg = `북쪽 연구실 투입구로 별가루(${starCount}개)를 넣으세요!`;
       } else {
-        target = { x: 7.2, z: 16.5 };
+        target = { x: 6.7, z: 13.8 };
         msg = `남동쪽 별빛 채집지에서 별가루 10개를 캐세요! (${runtime.labInputQueue.length}/10)`;
       }
     } else if (stepNum === 4) {
@@ -1880,13 +1901,13 @@
         target = { x: player.x, z: player.z };
         msg = "🔮 50 달성! 우측 하단 [✨ 스킬 진화]에서 Lv.2로 레벨업하세요!";
       } else if (state.labStored[1] > 0) {
-        target = { x: -3.2, z: -9.4 };
+        target = { x: -2.6, z: -7.8 };
         msg = `🔮 1차 에너지 타일에서 에너지를 수거하세요! (${state.dim1}/50)`;
       } else if (starCount > 0) {
-        target = { x: BUILDING_POS.energy_lab.x - 4.2, z: BUILDING_POS.energy_lab.z + 1.8 };
+        target = { x: BUILDING_POS.energy_lab.x - 3.6, z: BUILDING_POS.energy_lab.z + 2.0 };
         msg = `연구실에 별가루를 넣어 🔮 50개를 모으세요! (${state.dim1}/50)`;
       } else {
-        target = { x: 7.2, z: 16.5 };
+        target = { x: 6.7, z: 13.8 };
         msg = `별가루를 캐서 연구실에 넣고 🔮 50개를 모으세요! (${state.dim1}/50)`;
       }
     } else if (stepNum === 5) {
@@ -1897,7 +1918,7 @@
       }
       if (state.gems >= 1000) {
         target = { x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z + 2.3 };
-        msg = "💵 1,000 확보! [✨ 별가루 뭉치기 공방] 건설 타일 위로 올라가세요!";
+        msg = "💵 1,000 확보! 서쪽 [✨ 별가루 뭉치기 공방] 건설 타일 위로 올라가세요!";
       } else if (om && om.cash > 0) {
         target = { x: om.cashX, z: om.cashZ };
         msg = `교역소 수익을 수거하세요! (💵 ${state.gems}/1,000)`;
@@ -1905,7 +1926,7 @@
         target = { x: om.sellX, z: om.sellZ };
         msg = `광석을 팔아 💵 1,000원을 모으세요! (${state.gems}/1,000)`;
       } else {
-        target = { x: -7.2, z: 16.5 };
+        target = { x: -7.2, z: 13.8 };
         msg = `광석을 캐서 💵 1,000원을 모으세요! (${state.gems}/1,000)`;
       }
     } else if (stepNum === 6) {
@@ -1920,7 +1941,7 @@
         target = { x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z };
         msg = `별가루 10개를 ✨ 별가루 뭉치기 공방에 투입하세요! (보유 ${starCount})`;
       } else {
-        target = { x: 7.2, z: 16.5 };
+        target = { x: 6.7, z: 13.8 };
         msg = "남동쪽에서 별가루 10개를 캐서 별빛 결정을 만드세요!";
       }
     }
@@ -1955,7 +1976,40 @@
       let isMax = false;
       let onBuy = null;
 
-      if (pad.id === "energy_lab") {
+      if (pad.id === "bag_station") {
+        isMax = state.bagLv >= 2;
+        lvTxt = `Lv.${state.bagLv}/2 (${getHeroBagCap()}칸)`;
+        if (isMax) {
+          priceTxt = "MAX";
+        } else {
+          const bCost = BAG_UPGRADE_COSTS[state.bagLv];
+          priceTxt = `💵 ${bCost.toLocaleString()}`;
+          canAfford = state.gems >= bCost;
+          onBuy = () => {
+            state.gems -= bCost;
+            state.bagLv++;
+            showToast(`🎒 가방 용량 ${getHeroBagCap()}칸으로 확장!`);
+            playTone(880, 0.14, "triangle", 0.12);
+          };
+        }
+      } else if (pad.id === "fairy_shrine") {
+        isMax = state.fairyCount >= 4;
+        lvTxt = `${state.fairyCount}/4기`;
+        if (isMax) {
+          priceTxt = "MAX";
+        } else {
+          const f = FAIRY_DEFS[state.fairyCount];
+          priceTxt = `${ENERGY_META[f.tier].icon} ${f.cost}`;
+          canAfford = getEnergyAmount(f.tier) >= f.cost;
+          onBuy = () => {
+            addEnergyAmount(f.tier, -f.cost);
+            state.fairyCount++;
+            syncFairiesCount();
+            showToast(`🧚 ${f.title} 소환 완료!`);
+            playTone(880, 0.14, "triangle", 0.12);
+          };
+        }
+      } else if (pad.id === "energy_lab") {
         lvTxt = `Lv.${state.labLv}/5`;
         if (state.labLv >= 5) {
           isMax = true;

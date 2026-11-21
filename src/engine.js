@@ -172,26 +172,26 @@
     fillZone(-16.5, -1.5, 18.0, 2.5, "rgba(48, 56, 92, 0.72)", "rgba(247, 220, 161, 0.45)", 12);
     fillZone(-2.5, -15.0, 2.5, 12.0, "rgba(48, 56, 92, 0.72)", "rgba(247, 220, 161, 0.45)", 12);
 
-    // North Arcane Lab Sanctuary + Glowing Rune Circle
-    fillZone(-8.5, -15.2, 8.5, -8.2, "rgba(44, 28, 86, 0.78)", "rgba(192, 132, 252, 0.65)", 20);
+    // North Tech & R&D District (Bag Upgrade, Monggle Lab, Fairy Shrine)
+    fillZone(-10.5, -15.4, 10.5, -7.2, "rgba(44, 28, 86, 0.80)", "rgba(192, 132, 252, 0.68)", 20);
     ctx.save();
-    ctx.translate(wx(0), wz(-11.7));
+    ctx.translate(wx(0), wz(-11.3));
     ctx.strokeStyle = "rgba(216, 180, 254, 0.42)";
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(0, 0, 72, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.arc(0, 0, 52, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
 
-    // Central Atelier Crafting Deck
-    fillZone(-16.2, -7.2, 14.2, -0.5, "rgba(32, 40, 72, 0.74)", "rgba(247, 220, 161, 0.52)", 20);
+    // West Resource Sales & Crafting Cluster (Close to South Resources!)
+    fillZone(-16.4, -5.2, -0.2, 7.2, "rgba(32, 40, 72, 0.78)", "rgba(247, 220, 161, 0.56)", 20);
 
-    // Ornate Central Arcane Medallion around Spawn (0, 4.5)
+    // Ornate Central Arcane Medallion around Spawn (0, 2.5)
     ctx.save();
-    ctx.translate(wx(0), wz(4.5));
-    ctx.beginPath(); ctx.arc(0, 0, 58, 0, Math.PI * 2);
+    ctx.translate(wx(0), wz(2.5));
+    ctx.beginPath(); ctx.arc(0, 0, 52, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(247, 220, 161, 0.10)"; ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = "rgba(247, 220, 161, 0.62)"; ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, 0, 42, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(0, 0, 36, 0, Math.PI * 2);
     ctx.lineWidth = 2; ctx.strokeStyle = "rgba(192, 132, 252, 0.5)"; ctx.stroke();
     ctx.restore();
 
@@ -228,16 +228,16 @@
       envGroup.add(soil);
     }
 
-    // South Resource Valley: SW Ore Mine & SE Stardust Grove
-    addFarmPlot(-7.2, 17.5, 11.2, 9.2, 0x253554, 0x60a5fa);
-    addFarmPlot(7.2, 17.5, 11.2, 9.2, 0x2d214a, 0xc084fc);
+    // South Resource Valley (Moved closer for efficient travel): SW Ore Mine & SE Stardust Grove
+    addFarmPlot(-7.2, 14.2, 11.2, 7.6, 0x253554, 0x60a5fa);
+    addFarmPlot(6.7, 14.2, 11.2, 7.6, 0x2d214a, 0xc084fc);
 
     // South Path
     const southPath = new THREE.Mesh(
-      new THREE.BoxGeometry(3.8, 0.04, 13.0),
+      new THREE.BoxGeometry(3.8, 0.04, 10.0),
       new THREE.MeshLambertMaterial({ color: 0x333c5c })
     );
-    southPath.position.set(0, 0.015, 16.5);
+    southPath.position.set(0, 0.015, 14.0);
     southPath.receiveShadow = true;
     envGroup.add(southPath);
 
