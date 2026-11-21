@@ -20,7 +20,7 @@
 
   const HERO_SPAWN = { x: 0.0, z: 4.5 };
   const GATE_POS = { x: 18.0, z: 0.0 };
-  const HERO_COMBAT_X_MIN = 8.5;
+  const HERO_COMBAT_X_MIN = 5.0;
 
   // Guide 01: Physical Items (5 types)
   const ITEM_META = {
@@ -744,7 +744,8 @@
     player.vx = mx * spd;
     player.vz = mz * spd;
 
-    player.x = Math.max(-16.5, Math.min(17.2, player.x + player.vx * dt));
+    const maxX = Math.abs(player.z) <= 4.6 ? 28.0 : 17.2;
+    player.x = Math.max(-16.5, Math.min(maxX, player.x + player.vx * dt));
     player.z = Math.max(-15.0, Math.min(20.5, player.z + player.vz * dt));
 
     if (Math.hypot(player.vx, player.vz) > 0.3) {
@@ -1220,6 +1221,13 @@
     const cap = getHeroBagCap();
     setText("ui-bag", `🎒 ${player.bagItems.length}/${cap}`);
 
+    const invEl = document.getElementById("invasion-banner");
+    if (invEl) {
+      const hunting = player.x >= HERO_COMBAT_X_MIN && Math.abs(player.z) <= 9.0;
+      const showInv = runtime.stageActive && runtime.monsters.length > 0 && !hunting;
+      invEl.style.display = showInv ? "block" : "none";
+    }
+
     const curSkill = SKILL_EVOLUTIONS[state.skillStage];
     setText("ui-skill-ico", curSkill.icon);
     setText("ui-skill-stage", `${curSkill.stage}단계 · Lv.${state.skillLv}`);
@@ -1593,8 +1601,11 @@
       if (runtime.tutorialRing) runtime.tutorialRing.visible = false;
       if (stepEl) stepEl.textContent = `P${getCurrentPhase()}`;
       if (textEl) {
+        const hunting = player.x >= HERO_COMBAT_X_MIN && Math.abs(player.z) <= 9.0;
         textEl.textContent = runtime.stageActive
-          ? `⚔️ Stage ${state.stage} 전투 중! 동쪽 성벽으로 이동해 방어하세요.`
+          ? (hunting
+            ? `⚔️ Stage ${state.stage} 전투 중! (남은 몬스터 ${runtime.monsters.length}마리)`
+            : `⚔️ Stage ${state.stage} 몬스터 침공! 동쪽 성문으로 이동하세요.`)
           : `휴식 시간! 자원 가공·연구·스킬 진화를 준비하세요.`;
       }
       return;
