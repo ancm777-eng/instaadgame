@@ -253,13 +253,14 @@
     root.add(bodyPivot);
 
     const palette = HERO_TIERS[0];
-    const matRobe = makeToonMat(palette.robe, { uncached: true });
-    const matHat = makeToonMat(palette.hat, { uncached: true });
+    const matRobe = makeToonMat(0x7c5cbf, { uncached: true });
+    const matHat = makeToonMat(0x9b72e8, { uncached: true });
     const matTrim = makeToonMat(palette.trim, { uncached: true });
     const matCape = makeToonMat(palette.cape, { uncached: true });
-    const matSkin = makeToonMat(0xffd6ba);
+    const matSkin = makeToonMat(0xff9ec4); // Loopy signature pastel pink fur
+    const matMuzzle = makeToonMat(0xffe7f0); // Cream muzzle & belly
     const matHair = makeToonMat(0x7c482e);
-    const matBoot = makeToonMat(0x523228);
+    const matBoot = makeToonMat(0x6b3a4e);
     const matWood = makeToonMat(0x9a6439);
     const matDarkWood = makeToonMat(0x6b4122);
 
@@ -393,37 +394,71 @@
     rightArm.add(staffGroup);
     bodyPivot.add(rightArm);
 
-    // Big 2등신 Storybook Head + Floppy Pointed Alchemist Hat
+    // Cute flat beaver tail at the back (Loopy!)
+    addOutlinedMesh(
+      bodyPivot,
+      cachedGeo("loopy_tail", () => new THREE.SphereGeometry(0.24, 10, 8)),
+      makeToonMat(0xc46b88),
+      { pos: [0, 0.30, -0.45], rot: [0.35, 0, 0], scale: [1.05, 0.34, 1.45], outlineScale: 1.07 }
+    );
+
+    // Big 2등신 Storybook Loopy Head + Round Beaver Ears + Signature Bucktooth
     const headGroup = new THREE.Group();
     headGroup.position.set(0, 1.30, 0.02);
     addOutlinedMesh(
       headGroup,
-      cachedGeo("hero_head", () => new THREE.SphereGeometry(0.45, 20, 16)),
+      cachedGeo("hero_head", () => new THREE.SphereGeometry(0.46, 20, 16)),
       matSkin,
-      { scale: [1.04, 0.96, 1.0], outlineScale: 1.05 }
+      { scale: [1.08, 0.96, 1.02], outlineScale: 1.05 }
     );
-    buildCuteEyesAndCheeks(headGroup, 0.42, 0.155, -0.04);
-
-    // Cute hair bangs framing forehead + sidelocks
+    // Cream muzzle oval + cute dark nose + signature single white front bucktooth
     addOutlinedMesh(
       headGroup,
-      cachedGeo("hero_hair_cap", () => new THREE.SphereGeometry(0.465, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.52)),
-      matHair,
-      { pos: [0, 0.06, -0.02], rot: [-0.24, 0, 0], outlineScale: 1.05 }
+      cachedGeo("loopy_muzzle", () => new THREE.SphereGeometry(0.20, 12, 10)),
+      matMuzzle,
+      { pos: [0, -0.11, 0.38], scale: [1.15, 0.78, 0.65], outline: false }
     );
+    addOutlinedMesh(
+      headGroup,
+      cachedGeo("loopy_nose", () => new THREE.SphereGeometry(0.065, 8, 8)),
+      makeToonMat(0x4a2030),
+      { pos: [0, -0.04, 0.49], scale: [1.2, 0.85, 0.8], outline: false }
+    );
+    addOutlinedMesh(
+      headGroup,
+      cachedGeo("loopy_tooth", () => new THREE.BoxGeometry(0.105, 0.095, 0.04)),
+      makeToonMat(0xffffff),
+      { pos: [0, -0.17, 0.48], outline: false }
+    );
+    buildCuteEyesAndCheeks(headGroup, 0.44, 0.165, 0.02);
+
+    // Round pink beaver ears + cute signature top hair tuft
     [-1, 1].forEach((side) => {
       addOutlinedMesh(
         headGroup,
-        cachedGeo("hero_sidelock", () => new THREE.SphereGeometry(0.13, 10, 8)),
-        matHair,
-        { pos: [side * 0.38, -0.06, 0.14], scale: [0.85, 1.35, 0.9], outlineScale: 1.08 }
+        cachedGeo("loopy_ear", () => new THREE.SphereGeometry(0.145, 10, 10)),
+        matSkin,
+        { pos: [side * 0.38, 0.30, 0.02], scale: [1.0, 1.0, 0.58], outlineScale: 1.08 }
+      );
+      addOutlinedMesh(
+        headGroup,
+        cachedGeo("loopy_ear_in", () => new THREE.SphereGeometry(0.08, 8, 8)),
+        matMuzzle,
+        { pos: [side * 0.38, 0.30, 0.07], scale: [1.0, 1.0, 0.4], outline: false }
       );
     });
+    addOutlinedMesh(
+      headGroup,
+      cachedGeo("loopy_tuft", () => new THREE.ConeGeometry(0.07, 0.18, 7)),
+      matHair,
+      { pos: [0, 0.45, 0.16], rot: [0.35, 0, 0], outline: false }
+    );
 
-    // Big Pastel Alchemist Pointed Hat with Wide Brim & Gold Buckle
+    // Cute Alchemist Pointed Hat tilted slightly back so Loopy's face & ears shine
     const hatGroup = new THREE.Group();
-    hatGroup.position.set(0, 0.29, -0.03);
-    hatGroup.rotation.x = -0.14;
+    hatGroup.position.set(0, 0.34, -0.06);
+    hatGroup.rotation.x = -0.22;
+    hatGroup.scale.setScalar(0.86);
     addOutlinedMesh(
       hatGroup,
       cachedGeo("hat_brim", () => new THREE.CylinderGeometry(0.76, 0.80, 0.075, 22)),
