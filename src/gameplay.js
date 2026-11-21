@@ -166,6 +166,8 @@
       stage: 1,
       allCleared: false,
       muted: false,
+      tutStep: 1,
+      tutSoldOre: false,
       storages: {
         storage_ore: [],
         storage_gold: [],
@@ -214,6 +216,9 @@
     shopOpen: false,
     shopTab: "workshop",
     toastTimer: 0,
+    tutPopupTimer: 0,
+    lastShownTutStep: 0,
+    tutorialRing: null,
     lastHudSync: 0,
     philosopherHalo: null,
     sageAuraRing: null,
@@ -354,8 +359,19 @@
     // Hero
     sceneObjs.hero = Entities.createPlayerHero();
     sceneObjs.hero.root.position.set(player.x, 0, player.z);
-    if (sceneObjs.hero.guideArrowGroup) sceneObjs.hero.guideArrowGroup.visible = false;
+    if (sceneObjs.hero.guideArrowGroup) sceneObjs.hero.guideArrowGroup.visible = state.tutStep <= 6;
     Engine.unitGroup.add(sceneObjs.hero.root);
+
+    // Tutorial 3D Target Ring on ground
+    const tutRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.15, 1.48, 28),
+      new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.78 })
+    );
+    tutRing.rotation.x = -Math.PI * 0.5;
+    tutRing.position.y = 0.08;
+    tutRing.visible = false;
+    Engine.vfxGroup.add(tutRing);
+    runtime.tutorialRing = tutRing;
 
     // East Gate
     sceneObjs.gate = Entities.createVillageGate(GATE_POS.x, GATE_POS.z, "🏰 동쪽 수호 성벽");
@@ -877,6 +893,7 @@
         const amt = b.cash;
         b.cash = 0;
         state.gems += amt;
+        if (key === "ore_market") state.tutSoldOre = true;
         spawnFloatingText(player.x, 2.1, player.z, `+💵 ${amt.toLocaleString()}`, "#4ade80");
         playTone(740, 0.08, "sine", 0.05);
       }
@@ -1482,7 +1499,12 @@
 
     document.getElementById("btn-start-mission")?.addEventListener("click", () => {
       document.getElementById("opening-modal")?.classList.remove("open");
+      if (window.ClassicalBGM) window.ClassicalBGM.start();
+      triggerTutorialStepPopup(state.tutStep);
     });
+    window.addEventListener("pointerdown", () => {
+      if (window.ClassicalBGM) window.ClassicalBGM.start();
+    }, { once: true });
     document.getElementById("btn-wave-now")?.addEventListener("click", startNextStageNow);
     document.getElementById("btn-open-shop")?.addEventListener("click", () => openShop("workshop"));
     document.getElementById("btn-open-skills")?.addEventListener("click", () => openShop("skills"));
@@ -1502,6 +1524,7 @@
     document.getElementById("btn-mute")?.addEventListener("click", (e) => {
       state.muted = !state.muted;
       e.currentTarget.textContent = state.muted ? "🔇" : "🔊";
+      if (window.ClassicalBGM) window.ClassicalBGM.setMuted(state.muted);
     });
     document.getElementById("btn-save")?.addEventListener("click", () => saveGame(true));
     document.getElementById("btn-reset")?.addEventListener("click", () => document.getElementById("reset-modal")?.classList.add("open"));
@@ -1527,6 +1550,189 @@
     });
   }
 
+  const TUTORIAL_STEPS = {
+    1: { title: "1. 광석 캐서 돈으로 받아보기", desc: "화살표를 따라 남서쪽 광산에서 광석을 캐고, 원석 교역소에 팔아 수익을 수거하세요!" },
+    2: { title: "2. 연구실 Lv.1 지어보기", desc: "💵 500원을 모아 우측 하단 [🏛️ 공방·성벽] → [🔮 연구실·요정]에서 연구실을 지으세요!" },
+    3: { title: "3. 별가루 캐서 1차 에너지 만들기", desc: "남동쪽에서 별가루 10개를 캐서 북쪽 연구실 투입구에 넣고 🔮 1차 에너지를 수거하세요!" },
+    4: { title: "4. 스킬 레벨업 해보기", desc: "🔮 1차 에너지 50개를 모아 [✨ 스킬 진화] 버튼에서 1단계 Lv.2로 강화하세요!" },
+    5: { title: "5. 별가루 뭉치기 공방 만들기", desc: "💵 1,000원을 모아 [🏛️ 공방·성벽]에서 ✨ 별가루 뭉치기 공방을 건설하세요!" },
+    6: { title: "6. 별가루 캐서 별빛결정 만들기", desc: "별가루 10개를 캐서 별가루 뭉치기 공방에 투입해 💠 별빛 결정을 완성하세요!" },
+  };
+
+  function triggerTutorialStepPopup(stepNum) {
+    if (stepNum < 1 || stepNum > 6) return;
+    if (runtime.lastShownTutStep === stepNum) return;
+    runtime.lastShownTutStep = stepNum;
+    const info = TUTORIAL_STEPS[stepNum];
+    const el = document.getElementById("tutorial-popup");
+    if (!el || !info) return;
+    document.getElementById("tp-step").textContent = `초보자 가이드 ${stepNum} / 6`;
+    document.getElementById("tp-title").textContent = info.title;
+    document.getElementById("tp-desc").textContent = info.desc;
+    el.classList.add("show");
+    runtime.tutPopupTimer = 2.8;
+  }
+
+  function updateTutorial(dt) {
+    if (runtime.tutPopupTimer > 0) {
+      runtime.tutPopupTimer -= dt;
+      if (runtime.tutPopupTimer <= 0) {
+        document.getElementById("tutorial-popup")?.classList.remove("show");
+      }
+    }
+
+    const stepNum = state.tutStep || 1;
+    const stepEl = document.getElementById("ui-guide-step");
+    const textEl = document.getElementById("ui-guide-text");
+
+    if (stepNum > 6) {
+      if (sceneObjs.hero && sceneObjs.hero.guideArrowGroup) sceneObjs.hero.guideArrowGroup.visible = false;
+      if (runtime.tutorialRing) runtime.tutorialRing.visible = false;
+      if (stepEl) stepEl.textContent = `P${getCurrentPhase()}`;
+      if (textEl) {
+        textEl.textContent = runtime.stageActive
+          ? `⚔️ Stage ${state.stage} 전투 중! 동쪽 성벽으로 이동해 방어하세요.`
+          : `휴식 시간! 자원 가공·연구·스킬 진화를 준비하세요.`;
+      }
+      return;
+    }
+
+    const oreCount = player.bagItems.filter((x) => x === "ore").length;
+    const starCount = player.bagItems.filter((x) => x === "stardust").length;
+    const om = runtime.buildings.ore_market;
+    let target = { x: -7.2, z: 16.5 };
+    let msg = "";
+
+    if (stepNum === 1) {
+      if (state.tutSoldOre) {
+        state.tutStep = 2;
+        triggerTutorialStepPopup(2);
+        return;
+      }
+      if (om && om.cash > 0) {
+        target = { x: om.x, z: om.z + 2.4 };
+        msg = "교역소 앞 초록 캐시 받침대를 밟아 돈을 수거하세요!";
+      } else if (oreCount > 0) {
+        target = { x: om.x, z: om.z };
+        msg = `원석 교역소로 가서 광석(${oreCount}개)을 판매하세요!`;
+      } else {
+        target = { x: -7.2, z: 16.5 };
+        msg = "화살표를 따라 남서쪽 광산에서 광석을 캐세요!";
+      }
+    } else if (stepNum === 2) {
+      if (state.labLv >= 1) {
+        state.tutStep = 3;
+        triggerTutorialStepPopup(3);
+        return;
+      }
+      if (state.gems >= 500) {
+        target = { x: BUILDING_POS.energy_lab.x, z: BUILDING_POS.energy_lab.z + 2.0 };
+        msg = "💵 500 확보! [🏛️ 공방·성벽 → 연구실·요정]에서 연구실 Lv.1을 지으세요!";
+      } else if (om && om.cash > 0) {
+        target = { x: om.x, z: om.z + 2.4 };
+        msg = `교역소 수익을 수거하세요! (💵 ${state.gems}/500)`;
+      } else if (oreCount > 0) {
+        target = { x: om.x, z: om.z };
+        msg = `광석을 교역소에 팔아 💵 500을 모으세요! (${state.gems}/500)`;
+      } else {
+        target = { x: -7.2, z: 16.5 };
+        msg = `광석을 캐서 💵 500원을 모으세요! (${state.gems}/500)`;
+      }
+    } else if (stepNum === 3) {
+      if (state.dim1 > 0) {
+        state.tutStep = 4;
+        triggerTutorialStepPopup(4);
+        return;
+      }
+      if (state.labStored[1] > 0) {
+        target = { x: -3.2, z: -9.4 };
+        msg = "🔮 1차 에너지 타일 위로 걸어가 에너지를 수거하세요!";
+      } else if (runtime.labInputQueue.length >= 10) {
+        target = { x: -3.2, z: -9.4 };
+        msg = "연구실 연성 중... 1차 타일 앞에서 에너지를 기다리세요!";
+      } else if (starCount > 0) {
+        target = { x: BUILDING_POS.energy_lab.x - 4.2, z: BUILDING_POS.energy_lab.z + 1.8 };
+        msg = `북쪽 연구실 투입구로 별가루(${starCount}개)를 넣으세요!`;
+      } else {
+        target = { x: 7.2, z: 16.5 };
+        msg = `남동쪽 별빛 채집지에서 별가루 10개를 캐세요! (${runtime.labInputQueue.length}/10)`;
+      }
+    } else if (stepNum === 4) {
+      if (state.skillStage >= 2 || state.skillLv >= 2) {
+        state.tutStep = 5;
+        triggerTutorialStepPopup(5);
+        return;
+      }
+      if (state.dim1 >= 50) {
+        target = { x: player.x, z: player.z };
+        msg = "🔮 50 달성! 우측 하단 [✨ 스킬 진화]에서 Lv.2로 레벨업하세요!";
+      } else if (state.labStored[1] > 0) {
+        target = { x: -3.2, z: -9.4 };
+        msg = `🔮 1차 에너지 타일에서 에너지를 수거하세요! (${state.dim1}/50)`;
+      } else if (starCount > 0) {
+        target = { x: BUILDING_POS.energy_lab.x - 4.2, z: BUILDING_POS.energy_lab.z + 1.8 };
+        msg = `연구실에 별가루를 넣어 🔮 50개를 모으세요! (${state.dim1}/50)`;
+      } else {
+        target = { x: 7.2, z: 16.5 };
+        msg = `별가루를 캐서 연구실에 넣고 🔮 50개를 모으세요! (${state.dim1}/50)`;
+      }
+    } else if (stepNum === 5) {
+      if (state.starWorkshopBuilt) {
+        state.tutStep = 6;
+        triggerTutorialStepPopup(6);
+        return;
+      }
+      if (state.gems >= 1000) {
+        target = { x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z };
+        msg = "💵 1,000 확보! [🏛️ 공방·성벽]에서 ✨ 별가루 뭉치기 공방을 지으세요!";
+      } else if (om && om.cash > 0) {
+        target = { x: om.x, z: om.z + 2.4 };
+        msg = `교역소 수익을 수거하세요! (💵 ${state.gems}/1,000)`;
+      } else if (oreCount > 0) {
+        target = { x: om.x, z: om.z };
+        msg = `광석을 팔아 💵 1,000원을 모으세요! (${state.gems}/1,000)`;
+      } else {
+        target = { x: -7.2, z: 16.5 };
+        msg = `광석을 캐서 💵 1,000원을 모으세요! (${state.gems}/1,000)`;
+      }
+    } else if (stepNum === 6) {
+      if (state.storages.storage_star_crystal.length > 0) {
+        state.tutStep = 7;
+        state.gems += 200;
+        showToast("🎉 초보자 가이드 6단계 완료! 보너스 +💵 200 지급!");
+        playTone(987, 0.16, "triangle", 0.07);
+        return;
+      }
+      if (starCount > 0) {
+        target = { x: BUILDING_POS.star_crystal_workshop.x, z: BUILDING_POS.star_crystal_workshop.z };
+        msg = `별가루 10개를 ✨ 별가루 뭉치기 공방에 투입하세요! (보유 ${starCount})`;
+      } else {
+        target = { x: 7.2, z: 16.5 };
+        msg = "남동쪽에서 별가루 10개를 캐서 별빛 결정을 만드세요!";
+      }
+    }
+
+    if (stepEl) stepEl.textContent = `가이드 ${stepNum}/6`;
+    if (textEl) textEl.textContent = msg;
+
+    // Point 3D Hero Guide Arrow & Pulsing Ground Ring toward target
+    const dx = target.x - player.x;
+    const dz = target.z - player.z;
+    const dist = Math.hypot(dx, dz);
+    if (sceneObjs.hero && sceneObjs.hero.guideArrowGroup) {
+      sceneObjs.hero.guideArrowGroup.visible = dist > 1.8;
+      if (dist > 0.2) {
+        sceneObjs.hero.guideArrowGroup.rotation.y = Math.atan2(dx, dz) - player.rotY;
+      }
+    }
+    if (runtime.tutorialRing) {
+      runtime.tutorialRing.visible = dist > 1.8;
+      runtime.tutorialRing.position.set(target.x, 0.08, target.z);
+      const pulse = 1.0 + Math.sin(runtime.time * 5.0) * 0.14;
+      runtime.tutorialRing.scale.set(pulse, pulse, 1);
+    }
+  }
+
   function step(dt) {
     if (runtime.gameOver) return;
     runtime.time += dt;
@@ -1539,6 +1745,7 @@
     updateFairies(dt);
     updateCombatAndStages(dt);
     updateVfx(dt);
+    updateTutorial(dt);
     if (window.Engine) {
       window.Engine.update({ x: player.x, z: player.z }, { x: player.vx, z: player.vz }, dt);
     }
