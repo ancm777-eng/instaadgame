@@ -1658,7 +1658,6 @@
         input.joyX = 0; input.joyY = 0;
         if (joyBase) {
           joyBase.style.display = "block";
-          joyBase.style.bottom = "auto";
           joyBase.style.left = `${input.originX}px`;
           joyBase.style.top = `${input.originY}px`;
         }
@@ -1687,7 +1686,6 @@
           joyBase.style.display = "block";
           joyBase.style.left = "";
           joyBase.style.top = "";
-          joyBase.style.bottom = "";
         }
         if (joyStick) joyStick.style.transform = "translate(0px, 0px)";
       };

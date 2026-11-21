@@ -606,8 +606,8 @@ html, body {
 
 #joystick-base {
   position: absolute;
-  left: 74px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  left: calc(100% - 76px);
+  top: calc(100% - 148px - env(safe-area-inset-bottom, 0px));
   width: 102px;
   height: 102px;
   margin-left: -51px;
