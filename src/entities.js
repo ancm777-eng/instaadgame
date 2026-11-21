@@ -592,6 +592,14 @@
     root.add(visualRoot);
 
     const V10_NODES = {
+      stardust: { ring: 0xd8b4fe, build: () => {
+        chibi().addOutlinedMesh(visualRoot, new THREE.CylinderGeometry(0.64, 0.72, 0.14, 10), chibi().makeToonMat(0x2e1f47), { pos: [0, 0.1, 0] });
+        const starMat1 = chibi().makeToonMat(0xd8b4fe, { emissive: 0xa855f7, emissiveIntensity: 0.55 });
+        const starMat2 = chibi().makeToonMat(0xfef08a, { emissive: 0xfacc15, emissiveIntensity: 0.48 });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.42, 0), starMat1, { pos: [0, 0.72, 0], scale: [0.85, 1.45, 0.85] });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.24, 0), starMat2, { pos: [-0.32, 0.48, 0.2], rot: [0.2, 0.4, 0.3] });
+        chibi().addOutlinedMesh(visualRoot, new THREE.OctahedronGeometry(0.22, 0), starMat2, { pos: [0.3, 0.45, -0.18], rot: [-0.2, 0.1, -0.3] });
+      }},
       fire_mana_stone: { ring: 0xff6b35, build: () => {
         chibi().addOutlinedMesh(visualRoot, new THREE.DodecahedronGeometry(0.62, 0), chibi().makeToonMat(0x3f2e3e), { pos: [0, 0.42, 0], scale: [1.15, 0.78, 1.1] });
         const flameMat = chibi().makeToonMat(0xff6b35, { emissive: 0xe63946, emissiveIntensity: 0.45 });
@@ -631,7 +639,7 @@
     };
 
     const customNode = V10_NODES[kind];
-    const isOre = kind === "blue_ore" || kind === "crystal";
+    const isOre = kind === "ore" || kind === "blue_ore" || kind === "crystal";
     const role = isOre ? "rock_crystal" : "berry_bush";
     const L = loader();
 
@@ -1138,6 +1146,101 @@
   function animateArmoredTrain(tr, speed, dt) {
     return chibi().animateArmoredTrain ? chibi().animateArmoredTrain(tr, speed, dt) : undefined;
   }
+  function createSmallStorage(opts = {}) {
+    const x = opts.x || 0;
+    const z = opts.z || 0;
+    const accentHex = opts.accent || "#e6c27a";
+    const title = opts.title || "창고";
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+
+    // Exact 1-tile (2.0m x 2.0m) luxury brass-trimmed obsidian storage
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(2.0, 0.16, 2.0),
+      new THREE.MeshLambertMaterial({ color: 0x1e2540 })
+    );
+    base.position.y = 0.08;
+    base.receiveShadow = true;
+    root.add(base);
+
+    const rimColor = new THREE.Color(accentHex);
+    const rim = new THREE.Mesh(
+      new THREE.BoxGeometry(2.08, 0.08, 2.08),
+      new THREE.MeshLambertMaterial({ color: rimColor })
+    );
+    rim.position.y = 0.04;
+    root.add(rim);
+
+    const stackAnchor = new THREE.Group();
+    stackAnchor.position.set(0, 0.18, 0);
+    root.add(stackAnchor);
+
+    const bannerSprite = createOverheadBannerSprite({
+      text: `${title} · 0`,
+      accentColor: accentHex,
+      borderColor: accentHex,
+      scaleX: 2.8,
+      scaleY: 0.72,
+    });
+    bannerSprite.position.set(0, 2.15, 0);
+    root.add(bannerSprite);
+
+    return { root, stackAnchor, bannerSprite, x, z, accent: accentHex, title };
+  }
+
+  function createEnergyTile(opts = {}) {
+    const x = opts.x || 0;
+    const z = opts.z || 0;
+    const accentHex = opts.accent || "#c084fc";
+    const root = new THREE.Group();
+    root.position.set(x, 0, z);
+
+    const tile = new THREE.Mesh(
+      new THREE.BoxGeometry(2.1, 0.14, 2.1),
+      new THREE.MeshLambertMaterial({ color: 0x1d1b3a })
+    );
+    tile.position.y = 0.07;
+    tile.receiveShadow = true;
+    root.add(tile);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.72, 0.92, 24),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(accentHex), side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+    );
+    ring.rotation.x = -Math.PI * 0.5;
+    ring.position.y = 0.15;
+    root.add(ring);
+
+    const orb = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.32, 0),
+      new THREE.MeshLambertMaterial({ color: new THREE.Color(accentHex), emissive: new THREE.Color(accentHex), emissiveIntensity: 0.65 })
+    );
+    orb.position.y = 0.78;
+    root.add(orb);
+
+    const topSprite = createOverheadBannerSprite({
+      text: "대기 중",
+      accentColor: accentHex,
+      borderColor: accentHex,
+      scaleX: 2.9,
+      scaleY: 0.72,
+    });
+    topSprite.position.set(0, 2.35, 0);
+    root.add(topSprite);
+
+    const bottomSprite = createOverheadBannerSprite({
+      text: "보관: 0",
+      accentColor: "#f7dca1",
+      borderColor: accentHex,
+      scaleX: 2.4,
+      scaleY: 0.62,
+    });
+    bottomSprite.position.set(0, 0.45, 1.35);
+    root.add(bottomSprite);
+
+    return { root, orb, ring, topSprite, bottomSprite, x, z, accent: accentHex };
+  }
+
   function createGoldenAirship() {
     return chibi().createGoldenAirship ? chibi().createGoldenAirship() : { root: new THREE.Group() };
   }
@@ -1186,6 +1289,8 @@
     createShowcaseCounter,
     createGemPedestal,
     createResourceNode,
+    createSmallStorage,
+    createEnergyTile,
     createWoodenPalletZone,
     updateWoodenPalletZone,
     createStepPad,

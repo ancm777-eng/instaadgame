@@ -1574,6 +1574,7 @@
     3: { key: "vampire", name: "뱀파이어", primary: 0xe6e0f8, secondary: 0x991b1b, eye: 0xef4444 },
     4: { key: "werewolf", name: "늑대인간", primary: 0x64748b, secondary: 0x334155, eye: 0xf59e0b },
     5: { key: "demon", name: "악마", primary: 0xdc2626, secondary: 0x1f1224, eye: 0xfacc15 },
+    6: { key: "orc", name: "오크", primary: 0x4d7c3f, secondary: 0x78350f, eye: 0xf97316 },
   };
 
   function resolveMonsterTheme(species, waveTier = 1) {
@@ -1582,6 +1583,7 @@
     if (species === "vampire") return 3;
     if (species === "werewolf") return 4;
     if (species === "demon") return 5;
+    if (species === "orc") return 6;
     return Math.min(5, Math.max(1, Math.ceil((Number(waveTier) || 1) / 2)));
   }
 
@@ -1822,6 +1824,40 @@
         rot: [-1.15, 0, 0],
       });
       hpHeight = 1.98 * roleScale;
+    } else if (themeTier === 6) {
+      // 오크 (녹색 피부, 단단한 가죽 갑옷, 송곳니, 몽둥이)
+      const matOrc = makeToonMat(0x4d7c3f);
+      const matArmor = makeToonMat(0x78350f);
+      const matTusk = makeToonMat(0xfef3c7);
+
+      addOutlinedMesh(bodyPivot, cachedGeo("mon_o_torso", () => new THREE.BoxGeometry(0.74, 0.74, 0.48)), matArmor, { pos: [0, 0.70, 0], outlineScale: 1.05 });
+      const head = new THREE.Group();
+      head.position.set(0, 1.28, 0.05);
+      addOutlinedMesh(head, cachedGeo("mon_o_head", () => new THREE.BoxGeometry(0.58, 0.52, 0.52)), matOrc, { outlineScale: 1.05 });
+      [-0.14, 0.14].forEach((tx) => {
+        addOutlinedMesh(head, cachedGeo("mon_o_tusk", () => new THREE.ConeGeometry(0.055, 0.16, 5)), matTusk, {
+          pos: [tx, -0.14, 0.28],
+          rot: [-0.25, 0, 0],
+          outline: false,
+        });
+      });
+      addMonsterEyes(head, 0.27, 0xf97316);
+      bodyPivot.add(head);
+
+      armL = new THREE.Group();
+      armL.position.set(-0.46, 0.90, 0);
+      addOutlinedMesh(armL, cachedGeo("mon_o_arm", () => new THREE.BoxGeometry(0.22, 0.52, 0.22)), matOrc, { pos: [0, -0.20, 0] });
+      bodyPivot.add(armL);
+
+      armR = new THREE.Group();
+      armR.position.set(0.46, 0.90, 0);
+      addOutlinedMesh(armR, cachedGeo("mon_o_arm", () => new THREE.BoxGeometry(0.22, 0.52, 0.22)), matOrc, { pos: [0, -0.20, 0] });
+      addOutlinedMesh(armR, cachedGeo("mon_o_club", () => new THREE.CylinderGeometry(0.11, 0.06, 0.52, 7)), matArmor, { pos: [0, -0.34, 0.20], rot: [Math.PI * 0.4, 0, 0] });
+      bodyPivot.add(armR);
+
+      legL = addOutlinedMesh(bodyPivot, cachedGeo("mon_o_leg", () => new THREE.BoxGeometry(0.24, 0.36, 0.26)), matArmor, { pos: [-0.18, 0.18, 0] });
+      legR = addOutlinedMesh(bodyPivot, cachedGeo("mon_o_leg", () => new THREE.BoxGeometry(0.24, 0.36, 0.26)), matArmor, { pos: [0.18, 0.18, 0] });
+      hpHeight = 1.85 * roleScale;
     } else {
       // 5단계: 악마 (진홍/흑요석 피부, 굽은 뿔, 큰 박쥐 날개, 지옥불 코어, 화살촉 꼬리)
       const matDemon = makeToonMat(0xdc2626);
@@ -2592,8 +2628,47 @@
   }
 
   function populateV10CrateContents(group, type) {
-    const matGold = makeToonMat(0xf5c842);
+    const matGold = makeToonMat(0xf5c842, { emissive: 0xb45309, emissiveIntensity: 0.22 });
     const crates = {
+      ore: () => {
+        const m1 = makeToonMat(0x3b82f6, { emissive: 0x1d4ed8, emissiveIntensity: 0.28 });
+        const m2 = makeToonMat(0x7dd3fc, { emissive: 0x38bdf8, emissiveIntensity: 0.34 });
+        for (let i = 0; i < 6; i++) {
+          const col = i % 3;
+          const row = (i / 3) | 0;
+          addOutlinedMesh(group, new THREE.DodecahedronGeometry(0.115, 0), i % 2 === 0 ? m1 : m2, {
+            pos: [-0.26 + col * 0.26, 0.145, -0.11 + row * 0.22],
+            scale: [1.05, 0.82, 1.05],
+          });
+        }
+      },
+      stardust: () => {
+        const m1 = makeToonMat(0xd8b4fe, { emissive: 0xa855f7, emissiveIntensity: 0.45 });
+        const m2 = makeToonMat(0xfef08a, { emissive: 0xfacc15, emissiveIntensity: 0.38 });
+        for (let i = 0; i < 5; i++) {
+          addOutlinedMesh(group, new THREE.OctahedronGeometry(0.105, 0), i % 2 === 0 ? m1 : m2, {
+            pos: [-0.26 + i * 0.13, 0.155, (i % 2 - 0.5) * 0.16],
+          });
+        }
+      },
+      gold: () => {
+        for (let i = 0; i < 4; i++) {
+          const col = i % 2;
+          const row = (i / 2) | 0;
+          addOutlinedMesh(group, new THREE.BoxGeometry(0.26, 0.11, 0.15), matGold, {
+            pos: [-0.15 + col * 0.30, 0.14, -0.10 + row * 0.20],
+          });
+        }
+      },
+      star_crystal: () => {
+        const m = makeToonMat(0x38bdf8, { emissive: 0x0284c7, emissiveIntensity: 0.5 });
+        for (let i = 0; i < 4; i++) {
+          addOutlinedMesh(group, new THREE.OctahedronGeometry(0.125, 0), m, {
+            pos: [-0.24 + i * 0.16, 0.165, (i % 2 - 0.5) * 0.14],
+            scale: [0.85, 1.35, 0.85],
+          });
+        }
+      },
       fire_mana_stone: () => {
         const m = makeToonMat(0xff6b35, { emissive: 0xe63946, emissiveIntensity: 0.42 });
         for (let i = 0; i < 4; i++) addOutlinedMesh(group, new THREE.DodecahedronGeometry(0.14, 0), m, { pos: [-0.26 + i * 0.17, 0.16, (i % 2 - 0.5) * 0.18], rot: [0.3 * i, 0.5 * i, 0] });
