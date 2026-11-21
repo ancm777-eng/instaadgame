@@ -1656,7 +1656,12 @@
         input.originX = e.clientX - rect.left;
         input.originY = e.clientY - rect.top;
         input.joyX = 0; input.joyY = 0;
-        if (joyBase) { joyBase.style.display = "block"; joyBase.style.left = `${input.originX}px`; joyBase.style.top = `${input.originY}px`; }
+        if (joyBase) {
+          joyBase.style.display = "block";
+          joyBase.style.bottom = "auto";
+          joyBase.style.left = `${input.originX}px`;
+          joyBase.style.top = `${input.originY}px`;
+        }
         if (joyStick) joyStick.style.transform = "translate(0px, 0px)";
         if (joyHint) joyHint.style.display = "none";
       });
@@ -1678,7 +1683,13 @@
       const endJoy = (e) => {
         if (e.pointerId !== input.joyId) return;
         input.joyActive = false; input.joyX = 0; input.joyY = 0;
-        if (joyBase) joyBase.style.display = "none";
+        if (joyBase) {
+          joyBase.style.display = "block";
+          joyBase.style.left = "";
+          joyBase.style.top = "";
+          joyBase.style.bottom = "";
+        }
+        if (joyStick) joyStick.style.transform = "translate(0px, 0px)";
       };
       window.addEventListener("pointerup", endJoy);
       window.addEventListener("pointercancel", endJoy);

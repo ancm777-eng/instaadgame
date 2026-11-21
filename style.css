@@ -606,17 +606,23 @@ html, body {
 
 #joystick-base {
   position: absolute;
+  left: 74px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
   width: 102px;
   height: 102px;
   margin-left: -51px;
   margin-top: -51px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, rgba(15, 23, 52, 0.42) 100%);
-  border: 2px solid rgba(247, 220, 161, 0.52);
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.14) 0%, rgba(15, 23, 52, 0.5) 100%);
+  border: 2px solid rgba(247, 220, 161, 0.56);
   box-shadow: 0 0 22px rgba(192, 132, 252, 0.25), inset 0 0 14px rgba(247, 220, 161, 0.15);
   backdrop-filter: blur(6px);
-  display: none;
+  display: block;
   pointer-events: none;
+}
+
+#joystick-hint {
+  display: none;
 }
 
 #joystick-stick {
