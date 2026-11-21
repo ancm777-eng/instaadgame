@@ -216,6 +216,8 @@
     shopOpen: false,
     shopTab: "workshop",
     toastTimer: 0,
+    missingResTimer: 0,
+    missingResCd: 0,
     tutPopupTimer: 0,
     lastShownTutStep: 0,
     tutorialRing: null,
@@ -263,6 +265,28 @@
       el.textContent = msg;
       el.classList.add("show");
     }
+  }
+
+  const RESOURCE_SOURCES = {
+    ore: "남서쪽 광석 광산 또는 ⛏️ 광석 창고",
+    stardust: "남동쪽 별빛 채집지 또는 ✨ 별가루 창고",
+    gold: "🔥 금 나와라 뚝딱 가마(광석 10) 또는 🪙 금 창고",
+    star_crystal: "✨ 별가루 뭉치기 공방(별가루 10) 또는 💠 결정 창고",
+  };
+
+  function showMissingResourcePopup(itemType) {
+    if (runtime.missingResCd > 0) return;
+    const meta = ITEM_META[itemType];
+    const src = RESOURCE_SOURCES[itemType];
+    if (!meta || !src) return;
+    runtime.missingResCd = 1.6;
+    runtime.missingResTimer = 2.2;
+    const el = document.getElementById("missing-resource-popup");
+    if (!el) return;
+    document.getElementById("mrp-ico").textContent = meta.icon;
+    document.getElementById("mrp-title").textContent = `${meta.label}이(가) 없습니다!`;
+    document.getElementById("mrp-src").textContent = `얻는 곳: ${src}`;
+    el.classList.add("show");
   }
 
   function spawnFloatingText(x, y, z, text, color = "#f7dca1") {
@@ -841,37 +865,50 @@
 
       // Ore Market: sell ore (10)
       const om = runtime.buildings.ore_market;
-      if (om && Math.hypot(player.x - om.x, player.z - om.z) < 2.3 && takeFromBag("ore")) {
-        om.cash += 10;
-        spawnFloatingText(om.x, 2.0, om.z, "+💵 10", "#4ade80");
+      if (om && Math.hypot(player.x - om.x, player.z - om.z) < 2.3) {
+        if (takeFromBag("ore")) {
+          om.cash += 10;
+          spawnFloatingText(om.x, 2.0, om.z, "+💵 10", "#4ade80");
+        } else if (om.cash <= 0) {
+          showMissingResourcePopup("ore");
+        }
       }
 
       // Gold Kiln: deposit ore (10 -> 1 gold)
       const gk = runtime.buildings.gold_kiln;
-      if (gk && state.goldKilnBuilt && Math.hypot(player.x - gk.x, player.z - gk.z) < 2.3 && gk.inQueue.length < 30 && takeFromBag("ore")) {
-        gk.inQueue.push("ore");
+      if (gk && state.goldKilnBuilt && Math.hypot(player.x - gk.x, player.z - gk.z) < 2.3 && gk.inQueue.length < 30) {
+        if (!takeFromBag("ore")) showMissingResourcePopup("ore");
+        else gk.inQueue.push("ore");
       }
       // Gold Kiln front pedestal: sell gold (200) or collect cash
       if (gk && state.goldKilnBuilt && Math.hypot(player.x - gk.x, player.z - (gk.z + 2.4)) < 2.1) {
         if (takeFromBag("gold")) {
           gk.cash += 200;
           spawnFloatingText(gk.x, 2.0, gk.z + 2.4, "+💵 200", "#facc15");
+        } else if (gk.cash <= 0) {
+          showMissingResourcePopup("gold");
         }
       }
 
       // Star Crystal Workshop: deposit stardust (10 -> 1 star_crystal)
       const sw = runtime.buildings.star_crystal_workshop;
-      if (sw && state.starWorkshopBuilt && Math.hypot(player.x - sw.x, player.z - sw.z) < 2.3 && sw.inQueue.length < 30 && takeFromBag("stardust")) {
-        sw.inQueue.push("stardust");
+      if (sw && state.starWorkshopBuilt && Math.hypot(player.x - sw.x, player.z - sw.z) < 2.3 && sw.inQueue.length < 30) {
+        if (!takeFromBag("stardust")) showMissingResourcePopup("stardust");
+        else sw.inQueue.push("stardust");
       }
 
       // Star Gold Mixer: deposit gold & star_crystal (5 + 5 -> 1 philosopher_stone)
       const mx = runtime.buildings.star_gold_mixer;
       if (mx && state.mixerBuilt && Math.hypot(player.x - mx.x, player.z - mx.z) < 2.4) {
-        if (mx.inGold.length < 20 && takeFromBag("gold")) {
+        const needGold = mx.inGold.length < 20;
+        const needCrystal = mx.inCrystal.length < 20;
+        if (needGold && takeFromBag("gold")) {
           // taken
-        } else if (mx.inCrystal.length < 20 && takeFromBag("star_crystal")) {
+        } else if (needCrystal && takeFromBag("star_crystal")) {
           // taken
+        } else {
+          if (mx.inGold.length < 5) showMissingResourcePopup("gold");
+          else if (mx.inCrystal.length < 5) showMissingResourcePopup("star_crystal");
         }
       }
 
@@ -879,8 +916,9 @@
       const lab = runtime.buildings.energy_lab;
       if (lab && state.labLv > 0 && Math.hypot(player.x - (lab.x - 4.2), player.z - (lab.z + 1.8)) < 2.3) {
         const reqType = LAB_LEVELS[state.labLv].inputType;
-        if (runtime.labInputQueue.length < 60 && takeFromBag(reqType)) {
-          runtime.labInputQueue.push(reqType);
+        if (runtime.labInputQueue.length < 60) {
+          if (!takeFromBag(reqType)) showMissingResourcePopup(reqType);
+          else runtime.labInputQueue.push(reqType);
         }
       }
     }
@@ -1753,6 +1791,11 @@
     if (runtime.toastTimer > 0) {
       runtime.toastTimer -= dt;
       if (runtime.toastTimer <= 0) document.getElementById("toast-banner")?.classList.remove("show");
+    }
+    if (runtime.missingResCd > 0) runtime.missingResCd -= dt;
+    if (runtime.missingResTimer > 0) {
+      runtime.missingResTimer -= dt;
+      if (runtime.missingResTimer <= 0) document.getElementById("missing-resource-popup")?.classList.remove("show");
     }
     updatePlayer(dt);
     updateHarvestAndLogistics(dt);

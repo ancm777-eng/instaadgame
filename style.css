@@ -407,6 +407,49 @@ html, body {
   50% { opacity: 0.85; transform: scale(0.985); }
 }
 
+/* Small Missing Resource Source Hint Popup */
+.missing-res-popup {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+  left: 50%;
+  transform: translate(-50%, 8px);
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 36px);
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(14, 20, 40, 0.94);
+  border: 1px solid var(--gold-border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.missing-res-popup.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.mrp-ico {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.mrp-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #fda4af;
+}
+
+.mrp-src {
+  font-size: 11px;
+  color: var(--gold-bright);
+  margin-top: 1px;
+}
+
 /* Toast Banner */
 #toast-banner {
   position: absolute;
